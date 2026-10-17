@@ -1,0 +1,135 @@
+import { parse } from "yaml";
+import type { z } from "zod";
+import {
+  type Brand,
+  type CalendarRules,
+  type CaseDef,
+  type ClientRules,
+  type DeviceTemplate,
+  type Dialect,
+  type FaultDef,
+  type RoomTemplate,
+  type SlaRules,
+  type StalenessRules,
+  type TicketRules,
+  brandSchema,
+  calendarSchema,
+  caseSchema,
+  clientRulesSchema,
+  deviceTemplateSchema,
+  dialectSchema,
+  faultSchema,
+  roomTemplateSchema,
+  slaSchema,
+  stalenessSchema,
+  ticketRulesSchema,
+} from "../schema";
+
+export interface GameData {
+  brands: Map<string, Brand>;
+  devices: Map<string, DeviceTemplate>;
+  rooms: Map<string, RoomTemplate>;
+  faults: Map<string, FaultDef>;
+  cases: Map<string, CaseDef>;
+  dialects: Map<string, Dialect>;
+  sla: SlaRules;
+  tickets: TicketRules;
+  calendar: CalendarRules;
+  staleness: StalenessRules;
+  clients: ClientRules;
+}
+
+/** Raw YAML text keyed by path, like "../../../data/devices/fortress.yaml". */
+export type RawFiles = Record<string, string>;
+
+export class DataError extends Error {}
+
+function parseFile(path: string, text: string): unknown {
+  try {
+    return parse(text);
+  } catch (err) {
+    throw new DataError(`${path}: YAML error: ${(err as Error).message}`);
+  }
+}
+
+function check<T>(schema: z.ZodType<T, z.ZodTypeDef, unknown>, value: unknown, where: string): T {
+  const result = schema.safeParse(value);
+  if (!result.success) {
+    const issue = result.error.issues[0];
+    const at = issue?.path.join(".") || "(root)";
+    throw new DataError(`${where}: ${at}: ${issue?.message}`);
+  }
+  return result.data;
+}
+
+function folder(files: RawFiles, name: string): [string, string][] {
+  return Object.entries(files)
+    .filter(([p]) => p.includes(`/data/${name}/`))
+    .sort(([a], [b]) => a.localeCompare(b));
+}
+
+function listFolder<T extends { id: string }>(
+  files: RawFiles,
+  name: string,
+  schema: z.ZodType<T, z.ZodTypeDef, unknown>,
+): Map<string, T> {
+  const out = new Map<string, T>();
+  for (const [path, text] of folder(files, name)) {
+    const value = parseFile(path, text);
+    const items = name === "dialects" ? [value] : value;
+    if (!Array.isArray(items)) throw new DataError(`${path}: expected a list`);
+    items.forEach((item, i) => {
+      const where = `${path} [${i}${(item as { id?: string })?.id ? ` ${(item as { id: string }).id}` : ""}]`;
+      const rec = check(schema, item, where);
+      if (out.has(rec.id)) throw new DataError(`${where}: duplicate id ${rec.id}`);
+      out.set(rec.id, rec);
+    });
+  }
+  return out;
+}
+
+function rule<T>(files: RawFiles, file: string, schema: z.ZodType<T, z.ZodTypeDef, unknown>): T {
+  const entry = folder(files, "rules").find(([p]) => p.endsWith(`/${file}.yaml`));
+  if (!entry) throw new DataError(`missing data/rules/${file}.yaml`);
+  return check(schema, parseFile(entry[0], entry[1]), entry[0]);
+}
+
+/** Parse and validate every data file, then check cross references. */
+export function loadData(files: RawFiles): GameData {
+  const data: GameData = {
+    brands: listFolder(files, "brands", brandSchema),
+    devices: listFolder(files, "devices", deviceTemplateSchema),
+    rooms: listFolder(files, "rooms", roomTemplateSchema),
+    faults: listFolder(files, "faults", faultSchema),
+    cases: listFolder(files, "cases", caseSchema),
+    dialects: listFolder(files, "dialects", dialectSchema),
+    sla: rule(files, "sla", slaSchema),
+    tickets: rule(files, "tickets", ticketRulesSchema),
+    calendar: rule(files, "calendar", calendarSchema),
+    staleness: rule(files, "staleness", stalenessSchema),
+    clients: rule(files, "clients", clientRulesSchema),
+  };
+  for (const t of data.devices.values()) {
+    if (!data.brands.has(t.brand)) throw new DataError(`device ${t.id}: unknown brand ${t.brand}`);
+    if (t.dialect && !data.dialects.has(t.dialect))
+      throw new DataError(`device ${t.id}: unknown dialect ${t.dialect}`);
+  }
+  for (const f of data.faults.values()) {
+    for (const e of f.effects) {
+      if (e.type === "add-endpoints" && !data.devices.has(e.template)) {
+        throw new DataError(`fault ${f.id}: unknown device template ${e.template}`);
+      }
+    }
+  }
+  for (const c of data.cases.values()) {
+    for (const f of c.faults)
+      if (!data.faults.has(f)) throw new DataError(`case ${c.id}: unknown fault ${f}`);
+  }
+  for (const ind of data.clients.industries) {
+    if (!data.rooms.has(ind.rooms))
+      throw new DataError(`industry ${ind.id}: unknown room set ${ind.rooms}`);
+  }
+  if (!data.tickets.statuses.some((s) => s.initial))
+    throw new DataError("tickets.yaml: no initial status");
+  return data;
+}

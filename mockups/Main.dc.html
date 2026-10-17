@@ -1,0 +1,247 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Remote desk</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&amp;family=JetBrains+Mono:wght@400;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#0b0f14}
+a{color:#7cb7ff}a:hover{color:#a9cfff}
+button{font-family:inherit;cursor:pointer}
+</style>
+</helmet>
+<div style="width: 1440px; height: 900px; box-sizing: border-box; background: #0b0f14; color: #d6dde6; font-family: 'IBM Plex Sans', sans-serif; font-size: 13px; display: flex; flex-direction: column; overflow: hidden">
+
+<header style="height: 48px; flex-shrink: 0; display: flex; align-items: center; gap: 16px; padding: 0 16px; background: #10161e; border-bottom: 1px solid #222c38">
+<div style="font-family: 'JetBrains Mono', monospace; font-weight: 600; font-size: 14px; color: {{accent}}; letter-spacing: 0.04em">[WORKING TITLE]</div>
+<nav aria-label="Apps" style="display: flex; gap: 4px; flex: 1; align-items: center">
+<span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #8a96a6; padding-right: 4px">ATRIUM</span>
+<button style="height: 32px; padding: 0 12px; border-radius: 6px; border: 1px solid #2f3b4a; background: #1a2430; color: #e6edf3; font-size: 12.5px; font-weight: 500">LinkWise Desk</button>
+<button style="height: 32px; padding: 0 12px; border-radius: 6px; border: 1px solid transparent; background: transparent; color: #a8b3c1; font-size: 12.5px">Shinobi RMM</button>
+<button style="height: 32px; padding: 0 12px; border-radius: 6px; border: 1px solid transparent; background: transparent; color: #a8b3c1; font-size: 12.5px">ScreenLink</button>
+<button style="height: 32px; padding: 0 12px; border-radius: 6px; border: 1px solid transparent; background: transparent; color: #a8b3c1; font-size: 12.5px">Ovik</button>
+<span aria-hidden="true" style="width: 1px; height: 20px; background: #2f3b4a; margin: 0 8px"></span>
+<button style="height: 32px; padding: 0 12px; border-radius: 6px; border: 1px solid transparent; background: transparent; color: #a8b3c1; font-size: 12.5px">Hoodoo Docs</button>
+<button style="height: 32px; padding: 0 12px; border-radius: 6px; border: 1px solid transparent; background: transparent; color: #a8b3c1; font-size: 12.5px">VPN clients</button>
+<button style="height: 32px; padding: 0 12px; border-radius: 6px; border: 1px solid transparent; background: transparent; color: #a8b3c1; font-size: 12.5px">Terminal</button>
+<button style="height: 32px; padding: 0 12px; border-radius: 6px; border: 1px solid transparent; background: transparent; color: #a8b3c1; font-size: 12.5px">Vendor KB</button>
+<button style="height: 32px; padding: 0 12px; border-radius: 6px; border: 1px solid transparent; background: transparent; color: #a8b3c1; font-size: 12.5px">Team chat</button>
+</nav>
+<div style="display: flex; gap: 20px; align-items: center; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #a8b3c1">
+<span>SHIFT 2 · TUE 14:32</span>
+<span>QUEUE 5</span>
+<span style="color: #e6edf3">SCORE 1,240</span>
+</div>
+</header>
+
+<main style="flex: 1; min-height: 0; display: grid; grid-template-columns: 300px minmax(0, 1fr) 380px; gap: 12px; padding: 12px; box-sizing: border-box">
+
+<section aria-label="Ticket queue" style="display: flex; flex-direction: column; gap: 12px; min-height: 0">
+<div style="background: #121922; border: 1px solid #222c38; border-radius: 8px; display: flex; flex-direction: column; overflow: hidden">
+<div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; border-bottom: 1px solid #222c38">
+<span style="font-weight: 600; font-size: 13px">LinkWise Desk · My queue</span>
+<span style="font-size: 11.5px; color: #8a96a6">sorted by SLA</span>
+</div>
+<div style="padding: 10px 12px; border-left: 3px solid {{accent}}; background: #1a2430; display: flex; flex-direction: column; gap: 4px">
+<div style="display: flex; justify-content: space-between"><span style="font-family: 'JetBrains Mono', monospace; font-size: 11.5px; color: #ff8a80; font-weight: 600">P1 · #48211</span><span style="font-family: 'JetBrains Mono', monospace; font-size: 11.5px; color: {{accent}}">SLA 00:42:10</span></div>
+<div style="font-weight: 600">Main St Dental</div>
+<div style="color: #b9c3cf; font-size: 12.5px">Phones rebooting, Wi-Fi drops in exam rooms</div>
+</div>
+<div style="padding: 10px 12px; border-top: 1px solid #1c2530; display: flex; flex-direction: column; gap: 4px">
+<div style="display: flex; justify-content: space-between"><span style="font-family: 'JetBrains Mono', monospace; font-size: 11.5px; color: #f0c674">P2 · #48207</span><span style="font-family: 'JetBrains Mono', monospace; font-size: 11.5px; color: #a8b3c1">SLA 01:55:00</span></div>
+<div style="font-weight: 600">Harbor Freightways</div>
+<div style="color: #b9c3cf; font-size: 12.5px">Branch site-to-site VPN down since 6 AM</div>
+</div>
+<div style="padding: 10px 12px; border-top: 1px solid #1c2530; display: flex; flex-direction: column; gap: 4px">
+<div style="display: flex; justify-content: space-between"><span style="font-family: 'JetBrains Mono', monospace; font-size: 11.5px; color: #f0c674">P2 · #48199</span><span style="font-family: 'JetBrains Mono', monospace; font-size: 11.5px; color: #a8b3c1">SLA 03:10:00</span></div>
+<div style="font-weight: 600">Oak Ridge Library</div>
+<div style="color: #b9c3cf; font-size: 12.5px">Guest Wi-Fi clients get 169.254 addresses</div>
+</div>
+<div style="padding: 10px 12px; border-top: 1px solid #1c2530; display: flex; flex-direction: column; gap: 4px">
+<div style="display: flex; justify-content: space-between"><span style="font-family: 'JetBrains Mono', monospace; font-size: 11.5px; color: #8fb8de">P3 · #48188</span><span style="font-family: 'JetBrains Mono', monospace; font-size: 11.5px; color: #a8b3c1">SLA 1d 04h</span></div>
+<div style="font-weight: 600">Kessler and Vance CPA</div>
+<div style="color: #b9c3cf; font-size: 12.5px">Copier scan-to-email fails</div>
+</div>
+<div style="padding: 10px 12px; border-top: 1px solid #1c2530; display: flex; flex-direction: column; gap: 4px">
+<div style="display: flex; justify-content: space-between"><span style="font-family: 'JetBrains Mono', monospace; font-size: 11.5px; color: #c9a7ff">BREAK-FIX</span><span style="font-family: 'JetBrains Mono', monospace; font-size: 11.5px; color: #a8b3c1">Callback 15:00</span></div>
+<div style="font-weight: 600">Rosa's Bakery <span style="font-weight: 400; color: #8a96a6">(not managed)</span></div>
+<div style="color: #b9c3cf; font-size: 12.5px">Card reader offline. Needs one-time session with owner.</div>
+</div>
+</div>
+
+<div style="background: #121922; border: 1px solid #222c38; border-radius: 8px; flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden">
+<div style="padding: 10px 12px; border-bottom: 1px solid #222c38; font-weight: 600">Ovik alerts</div>
+<div style="padding: 8px 12px; display: flex; flex-direction: column; gap: 8px; font-size: 12.5px">
+<div style="display: flex; gap: 8px; align-items: baseline"><span style="width: 8px; height: 8px; border-radius: 50%; background: #f0a43a; flex-shrink: 0" aria-hidden="true"></span><span><span style="font-family: 'JetBrains Mono', monospace">MSD-SW01</span> PoE budget at 98%</span></div>
+<div style="display: flex; gap: 8px; align-items: baseline"><span style="width: 8px; height: 8px; border-radius: 50%; background: #f85149; flex-shrink: 0" aria-hidden="true"></span><span><span style="font-family: 'JetBrains Mono', monospace">MSD-AP-EX3</span> offline, flapped 7 times today</span></div>
+<div style="display: flex; gap: 8px; align-items: baseline"><span style="width: 8px; height: 8px; border-radius: 50%; background: #f85149; flex-shrink: 0" aria-hidden="true"></span><span><span style="font-family: 'JetBrains Mono', monospace">HFW-FW01</span> IPsec tunnel to Branch-2 down</span></div>
+<div style="display: flex; gap: 8px; align-items: baseline"><span style="width: 8px; height: 8px; border-radius: 50%; background: #6e7a8a; flex-shrink: 0" aria-hidden="true"></span><span style="color: #a8b3c1"><span style="font-family: 'JetBrains Mono', monospace">ORL-SW02</span> SNMP timeout (may be false)</span></div>
+</div>
+</div>
+</section>
+
+<section aria-label="Active ticket" style="display: flex; flex-direction: column; gap: 12px; min-height: 0">
+<div style="background: #121922; border: 1px solid #222c38; border-radius: 8px; padding: 14px 16px; display: flex; flex-direction: column; gap: 12px">
+<div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 16px">
+<div style="display: flex; flex-direction: column; gap: 4px">
+<div style="font-family: 'JetBrains Mono', monospace; font-size: 11.5px; color: #8a96a6">#48211 · P1 · Managed client · Escalated from Tier 1</div>
+<h1 style="margin: 0; font-size: 18px; font-weight: 600; color: #f0f4f8">Main St Dental: phones rebooting, Wi-Fi drops in exam rooms</h1>
+</div>
+<div style="text-align: right; flex-shrink: 0">
+<div style="font-size: 11.5px; color: #8a96a6">Contact</div>
+<div style="font-weight: 500">Pam R., front desk</div>
+<div style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #a8b3c1">(555) 014-2290</div>
+</div>
+</div>
+<div style="background: #0e141b; border: 1px solid #1f2935; border-radius: 6px; padding: 10px 12px; color: #c7d0db; font-size: 12.5px; line-height: 1.5">
+<span style="color: #8a96a6">Dispatch note:</span> Started Monday after the security vendor added 4 cameras. Exam room desk phones reboot a few times an hour. AP in Exam 3 drops out. Front desk is fine.
+</div>
+<div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px">
+<div style="border: 1px solid #2a3644; border-radius: 6px; padding: 8px 10px; display: flex; flex-direction: column; gap: 6px">
+<div style="display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600"><span style="width: 8px; height: 8px; border-radius: 50%; background: #3fb950" aria-hidden="true"></span>RMM agent online</div>
+<div style="font-family: 'JetBrains Mono', monospace; font-size: 11.5px; color: #a8b3c1">FRONTDESK-PC 10.20.10.15</div>
+<button style="height: 30px; border-radius: 5px; border: 1px solid #2f3b4a; background: #1a2430; color: #e6edf3; font-size: 12px">Open background shell</button>
+</div>
+<div style="border: 1px solid #2a3644; border-radius: 6px; padding: 8px 10px; display: flex; flex-direction: column; gap: 6px">
+<div style="display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600"><span style="width: 8px; height: 8px; border-radius: 50%; background: #6e7a8a" aria-hidden="true"></span>Site VPN</div>
+<div style="font-family: 'JetBrains Mono', monospace; font-size: 11.5px; color: #a8b3c1">FortressClient · MSD-SSLVPN</div>
+<button style="height: 30px; border-radius: 5px; border: 1px solid #2f3b4a; background: #1a2430; color: #e6edf3; font-size: 12px">Connect</button>
+</div>
+<div style="border: 1px solid #2a3644; border-radius: 6px; padding: 8px 10px; display: flex; flex-direction: column; gap: 6px">
+<div style="display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600"><span style="width: 8px; height: 8px; border-radius: 50%; background: #6e7a8a" aria-hidden="true"></span>Remote hands</div>
+<div style="font-size: 11.5px; color: #a8b3c1">Pam R. · free until 15:30</div>
+<button style="height: 30px; border-radius: 5px; border: 1px solid #2f3b4a; background: #1a2430; color: #e6edf3; font-size: 12px">Call Pam</button>
+</div>
+<div style="border: 1px solid #2a3644; border-radius: 6px; padding: 8px 10px; display: flex; flex-direction: column; gap: 6px">
+<div style="display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600"><span style="width: 8px; height: 8px; border-radius: 50%; background: #6e7a8a" aria-hidden="true"></span>Cloud controller</div>
+<div style="font-size: 11.5px; color: #8a96a6">None. On-prem gear only.</div>
+<button disabled style="height: 30px; border-radius: 5px; border: 1px solid #222c38; background: transparent; color: #6e7a8a; font-size: 12px; cursor: not-allowed">Not available</button>
+</div>
+<div style="border: 1px solid #2a3644; border-radius: 6px; padding: 8px 10px; display: flex; flex-direction: column; gap: 6px">
+<div style="display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600"><span style="width: 8px; height: 8px; border-radius: 50%; background: #6e7a8a" aria-hidden="true"></span>Console</div>
+<div style="font-size: 11.5px; color: #8a96a6">Needs remote hands or onsite</div>
+<button style="height: 30px; border-radius: 5px; border: 1px solid #2f3b4a; background: #1a2430; color: #e6edf3; font-size: 12px">Request console</button>
+</div>
+<div style="border: 1px solid #4a3a20; border-radius: 6px; padding: 8px 10px; display: flex; flex-direction: column; gap: 6px">
+<div style="display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600"><span style="width: 8px; height: 8px; border-radius: 50%; background: #f0a43a" aria-hidden="true"></span>Truck roll</div>
+<div style="font-size: 11.5px; color: #a8b3c1">35 min drive · costs SLA time</div>
+<button style="height: 30px; border-radius: 5px; border: 1px solid #6a5226; background: #2a2114; color: #f6d9a8; font-size: 12px">Dispatch me onsite</button>
+</div>
+</div>
+</div>
+
+<div style="background: #05080b; border: 1px solid #222c38; border-radius: 8px; flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden">
+<div role="tablist" aria-label="Sessions" style="display: flex; gap: 2px; padding: 6px 8px 0; background: #0e141b; border-bottom: 1px solid #222c38">
+<button role="tab" aria-selected="true" style="height: 30px; padding: 0 12px; border: 1px solid #2a3644; border-bottom-color: #05080b; border-radius: 6px 6px 0 0; background: #05080b; color: #e6edf3; font-family: 'JetBrains Mono', monospace; font-size: 11.5px; margin-bottom: -1px">SSH MSD-SW01 10.20.1.2</button>
+<button role="tab" aria-selected="false" style="height: 30px; padding: 0 12px; border: 1px solid transparent; background: transparent; color: #8a96a6; font-family: 'JetBrains Mono', monospace; font-size: 11.5px">FRONTDESK-PC (agent)</button>
+<button role="tab" aria-selected="false" style="height: 30px; padding: 0 12px; border: 1px solid transparent; background: transparent; color: #8a96a6; font-family: 'JetBrains Mono', monospace; font-size: 11.5px">https://10.20.1.1 (FortressGate)</button>
+</div>
+<pre style="margin: 0; padding: 12px 14px; flex: 1; overflow: auto; font-family: 'JetBrains Mono', monospace; font-size: 12px; line-height: 1.55; color: #c9d4df; white-space: pre">MSD-SW01# show power-over-ethernet brief
+
+  System power budget  : 370.0 W
+  Total power drawn    : 362.4 W
+  Power remaining      :   7.6 W
+
+  PORT    PRIORITY  STATUS       CLASS  DRAWN    NAME
+  1/1/1   critical  delivering   4      21.8 W   AP-LOBBY
+  1/1/3   low       delivering   2       6.1 W   PHONE-FRONT
+  1/1/13  low       delivering   0      12.9 W   (no description)
+  1/1/14  low       delivering   0      12.9 W   (no description)
+  1/1/15  low       delivering   0      12.9 W   (no description)
+  1/1/16  low       delivering   0      12.9 W   (no description)
+  1/1/18  low       <span style="color: #f0a43a">denied</span>       4       0.0 W   AP-EX3
+  1/1/21  low       <span style="color: #f0a43a">searching</span>    2       0.0 W   PHONE-EX4
+
+MSD-SW01# <span style="background: #c9d4df; color: #05080b"> </span></pre>
+</div>
+
+<div style="background: #121922; border: 1px solid #222c38; border-radius: 8px; padding: 12px 14px; display: flex; flex-direction: column; gap: 8px">
+<label for="notes" style="font-size: 12px; font-weight: 600">Ticket notes <span style="font-weight: 400; color: #8a96a6">· root cause, fix, device name and IP</span></label>
+<textarea id="notes" rows="2" placeholder="e.g. MSD-SW01 (10.20.1.2) PoE budget exhausted after 4 cameras added on 1/1/13-16..." style="resize: none; border-radius: 6px; border: 1px solid #2a3644; background: #0e141b; color: #e6edf3; font-family: inherit; font-size: 12.5px; padding: 8px 10px"></textarea>
+<div style="display: flex; justify-content: space-between; align-items: center">
+<span style="font-family: 'JetBrains Mono', monospace; font-size: 11.5px; color: #8a96a6">Time on ticket 00:17:50</span>
+<div style="display: flex; gap: 8px">
+<button style="height: 32px; padding: 0 14px; border-radius: 6px; border: 1px solid #2f3b4a; background: transparent; color: #c7d0db; font-size: 12.5px">Escalate</button>
+<button style="height: 32px; padding: 0 14px; border-radius: 6px; border: 1px solid #2f3b4a; background: #1a2430; color: #e6edf3; font-size: 12.5px">Hand to dispatch</button>
+<button style="height: 32px; padding: 0 14px; border-radius: 6px; border: 1px solid {{accent}}; background: {{accent}}; color: #1a1206; font-size: 12.5px; font-weight: 600">Resolve</button>
+</div>
+</div>
+</div>
+</section>
+
+<section aria-label="Documentation" style="display: flex; flex-direction: column; gap: 12px; min-height: 0">
+<div style="background: #121922; border: 1px solid #222c38; border-radius: 8px; display: flex; flex-direction: column; overflow: hidden">
+<div style="padding: 10px 12px; border-bottom: 1px solid #222c38; display: flex; justify-content: space-between; align-items: center">
+<span style="font-weight: 600">Hoodoo Docs · Main St Dental</span>
+<span style="font-size: 11px; padding: 2px 8px; border-radius: 10px; background: #2a2114; color: #f6d9a8; border: 1px solid #6a5226">Edited 14 months ago</span>
+</div>
+<div style="padding: 10px 12px; display: flex; flex-direction: column; gap: 12px">
+<div>
+<div style="font-size: 11px; color: #8a96a6; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px">Devices</div>
+<table style="width: 100%; border-collapse: collapse; font-size: 12px">
+<thead><tr style="color: #8a96a6; text-align: left"><th style="font-weight: 500; padding: 3px 0">Name</th><th style="font-weight: 500; padding: 3px 0">IP</th><th style="font-weight: 500; padding: 3px 0">Model</th></tr></thead>
+<tbody style="font-family: 'JetBrains Mono', monospace; font-size: 11.5px">
+<tr style="border-top: 1px solid #1c2530"><td style="padding: 5px 0">MSD-FW01</td><td>10.20.1.1</td><td style="color: #b9c3cf">FortressGate 60</td></tr>
+<tr style="border-top: 1px solid #1c2530"><td style="padding: 5px 0">MSD-SW01</td><td>10.20.1.2</td><td style="color: #b9c3cf">Aurora 6000 24G</td></tr>
+<tr style="border-top: 1px solid #1c2530"><td style="padding: 5px 0">MSD-AP-*</td><td>10.20.30.11-14</td><td style="color: #b9c3cf">Aurora AP-505</td></tr>
+<tr style="border-top: 1px solid #1c2530"><td style="padding: 5px 0">MSD-DC01</td><td>10.20.10.5</td><td style="color: #b9c3cf">Server, DHCP/DNS</td></tr>
+</tbody>
+</table>
+</div>
+<div>
+<div style="font-size: 11px; color: #8a96a6; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px">VLANs</div>
+<div style="font-family: 'JetBrains Mono', monospace; font-size: 11.5px; display: flex; flex-direction: column; gap: 3px; color: #c7d0db">
+<span>10 Data   10.20.10.0/24</span>
+<span>20 Voice  10.20.20.0/24</span>
+<span>30 Mgmt   10.20.30.0/24</span>
+</div>
+</div>
+<div>
+<div style="font-size: 11px; color: #8a96a6; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px">Access</div>
+<div style="display: flex; flex-direction: column; gap: 6px; font-size: 12px">
+<div style="display: flex; justify-content: space-between; align-items: center"><span><span style="font-family: 'JetBrains Mono', monospace">MSD-SW01</span> admin · ••••••••</span><button style="height: 26px; padding: 0 10px; border-radius: 5px; border: 1px solid #2f3b4a; background: #1a2430; color: #e6edf3; font-size: 11.5px">Reveal</button></div>
+<div style="color: #b9c3cf">VPN: FortressClient, profile MSD-SSLVPN, port 10443, MFA push</div>
+<div style="color: #b9c3cf">ISP: Valley Fiber · circuit VF-88213 · 203.0.113.42/29</div>
+</div>
+</div>
+</div>
+</div>
+
+<div style="background: #121922; border: 1px solid #222c38; border-radius: 8px; flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden">
+<div style="padding: 10px 12px; border-bottom: 1px solid #222c38; font-weight: 600">Vendor KB · Aurora Networks</div>
+<div style="padding: 10px 12px; display: flex; flex-direction: column; gap: 10px">
+<label for="kb" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Search vendor knowledge base</label>
+<input id="kb" value="poe priority" style="height: 32px; border-radius: 6px; border: 1px solid #2a3644; background: #0e141b; color: #e6edf3; font-family: 'JetBrains Mono', monospace; font-size: 12px; padding: 0 10px">
+<div style="display: flex; flex-direction: column; gap: 10px; font-size: 12.5px">
+<div><a href="#">CLI Reference 10.12: power-over-ethernet priority</a><div style="color: #8a96a6; font-size: 11.5px">Sets port priority critical, high or low. Low ports drop first when budget runs out.</div></div>
+<div><a href="#">Datasheet: Aurora 6000 PoE budget by model</a><div style="color: #8a96a6; font-size: 11.5px">24G and 48G class 4 budgets, PSU options.</div></div>
+<div><a href="#">Release notes 10.12.1005: known issues</a><div style="color: #8a96a6; font-size: 11.5px">LLDP-MED power negotiation fix for class 4 APs.</div></div>
+</div>
+</div>
+</div>
+</section>
+</main>
+
+<footer style="height: 28px; flex-shrink: 0; display: flex; align-items: center; gap: 20px; padding: 0 16px; background: #10161e; border-top: 1px solid #222c38; font-family: 'JetBrains Mono', monospace; font-size: 11.5px; color: #a8b3c1">
+<span style="display: flex; align-items: center; gap: 6px"><span style="width: 7px; height: 7px; border-radius: 50%; background: #6e7a8a" aria-hidden="true"></span>VPN: not connected</span>
+<span style="display: flex; align-items: center; gap: 6px"><span style="width: 7px; height: 7px; border-radius: 50%; background: #3fb950" aria-hidden="true"></span>SSH via jump host FRONTDESK-PC</span>
+<span>Ovik: 3 active alerts</span>
+<span style="margin-left: auto">Next: Rosa's Bakery callback 15:00</span>
+</footer>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#f0a43a","options":["#f0a43a","#4cc2ff","#3fb950","#c9a7ff"]},"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return { accent: this.props.accent ?? '#f0a43a' };
+  }
+}
+</script>
+</body>
+</html>

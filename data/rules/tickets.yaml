@@ -1,0 +1,13 @@
+# Statuses from the workflow interview, plus Open for a ticket nobody has touched yet.
+statuses:
+  - { id: open, name: Open, initial: true }
+  - { id: dispatch-review, name: Dispatch Review }
+  - { id: awaiting-client, name: Awaiting Client Response }
+  - { id: feedback-received, name: Feedback Received }
+  - { id: scheduled, name: Scheduled }
+  - { id: follow-up-needed, name: Follow-up Needed, automatic: true }
+  - { id: closed, name: Closed, final: true }
+techPriorities: [P2, P3, P4]
+aging:
+  followUpAfterDays: 3
+  p1AfterBusinessDays: 2

@@ -1,0 +1,13 @@
+- id: camera-day
+  name: Camera Day
+  pick: first-slice
+  requires:
+    kinds: { switch: 1, ap: 1, phone: 2 }
+  ticket:
+    title: "Phones rebooting, {ap.room} Wi-Fi down"
+    body: "Desk phones keep rebooting and the Wi-Fi in {ap.room} has been down since Monday. The camera installer was here Monday too."
+    priority: P2
+  faults: [poe-budget-exhausted]
+  redHerring: "AP and phone firmware are a few versions behind, so it looks like a firmware bug."
+  rootCause: "Four new cameras pushed {switch.hostname} past its PoE budget. Every port is low priority, so the switch cut power to the highest ports, including {ap.hostname}."
+  fix: "Set PoE priority high on the AP and phone ports, then quote a bigger PoE switch or a camera switch."

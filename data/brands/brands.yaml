@@ -1,0 +1,13 @@
+# Parody brands only. Never real vendor names in game data.
+- id: fortress
+  name: Fortress Networks
+  vpnClient: FortressClient
+  dialect: fortress
+- id: grandstand
+  name: Grandstand
+- id: hawkvision
+  name: Hawkvision
+- id: workbox
+  name: WorkBox
+- id: rackline
+  name: RackLine

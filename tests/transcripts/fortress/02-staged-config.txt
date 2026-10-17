@@ -1,0 +1,78 @@
+# seed: transcript-1
+# case: camera-day
+> config system interface
+> edit data
+> set allowaccess ping ssh https
+> set alias "Office LAN"
+> show
+edit "data"
+    set ip 10.168.10.1 255.255.255.0
+    set allowaccess ping ssh https
+    set status up
+    set alias "Office LAN"
+    set vlanid 10
+    set interface "port1"
+    set role lan
+    set type vlan
+next
+> abort
+> show system interface data
+config system interface
+    edit "data"
+        set ip 10.168.10.1 255.255.255.0
+        set allowaccess ping
+        set status up
+        set alias "Data"
+        set vlanid 10
+        set interface "port1"
+        set role lan
+        set type vlan
+    next
+end
+> config system interface
+> edit data
+> set allowaccess ping ssh https
+> next
+> end
+> show system interface data
+config system interface
+    edit "data"
+        set ip 10.168.10.1 255.255.255.0
+        set allowaccess ping ssh https
+        set status up
+        set alias "Data"
+        set vlanid 10
+        set interface "port1"
+        set role lan
+        set type vlan
+    next
+end
+> conf sys glo
+> set hostname FG-RENAMED
+> end
+> get system status
+Version: FortressGate-100G v7.4.5,build2225 (GA)
+Serial-Number: FG100G399808110
+Hostname: FG-RENAMED
+Operation Mode: NAT
+Current HA mode: standalone
+System time: Tue Oct 20 08:00:00 2026
+> config router static
+> edit 0
+> set dst 10.200.0.0/16
+> set gateway 10.0.0.1
+> set device "wan1"
+> end
+> show router static
+config router static
+    edit 1
+        set dst 0.0.0.0 0.0.0.0
+        set gateway 198.51.100.241
+        set device "wan1"
+    next
+    edit 2
+        set dst 10.200.0.0 255.255.0.0
+        set gateway 10.0.0.1
+        set device "wan1"
+    next
+end

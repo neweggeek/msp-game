@@ -1,0 +1,69 @@
+- id: fortressgate-60g
+  kind: firewall
+  brand: fortress
+  model: FortressGate 60G
+  dialect: fortress
+  tiers: [low, mid]
+  firmware: ["7.2.8", "7.2.10", "7.4.3"]
+  credentials: { username: admin }
+  ports:
+    - { pattern: "wan{n}", from: 1, to: 2, role: wan }
+    - { pattern: "internal{n}", from: 1, to: 5, role: lan }
+
+- id: fortressgate-100g
+  kind: firewall
+  brand: fortress
+  model: FortressGate 100G
+  dialect: fortress
+  tiers: [mid, high]
+  firmware: ["7.2.10", "7.4.3", "7.4.5"]
+  credentials: { username: admin }
+  ports:
+    - { pattern: "wan{n}", from: 1, to: 2, role: wan }
+    - { pattern: "port{n}", from: 1, to: 16, role: lan }
+
+- id: fortressswitch-108p
+  kind: switch
+  brand: fortress
+  model: FortressSwitch 108P
+  dialect: fortress
+  tiers: [low]
+  firmware: ["7.2.6", "7.4.1"]
+  poeBudgetW: 130
+  ports:
+    - { pattern: "port{n}", from: 1, to: 8, poe: true }
+    - { pattern: "port{n}", from: 9, to: 10, role: uplink }
+
+- id: fortressswitch-124p
+  kind: switch
+  brand: fortress
+  model: FortressSwitch 124P
+  dialect: fortress
+  tiers: [low, mid, high]
+  firmware: ["7.2.6", "7.4.1", "7.4.2"]
+  poeBudgetW: 185
+  ports:
+    - { pattern: "port{n}", from: 1, to: 24, poe: true }
+    - { pattern: "port{n}", from: 25, to: 28, role: uplink }
+
+- id: fortressswitch-148p
+  kind: switch
+  brand: fortress
+  model: FortressSwitch 148P
+  dialect: fortress
+  tiers: [mid, high]
+  firmware: ["7.4.1", "7.4.2"]
+  poeBudgetW: 370
+  ports:
+    - { pattern: "port{n}", from: 1, to: 48, poe: true }
+    - { pattern: "port{n}", from: 49, to: 52, role: uplink }
+
+- id: fortressap-231
+  kind: ap
+  brand: fortress
+  model: FortressAP 231G
+  tiers: [low, mid, high]
+  firmware: ["7.2.3", "7.4.0"]
+  poe: { class: 4, drawW: 19 }
+  ports:
+    - { pattern: "lan{n}", from: 1, to: 1 }

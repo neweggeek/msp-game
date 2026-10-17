@@ -1,0 +1,5 @@
+# Response and resolve targets per priority. "business" means MSP business hours only.
+P1: { responseMinutes: 15, resolveMinutes: 240, clock: wall }
+P2: { responseMinutes: 120, resolveBusinessDays: 1, clock: business }
+P3: { responseMinutes: 480, resolveBusinessDays: 5, clock: business }
+P4: { responseMinutes: 480, resolveBusinessDays: 5, clock: business }

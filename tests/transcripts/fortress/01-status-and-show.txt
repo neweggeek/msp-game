@@ -1,0 +1,219 @@
+# seed: transcript-1
+# case: camera-day
+> get system status
+Version: FortressGate-100G v7.4.5,build2225 (GA)
+Serial-Number: FG100G399808110
+Hostname: FG-OHI01
+Operation Mode: NAT
+Current HA mode: standalone
+System time: Tue Oct 20 08:00:00 2026
+> get sys stat
+Version: FortressGate-100G v7.4.5,build2225 (GA)
+Serial-Number: FG100G399808110
+Hostname: FG-OHI01
+Operation Mode: NAT
+Current HA mode: standalone
+System time: Tue Oct 20 08:00:00 2026
+> show system global
+config system global
+    set hostname "FG-OHI01"
+    set timezone "US/Central"
+end
+> show system interface mgmt
+config system interface
+    edit "mgmt"
+        set ip 10.168.99.1 255.255.255.0
+        set allowaccess ping https ssh fabric
+        set status up
+        set alias "Mgmt"
+        set vlanid 99
+        set interface "port1"
+        set role lan
+        set type vlan
+    next
+end
+> show sys int
+config system interface
+    edit "wan1"
+        set ip 198.51.100.242 255.255.255.248
+        set allowaccess ping
+        set status up
+        set alias "ISP"
+        set role wan
+        set type physical
+    next
+    edit "wan2"
+        set status down
+        set role wan
+        set type physical
+    next
+    edit "port1"
+        set status up
+        set role lan
+        set type physical
+    next
+    edit "port2"
+        set status down
+        set role lan
+        set type physical
+    next
+    edit "port3"
+        set status down
+        set role lan
+        set type physical
+    next
+    edit "port4"
+        set status down
+        set role lan
+        set type physical
+    next
+    edit "port5"
+        set status down
+        set role lan
+        set type physical
+    next
+    edit "port6"
+        set status down
+        set role lan
+        set type physical
+    next
+    edit "port7"
+        set status down
+        set role lan
+        set type physical
+    next
+    edit "port8"
+        set status down
+        set role lan
+        set type physical
+    next
+    edit "port9"
+        set status down
+        set role lan
+        set type physical
+    next
+    edit "port10"
+        set status down
+        set role lan
+        set type physical
+    next
+    edit "port11"
+        set status down
+        set role lan
+        set type physical
+    next
+    edit "port12"
+        set status down
+        set role lan
+        set type physical
+    next
+    edit "port13"
+        set status down
+        set role lan
+        set type physical
+    next
+    edit "port14"
+        set status down
+        set role lan
+        set type physical
+    next
+    edit "port15"
+        set status down
+        set role lan
+        set type physical
+    next
+    edit "port16"
+        set status down
+        set role lan
+        set type physical
+    next
+    edit "data"
+        set ip 10.168.10.1 255.255.255.0
+        set allowaccess ping
+        set status up
+        set alias "Data"
+        set vlanid 10
+        set interface "port1"
+        set role lan
+        set type vlan
+    next
+    edit "voice"
+        set ip 10.168.20.1 255.255.255.0
+        set allowaccess ping
+        set status up
+        set alias "Voice"
+        set vlanid 20
+        set interface "port1"
+        set role lan
+        set type vlan
+    next
+    edit "mgmt"
+        set ip 10.168.99.1 255.255.255.0
+        set allowaccess ping https ssh fabric
+        set status up
+        set alias "Mgmt"
+        set vlanid 99
+        set interface "port1"
+        set role lan
+        set type vlan
+    next
+end
+> get system interface
+== [ wan1 ]
+name: wan1   mode: static   ip: 198.51.100.242 255.255.255.248   status: up   type: physical   alias: ISP
+== [ wan2 ]
+name: wan2   mode: static   ip: 0.0.0.0 0.0.0.0   status: down   type: physical   alias: 
+== [ port1 ]
+name: port1   mode: static   ip: 0.0.0.0 0.0.0.0   status: up   type: physical   alias: 
+== [ port2 ]
+name: port2   mode: static   ip: 0.0.0.0 0.0.0.0   status: down   type: physical   alias: 
+== [ port3 ]
+name: port3   mode: static   ip: 0.0.0.0 0.0.0.0   status: down   type: physical   alias: 
+== [ port4 ]
+name: port4   mode: static   ip: 0.0.0.0 0.0.0.0   status: down   type: physical   alias: 
+== [ port5 ]
+name: port5   mode: static   ip: 0.0.0.0 0.0.0.0   status: down   type: physical   alias: 
+== [ port6 ]
+name: port6   mode: static   ip: 0.0.0.0 0.0.0.0   status: down   type: physical   alias: 
+== [ port7 ]
+name: port7   mode: static   ip: 0.0.0.0 0.0.0.0   status: down   type: physical   alias: 
+== [ port8 ]
+name: port8   mode: static   ip: 0.0.0.0 0.0.0.0   status: down   type: physical   alias: 
+== [ port9 ]
+name: port9   mode: static   ip: 0.0.0.0 0.0.0.0   status: down   type: physical   alias: 
+== [ port10 ]
+name: port10   mode: static   ip: 0.0.0.0 0.0.0.0   status: down   type: physical   alias: 
+== [ port11 ]
+name: port11   mode: static   ip: 0.0.0.0 0.0.0.0   status: down   type: physical   alias: 
+== [ port12 ]
+name: port12   mode: static   ip: 0.0.0.0 0.0.0.0   status: down   type: physical   alias: 
+== [ port13 ]
+name: port13   mode: static   ip: 0.0.0.0 0.0.0.0   status: down   type: physical   alias: 
+== [ port14 ]
+name: port14   mode: static   ip: 0.0.0.0 0.0.0.0   status: down   type: physical   alias: 
+== [ port15 ]
+name: port15   mode: static   ip: 0.0.0.0 0.0.0.0   status: down   type: physical   alias: 
+== [ port16 ]
+name: port16   mode: static   ip: 0.0.0.0 0.0.0.0   status: down   type: physical   alias: 
+== [ data ]
+name: data   mode: static   ip: 10.168.10.1 255.255.255.0   status: up   type: vlan   alias: Data
+== [ voice ]
+name: voice   mode: static   ip: 10.168.20.1 255.255.255.0   status: up   type: vlan   alias: Voice
+== [ mgmt ]
+name: mgmt   mode: static   ip: 10.168.99.1 255.255.255.0   status: up   type: vlan   alias: Mgmt
+> get router info routing-table all
+Codes: S - static, C - connected
+
+S*       0.0.0.0/0 [10/0] via 198.51.100.241, wan1
+C        198.51.100.240/29 is directly connected, wan1
+C        10.168.10.0/24 is directly connected, data
+C        10.168.20.0/24 is directly connected, voice
+C        10.168.99.0/24 is directly connected, mgmt
+> show router static
+config router static
+    edit 1
+        set dst 0.0.0.0 0.0.0.0
+        set gateway 198.51.100.241
+        set device "wan1"
+    next
+end

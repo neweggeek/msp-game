@@ -1,0 +1,71 @@
+# seed: transcript-1
+# case: camera-day
+> ?
+config       Configure object.
+show         Show configuration.
+get          Get dynamic and system information.
+diagnose     Diagnose facility.
+execute      Execute static commands.
+exit         Exit the CLI.
+> get ?
+system
+router
+> exe ?
+ping
+traceroute
+> bogus
+Unknown action 0
+Command fail. Return code -1
+> g system status
+Version: FortressGate-100G v7.4.5,build2225 (GA)
+Serial-Number: FG100G399808110
+Hostname: FG-OHI01
+Operation Mode: NAT
+Current HA mode: standalone
+System time: Tue Oct 20 08:00:00 2026
+> config system nothing
+command parse error before 'nothing'
+Command fail. Return code -61
+> config system interface
+> set ip 10.0.0.1 255.255.255.0
+Unknown action 0
+Command fail. Return code -1
+> edit data
+> set ip 10.0.0.1
+Command fail. Return code -61
+> set ip 10.0.0.1 255.0.255.0
+value parse error before '255.0.255.0'
+Command fail. Return code -8
+> set status sideways
+value parse error before 'sideways'
+Command fail. Return code -8
+> set allowaccess ping telnet
+value parse error before 'telnet'
+Command fail. Return code -8
+> set type physical
+The field is read-only.
+Command fail. Return code -651
+> set nothing 1
+command parse error before 'nothing'
+Command fail. Return code -61
+> unset alias
+> show
+edit "data"
+    set ip 10.168.10.1 255.255.255.0
+    set allowaccess ping
+    set status up
+    set vlanid 10
+    set interface "port1"
+    set role lan
+    set type vlan
+next
+> abort
+> show system interface nosuch
+entry not found in datasource
+Command fail. Return code -3
+> execute ping not-an-ip
+Unable to resolve hostname.
+> exit
+Connection to FG-OHI01 closed.
+> get system status
+Session is closed.

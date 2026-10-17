@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Onsite rack view</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&amp;family=JetBrains+Mono:wght@400;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#0b0f14}
+a{color:#7cb7ff}a:hover{color:#a9cfff}
+button{font-family:inherit;cursor:pointer}
+</style>
+</helmet>
+<div style="width: 1440px; height: 900px; box-sizing: border-box; background: #0b0f14; color: #d6dde6; font-family: 'IBM Plex Sans', sans-serif; font-size: 13px; display: flex; flex-direction: column; overflow: hidden">
+
+<header style="height: 48px; flex-shrink: 0; display: flex; align-items: center; gap: 16px; padding: 0 16px; background: #10161e; border-bottom: 1px solid #222c38">
+<div style="font-family: 'JetBrains Mono', monospace; font-weight: 600; font-size: 14px; color: {{accent}}; letter-spacing: 0.04em">[WORKING TITLE]</div>
+<div style="color: #a8b3c1">Main St Dental · #48211 · Network closet</div>
+<div role="group" aria-label="View mode" style="display: flex; margin-left: 24px; border: 1px solid #2f3b4a; border-radius: 6px; overflow: hidden">
+<button aria-pressed="true" style="height: 32px; padding: 0 14px; border: none; background: #1a2430; color: #e6edf3; font-size: 12.5px; font-weight: 500">Onsite</button>
+<button aria-pressed="false" style="height: 32px; padding: 0 14px; border: none; border-left: 1px solid #2f3b4a; background: transparent; color: #a8b3c1; font-size: 12.5px">Remote hands (Pam)</button>
+<button aria-pressed="false" style="height: 32px; padding: 0 14px; border: none; border-left: 1px solid #2f3b4a; background: transparent; color: #a8b3c1; font-size: 12.5px">Back to desk</button>
+</div>
+<div style="margin-left: auto; display: flex; gap: 20px; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #a8b3c1">
+<span>ARRIVED 15:09</span>
+<span style="color: {{accent}}">SLA 00:05:10</span>
+</div>
+</header>
+
+<main style="flex: 1; min-height: 0; display: grid; grid-template-columns: 260px minmax(0, 1fr) 360px; gap: 12px; padding: 12px; box-sizing: border-box">
+
+<section aria-label="Floor plan" style="background: #121922; border: 1px solid #222c38; border-radius: 8px; display: flex; flex-direction: column; overflow: hidden">
+<div style="padding: 10px 12px; border-bottom: 1px solid #222c38; font-weight: 600">Floor plan</div>
+<div style="padding: 12px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; font-size: 12px">
+<div style="grid-column: span 2; height: 64px; border: 1px solid #2a3644; border-radius: 4px; padding: 6px 8px; display: flex; justify-content: space-between"><span>Waiting room</span><span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #3fb950">AP · C1</span></div>
+<div style="height: 64px; border: 1px solid #2a3644; border-radius: 4px; padding: 6px 8px; display: flex; flex-direction: column; justify-content: space-between"><span>Front desk</span><span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #3fb950">PC · phone</span></div>
+<div style="height: 64px; border: 2px solid {{accent}}; border-radius: 4px; padding: 5px 7px; display: flex; flex-direction: column; justify-content: space-between; background: #1d1810"><span style="font-weight: 600">Network closet</span><span style="font-size: 11px; color: #f6d9a8">You are here</span></div>
+<div style="height: 64px; border: 1px solid #2a3644; border-radius: 4px; padding: 6px 8px; display: flex; flex-direction: column; justify-content: space-between"><span>Exam 1</span><span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #3fb950">phone · C2</span></div>
+<div style="height: 64px; border: 1px solid #2a3644; border-radius: 4px; padding: 6px 8px; display: flex; flex-direction: column; justify-content: space-between"><span>Exam 2</span><span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #3fb950">AP · phone</span></div>
+<div style="height: 64px; border: 1px solid #5a2a2a; border-radius: 4px; padding: 6px 8px; display: flex; flex-direction: column; justify-content: space-between"><span>Exam 3</span><span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #ff8a80">AP down · phone</span></div>
+<div style="height: 64px; border: 1px solid #5a2a2a; border-radius: 4px; padding: 6px 8px; display: flex; flex-direction: column; justify-content: space-between"><span>Exam 4</span><span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #ff8a80">phone off · C3</span></div>
+<div style="grid-column: span 2; height: 56px; border: 1px solid #2a3644; border-radius: 4px; padding: 6px 8px; display: flex; justify-content: space-between"><span>Break room</span><span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #3fb950">C4</span></div>
+</div>
+<div style="padding: 0 12px 12px; font-size: 11.5px; color: #8a96a6; line-height: 1.5">C1 to C4: new cameras, installed Monday by security vendor.</div>
+</section>
+
+<section aria-label="Rack" style="display: flex; flex-direction: column; gap: 12px; min-height: 0">
+<div style="background: #121922; border: 1px solid #222c38; border-radius: 8px; padding: 12px 16px; display: flex; flex-direction: column; gap: 10px">
+<div style="display: flex; justify-content: space-between; align-items: baseline"><span style="font-weight: 600">Rack A · front view</span><span style="font-size: 11.5px; color: #8a96a6">Click a device or port to inspect</span></div>
+<div style="display: flex; gap: 8px">
+<div style="display: flex; flex-direction: column; font-family: 'JetBrains Mono', monospace; font-size: 10.5px; color: #6e7a8a; padding-top: 8px">
+<span style="height: 44px">8</span><span style="height: 76px">7</span><span style="height: 32px">6</span><span style="height: 44px">5</span><span style="height: 44px">4</span><span style="height: 44px">3</span><span style="height: 84px">1-2</span>
+</div>
+<div style="flex: 1; border: 6px solid #2a323c; border-radius: 4px; background: #070a0d; padding: 4px; display: flex; flex-direction: column; gap: 4px">
+
+<div style="height: 40px; background: #1b2028; border-radius: 3px; display: flex; align-items: center; gap: 10px; padding: 0 10px">
+<span style="font-size: 11px; color: #a8b3c1; width: 92px">Patch panel</span>
+<div style="display: flex; gap: 4px">
+<sc-for list="{{jacks}}" as="j" hint-placeholder-count="24"><span style="width: 16px; height: 12px; background: #050708; border-radius: 2px; border: 1px solid #39424e"></span></sc-for>
+</div>
+</div>
+
+<div style="height: 72px; background: #1f2731; border-radius: 3px; display: flex; align-items: center; gap: 10px; padding: 0 10px; outline: 2px solid {{accent}}; outline-offset: 1px">
+<div style="width: 92px; display: flex; flex-direction: column; gap: 2px">
+<span style="font-size: 11px; font-weight: 600">MSD-SW01</span>
+<span style="font-size: 10.5px; color: #a8b3c1">Aurora 6000 48G</span>
+<span style="display: flex; align-items: center; gap: 4px; font-size: 10.5px; color: #f0a43a"><span style="width: 6px; height: 6px; border-radius: 50%; background: #f0a43a" aria-hidden="true"></span>PoE MAX</span>
+</div>
+<div style="display: flex; flex-direction: column; gap: 4px">
+<div style="display: flex; gap: 3px">
+<sc-for list="{{topPorts}}" as="p" hint-placeholder-count="24">
+<div style="display: flex; flex-direction: column; align-items: center; gap: 2px">
+<div style="display: flex; gap: 2px"><span style="width: 5px; height: 5px; border-radius: 50%; background: {{p.link}}"></span><span style="width: 5px; height: 5px; border-radius: 50%; background: {{p.poe}}"></span></div>
+<span style="width: 18px; height: 14px; background: #050708; border-radius: 2px; border: {{p.ring}}"></span>
+</div>
+</sc-for>
+</div>
+<div style="display: flex; gap: 3px">
+<sc-for list="{{bottomPorts}}" as="p" hint-placeholder-count="24">
+<div style="display: flex; flex-direction: column; align-items: center; gap: 2px">
+<span style="width: 18px; height: 14px; background: #050708; border-radius: 2px; border: {{p.ring}}"></span>
+<div style="display: flex; gap: 2px"><span style="width: 5px; height: 5px; border-radius: 50%; background: {{p.link}}"></span><span style="width: 5px; height: 5px; border-radius: 50%; background: {{p.poe}}"></span></div>
+</div>
+</sc-for>
+</div>
+</div>
+</div>
+
+<div style="height: 28px; background: #12161c; border-radius: 3px; display: flex; align-items: center; padding: 0 10px; font-size: 10.5px; color: #6e7a8a">Cable manager</div>
+
+<div style="height: 40px; background: #2a1a1a; border-radius: 3px; display: flex; align-items: center; gap: 10px; padding: 0 10px">
+<div style="width: 92px; display: flex; flex-direction: column"><span style="font-size: 11px; font-weight: 600">MSD-FW01</span><span style="font-size: 10.5px; color: #c7a5a5">FortressGate 60</span></div>
+<div style="display: flex; gap: 4px"><span style="width: 18px; height: 14px; background: #050708; border-radius: 2px; border: 1px solid #3fb950"></span><span style="width: 18px; height: 14px; background: #050708; border-radius: 2px; border: 1px solid #3fb950"></span><span style="width: 18px; height: 14px; background: #050708; border-radius: 2px; border: 1px solid #39424e"></span><span style="width: 18px; height: 14px; background: #050708; border-radius: 2px; border: 1px solid #39424e"></span></div>
+<span style="margin-left: auto; font-family: 'JetBrains Mono', monospace; font-size: 10.5px; color: #3fb950">WAN1 UP</span>
+</div>
+
+<div style="height: 40px; background: #1b2028; border-radius: 3px; display: flex; align-items: center; gap: 10px; padding: 0 10px">
+<div style="width: 92px; display: flex; flex-direction: column"><span style="font-size: 11px; font-weight: 600">NVR</span><span style="font-size: 10.5px; color: #a8b3c1">CamSecure 8ch</span></div>
+<span style="font-size: 11px; padding: 2px 8px; background: #e8d36a; color: #1a1606; border-radius: 2px; transform: rotate(-2deg)">Installed Mon. Do not unplug!</span>
+</div>
+
+<div style="height: 40px; background: #12161c; border-radius: 3px; display: flex; align-items: center; gap: 10px; padding: 0 10px">
+<div style="width: 92px; display: flex; flex-direction: column"><span style="font-size: 11px; font-weight: 600">Shelf</span><span style="font-size: 10.5px; color: #a8b3c1">Valley Fiber ONT</span></div>
+<span style="font-family: 'JetBrains Mono', monospace; font-size: 10.5px; color: #3fb950">PON ● LOS ○</span>
+</div>
+
+<div style="height: 80px; background: #1b2028; border-radius: 3px; display: flex; align-items: center; gap: 10px; padding: 0 10px">
+<div style="width: 92px; display: flex; flex-direction: column"><span style="font-size: 11px; font-weight: 600">UPS</span><span style="font-size: 10.5px; color: #a8b3c1">1500 VA</span></div>
+<div style="background: #0c1a12; border: 1px solid #234a32; border-radius: 3px; padding: 6px 10px; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #7ee2a0; display: flex; flex-direction: column; gap: 2px"><span>LOAD 61%  BATT 100%</span><span>RUNTIME 22 MIN</span></div>
+</div>
+</div>
+</div>
+</div>
+
+<div style="background: #121922; border: 1px solid #222c38; border-radius: 8px; padding: 12px 16px; display: flex; flex-direction: column; gap: 10px; flex: 1; min-height: 0">
+<div style="display: flex; justify-content: space-between; align-items: baseline"><span style="font-weight: 600">Inspecting MSD-SW01 port 18</span><span style="font-family: 'JetBrains Mono', monospace; font-size: 11.5px; color: #8a96a6">10.20.1.2</span></div>
+<div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; font-size: 12px">
+<div><div style="color: #8a96a6; font-size: 11px">Link LED</div><div>Off</div></div>
+<div><div style="color: #8a96a6; font-size: 11px">PoE LED</div><div style="color: #f0a43a">Amber, blinking</div></div>
+<div><div style="color: #8a96a6; font-size: 11px">Cable label</div><div style="font-family: 'JetBrains Mono', monospace">EX3-AP</div></div>
+</div>
+<div style="display: flex; gap: 8px; flex-wrap: wrap">
+<button style="height: 32px; padding: 0 12px; border-radius: 6px; border: 1px solid #2f3b4a; background: #1a2430; color: #e6edf3; font-size: 12.5px">Run cable test</button>
+<button style="height: 32px; padding: 0 12px; border-radius: 6px; border: 1px solid #2f3b4a; background: #1a2430; color: #e6edf3; font-size: 12.5px">Clip PoE tester</button>
+<button style="height: 32px; padding: 0 12px; border-radius: 6px; border: 1px solid #2f3b4a; background: #1a2430; color: #e6edf3; font-size: 12.5px">Move cable to port...</button>
+<button style="height: 32px; padding: 0 12px; border-radius: 6px; border: 1px solid #2f3b4a; background: #1a2430; color: #e6edf3; font-size: 12.5px">Plug in console</button>
+<button style="height: 32px; padding: 0 12px; border-radius: 6px; border: 1px solid #2f3b4a; background: #1a2430; color: #e6edf3; font-size: 12.5px">Photo for ticket</button>
+</div>
+</div>
+</section>
+
+<section aria-label="Kit and contacts" style="display: flex; flex-direction: column; gap: 12px; min-height: 0">
+<div style="background: #121922; border: 1px solid #222c38; border-radius: 8px; display: flex; flex-direction: column; overflow: hidden">
+<div style="padding: 10px 12px; border-bottom: 1px solid #222c38; display: flex; justify-content: space-between"><span style="font-weight: 600">Tool belt</span><span style="font-size: 11.5px; color: #8a96a6">van stock</span></div>
+<ul style="list-style: none; margin: 0; padding: 6px 12px 10px; display: flex; flex-direction: column; font-size: 12.5px">
+<li style="display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #1c2530"><span>Laptop with terminal and Wireshark</span><span style="color: #8a96a6">1</span></li>
+<li style="display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #1c2530"><span>Console cables: RJ45 rollover, USB-C</span><span style="color: #8a96a6">2</span></li>
+<li style="display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #1c2530"><span>Cable tester with TDR</span><span style="color: #8a96a6">1</span></li>
+<li style="display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #1c2530"><span>Toner and probe</span><span style="color: #8a96a6">1</span></li>
+<li style="display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #1c2530"><span>Inline PoE tester</span><span style="color: #8a96a6">1</span></li>
+<li style="display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #1c2530"><span>PoE+ injector</span><span style="color: #8a96a6">1</span></li>
+<li style="display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #1c2530"><span>SFP: 1G SR, 1G LR, 10G SR</span><span style="color: #8a96a6">3</span></li>
+<li style="display: flex; justify-content: space-between; padding: 6px 0"><span>Patch cables, assorted</span><span style="color: #8a96a6">12</span></li>
+</ul>
+</div>
+
+<div style="background: #121922; border: 1px solid #222c38; border-radius: 8px; flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden">
+<div style="padding: 10px 12px; border-bottom: 1px solid #222c38; display: flex; justify-content: space-between"><span style="font-weight: 600">Remote hands · Pam R.</span><span style="font-size: 11.5px; color: #8a96a6">used before you drove out</span></div>
+<div style="padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; font-size: 12.5px; line-height: 1.45">
+<div style="align-self: flex-end; max-width: 85%; background: #1a2430; border-radius: 8px 8px 2px 8px; padding: 7px 10px">Can you look at the switch and tell me what light is on next to port 18?</div>
+<div style="align-self: flex-start; max-width: 85%; background: #1f1b14; border-radius: 8px 8px 8px 2px; padding: 7px 10px">Okay, there's a bunch of green ones and one kind of orange? Maybe it's 17. They're really small.</div>
+<div style="align-self: flex-end; max-width: 85%; background: #1a2430; border-radius: 8px 8px 2px 8px; padding: 7px 10px">No worries. Is anything new plugged in up there?</div>
+<div style="align-self: flex-start; max-width: 85%; background: #1f1b14; border-radius: 8px 8px 8px 2px; padding: 7px 10px">The camera guy put a box in Monday. He said don't touch it.</div>
+</div>
+</div>
+</section>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#f0a43a","options":["#f0a43a","#4cc2ff","#3fb950","#c9a7ff"]},"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() {
+    var accent = this.props.accent ?? '#f0a43a';
+    var linked = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,19,20,22,23,24,25,26];
+    var powered = [1,3,5,7,9,11,13,14,15,16,17,19];
+    var denied = [18,21];
+    var mk = function (n) {
+      var isDenied = denied.indexOf(n) !== -1;
+      return {
+        n: n,
+        link: linked.indexOf(n) !== -1 ? '#3fb950' : '#1c232c',
+        poe: isDenied ? '#f0a43a' : (powered.indexOf(n) !== -1 ? '#3fb950' : '#1c232c'),
+        ring: n === 18 ? '2px solid ' + accent : '1px solid #39424e'
+      };
+    };
+    var topPorts = [];
+    var bottomPorts = [];
+    for (var i = 1; i <= 48; i += 2) { topPorts.push(mk(i)); bottomPorts.push(mk(i + 1)); }
+    var jacks = [];
+    for (var k = 0; k < 24; k++) { jacks.push({ k: k }); }
+    return { accent: accent, topPorts: topPorts, bottomPorts: bottomPorts, jacks: jacks };
+  }
+}
+</script>
+</body>
+</html>

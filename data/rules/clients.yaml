@@ -1,0 +1,29 @@
+tiers:
+  low:  { weight: 3, headcount: [5, 15] }
+  mid:  { weight: 5, headcount: [15, 40] }
+  high: { weight: 2, headcount: [40, 80] }
+industries:
+  - id: medical
+    rooms: clinic
+    names: ["{place} Family Clinic", "{place} Pediatrics", "{place} Dental", "{place} Physical Therapy"]
+  - id: professional
+    rooms: office
+    names: ["{place} Accounting", "{place} Law Group", "{place} Insurance", "{place} Realty"]
+places: [Maple Ridge, Cedar Point, Riverbend, Oak Hollow, Lakeview, Pinecrest, Stonebridge, Willow Creek, Harbor, Summit]
+firstNames: [Dana, Marcus, Priya, Tom, Alicia, Kenji, Rosa, Brent, Mei, Omar, Janet, Luis, Tara, Frank]
+lastNames: [Okafor, Lindqvist, Patel, Moreno, Brennan, Hughes, Nakamura, Kowalski, Reyes, Fischer]
+contactRoles: [Office Manager, Practice Manager, Owner, Front Desk Lead]
+afterHoursWindows:
+  - { label: "after 8 PM", start: 1200, end: 1440, weight: 6 }
+  - { label: "after 5 PM", start: 1020, end: 1440, weight: 3 }
+  - { label: "around 3 AM", start: 150, end: 240, weight: 1 }
+businessHours:
+  - { start: 480, end: 1020, weight: 5 }
+  - { start: 450, end: 1080, weight: 3 }
+  - { start: 420, end: 1140, weight: 1 }
+contactPreference: { quick-call-ok: 4, scheduled-only: 1 }
+lan:
+  vlans:
+    - { id: 10, name: Data, subnet: "10.{site}.10.0/24", role: data }
+    - { id: 20, name: Voice, subnet: "10.{site}.20.0/24", role: voice }
+    - { id: 99, name: Mgmt, subnet: "10.{site}.99.0/24", role: mgmt }

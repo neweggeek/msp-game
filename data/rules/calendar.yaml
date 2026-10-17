@@ -1,0 +1,6 @@
+# Game time is whole minutes since the epoch. The epoch is a Monday at 00:00.
+epochDate: "2026-10-19"
+# Play starts Tuesday 08:00, the day after the camera install.
+startMinute: 1920
+mspHours: { start: 480, end: 1020 }
+workDays: [0, 1, 2, 3, 4]

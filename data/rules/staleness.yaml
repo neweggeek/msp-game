@@ -1,0 +1,9 @@
+# Chance that each doc entry is degraded, per staleness level.
+levels:
+  fresh:  { wrongIp: 0.0,  missingDevice: 0.0,  missingCredential: 0.0,  wrongFirmware: 0.05 }
+  partly: { wrongIp: 0.08, missingDevice: 0.1,  missingCredential: 0.05, wrongFirmware: 0.3 }
+  stale:  { wrongIp: 0.2,  missingDevice: 0.25, missingCredential: 0.15, wrongFirmware: 0.6 }
+byTier:
+  low:  { fresh: 1, partly: 3, stale: 6 }
+  mid:  { fresh: 3, partly: 6, stale: 1 }
+  high: { fresh: 6, partly: 3, stale: 1 }

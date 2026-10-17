@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Shift view</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&amp;family=JetBrains+Mono:wght@400;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#0b0f14}
+a{color:#7cb7ff}a:hover{color:#a9cfff}
+button{font-family:inherit;cursor:pointer}
+</style>
+</helmet>
+<div style="width: 1440px; height: 900px; box-sizing: border-box; background: #0b0f14; color: #d6dde6; font-family: 'IBM Plex Sans', sans-serif; font-size: 13px; display: flex; flex-direction: column; overflow: hidden">
+
+<header style="height: 48px; flex-shrink: 0; display: flex; align-items: center; gap: 16px; padding: 0 16px; background: #10161e; border-bottom: 1px solid #222c38">
+<div style="font-family: 'JetBrains Mono', monospace; font-weight: 600; font-size: 14px; color: {{accent}}; letter-spacing: 0.04em">[WORKING TITLE]</div>
+<nav aria-label="Apps" style="display: flex; gap: 4px; flex: 1; align-items: center">
+<span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #8a96a6; padding-right: 4px">ATRIUM</span>
+<button style="height: 32px; padding: 0 12px; border-radius: 6px; border: 1px solid #2f3b4a; background: #1a2430; color: #e6edf3; font-size: 12.5px; font-weight: 500">LinkWise Desk</button>
+<button style="height: 32px; padding: 0 12px; border-radius: 6px; border: 1px solid transparent; background: transparent; color: #a8b3c1; font-size: 12.5px">Shinobi RMM</button>
+<button style="height: 32px; padding: 0 12px; border-radius: 6px; border: 1px solid transparent; background: transparent; color: #a8b3c1; font-size: 12.5px">ScreenLink</button>
+<button style="height: 32px; padding: 0 12px; border-radius: 6px; border: 1px solid transparent; background: transparent; color: #a8b3c1; font-size: 12.5px">Ovik</button>
+<span aria-hidden="true" style="width: 1px; height: 20px; background: #2f3b4a; margin: 0 8px"></span>
+<button style="height: 32px; padding: 0 12px; border-radius: 6px; border: 1px solid transparent; background: transparent; color: #a8b3c1; font-size: 12.5px">Hoodoo Docs</button>
+<button style="height: 32px; padding: 0 12px; border-radius: 6px; border: 1px solid transparent; background: transparent; color: #a8b3c1; font-size: 12.5px">Terminal</button>
+<button style="height: 32px; padding: 0 12px; border-radius: 6px; border: 1px solid transparent; background: transparent; color: #a8b3c1; font-size: 12.5px">Team chat</button>
+</nav>
+<div style="display: flex; gap: 20px; align-items: center; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #a8b3c1">
+<span>TUE 09:47</span>
+<span>RATING 4.6</span>
+<span style="color: #e6edf3">CREWHOO 1,240</span>
+</div>
+</header>
+
+<main style="flex: 1; min-height: 0; display: grid; grid-template-columns: 280px minmax(0, 1fr) 380px; gap: 12px; padding: 12px; box-sizing: border-box">
+
+<section aria-label="Queue watch" style="display: flex; flex-direction: column; gap: 12px; min-height: 0">
+<div style="background: #121922; border: 1px solid #222c38; border-radius: 8px; overflow: hidden">
+<div style="padding: 10px 12px; border-bottom: 1px solid #222c38; display: flex; justify-content: space-between"><span style="font-weight: 600">Start of shift</span><span style="font-size: 11.5px; color: #3fb950">3 of 5 done</span></div>
+<ul style="list-style: none; margin: 0; padding: 8px 12px 10px; display: flex; flex-direction: column; gap: 7px; font-size: 12.5px">
+<li style="display: flex; gap: 8px"><span style="color: #3fb950; font-family: 'JetBrains Mono', monospace">[x]</span>Review email</li>
+<li style="display: flex; gap: 8px"><span style="color: #3fb950; font-family: 'JetBrains Mono', monospace">[x]</span>Review tickets</li>
+<li style="display: flex; gap: 8px"><span style="color: #3fb950; font-family: 'JetBrains Mono', monospace">[x]</span>Walk the calendar</li>
+<li style="display: flex; gap: 8px"><span style="color: #f0a43a; font-family: 'JetBrains Mono', monospace">[ ]</span>Fix travel padding: Oak Ridge</li>
+<li style="display: flex; gap: 8px"><span style="color: #f0a43a; font-family: 'JetBrains Mono', monospace">[ ]</span>Time budget: Valley CU review</li>
+</ul>
+</div>
+<div style="background: #121922; border: 1px solid #222c38; border-radius: 8px; flex: 1; min-height: 0; overflow: hidden; display: flex; flex-direction: column">
+<div style="padding: 10px 12px; border-bottom: 1px solid #222c38; display: flex; justify-content: space-between"><span style="font-weight: 600">Queue watch</span><span style="font-size: 11.5px; color: #8a96a6">not on calendar</span></div>
+<div style="padding: 10px 12px; display: flex; flex-direction: column; gap: 4px; border-bottom: 1px solid #1c2530">
+<div style="display: flex; justify-content: space-between; font-family: 'JetBrains Mono', monospace; font-size: 11.5px"><span style="color: #8fb8de">P3 · #48188</span><span style="color: #f0a43a">Follow-up in 6h</span></div>
+<div style="font-weight: 600">Kessler and Vance CPA</div>
+<div style="font-size: 12px; color: #b9c3cf">Copier scan-to-email fails. No update for 2 days.</div>
+</div>
+<div style="padding: 10px 12px; display: flex; flex-direction: column; gap: 4px; border-bottom: 1px solid #1c2530">
+<div style="display: flex; justify-content: space-between; font-family: 'JetBrains Mono', monospace; font-size: 11.5px"><span style="color: #8fb8de">P3 · #48202</span><span style="color: #a8b3c1">Awaiting client</span></div>
+<div style="font-weight: 600">Pine Hollow Vet</div>
+<div style="font-size: 12px; color: #b9c3cf">New hire needs VPN access</div>
+</div>
+<div style="padding: 10px 12px; display: flex; flex-direction: column; gap: 4px">
+<div style="display: flex; justify-content: space-between; font-family: 'JetBrains Mono', monospace; font-size: 11.5px"><span style="color: #c9a7ff">MISROUTE?</span><span style="color: #a8b3c1">New</span></div>
+<div style="font-weight: 600">Harbor Freightways</div>
+<div style="font-size: 12px; color: #b9c3cf">Endpoint security console shows agents offline</div>
+</div>
+</div>
+</section>
+
+<section aria-label="Today's calendar" style="background: #121922; border: 1px solid #222c38; border-radius: 8px; display: flex; flex-direction: column; overflow: hidden; min-height: 0">
+<div role="alert" style="margin: 10px 12px 0; padding: 8px 12px; border-radius: 6px; background: #2a1414; border: 1px solid #6b2a2a; display: flex; justify-content: space-between; align-items: center; gap: 12px; font-size: 12.5px">
+<span><span style="font-weight: 600; color: #ff8a80">Dispatch · 09:42</span> P1 Main St Dental moved into your 12:30 block. Kessler and Vance moved to Thu 10:00, client emailed.</span>
+<span style="font-family: 'JetBrains Mono', monospace; font-size: 11.5px; color: #ffb4ad; flex-shrink: 0">Check-in due 10:42</span>
+</div>
+<div style="padding: 10px 12px 6px; display: flex; justify-content: space-between; align-items: baseline">
+<span style="font-weight: 600; font-size: 14px">Tuesday</span>
+<span style="font-size: 11.5px; color: #8a96a6">6 work blocks · 1 after-hours window</span>
+</div>
+<div style="position: relative; margin: 0 12px; height: 504px">
+<div style="position: absolute; left: 0; top: 0; width: 44px; height: 504px; font-family: 'JetBrains Mono', monospace; font-size: 10.5px; color: #6e7a8a">
+<span style="position: absolute; top: 0">08:00</span><span style="position: absolute; top: 56px">09:00</span><span style="position: absolute; top: 112px">10:00</span><span style="position: absolute; top: 168px">11:00</span><span style="position: absolute; top: 224px">12:00</span><span style="position: absolute; top: 280px">13:00</span><span style="position: absolute; top: 336px">14:00</span><span style="position: absolute; top: 392px">15:00</span><span style="position: absolute; top: 448px">16:00</span>
+</div>
+<div style="position: absolute; left: 52px; right: 0; top: 0; height: 504px; background: repeating-linear-gradient(to bottom, #1c2530 0, #1c2530 1px, transparent 1px, transparent 56px)"></div>
+<div style="position: absolute; left: 52px; right: 0; top: 98px; height: 2px; background: {{accent}}" aria-hidden="true"></div>
+
+<div style="position: absolute; left: 56px; right: 4px; top: 1px; height: 25px; border-radius: 5px; background: #16212b; border: 1px solid #2a3644; display: flex; align-items: center; gap: 8px; padding: 0 10px; font-size: 12px"><span style="font-family: 'JetBrains Mono', monospace; font-size: 10.5px; color: #8fd3c4">REVIEW</span>Start of shift</div>
+
+<div style="position: absolute; left: 56px; right: 4px; top: 29px; height: 81px; box-sizing: border-box; border-radius: 5px; background: #12263a; border: 1px solid #24537a; padding: 6px 10px; display: flex; flex-direction: column; gap: 2px">
+<div style="display: flex; justify-content: space-between"><span style="font-family: 'JetBrains Mono', monospace; font-size: 10.5px; color: #7cc4ff">REMOTE · #48207</span><span style="font-size: 11px; color: #a8b3c1">08:30 to 10:00</span></div>
+<div style="font-weight: 600">Harbor Freightways: branch tunnel down</div>
+<div style="font-size: 12px; color: #b9c3cf">Branch WAN IP changed after ISP work. Phase 2 looks off too.</div>
+</div>
+
+<div style="position: absolute; left: 56px; right: 4px; top: 113px; height: 25px; border-radius: 5px; border: 1px dashed #3a4656; display: flex; align-items: center; gap: 8px; padding: 0 10px; font-size: 12px; color: #a8b3c1"><span style="font-family: 'JetBrains Mono', monospace; font-size: 10.5px">TRAVEL</span>To Oak Ridge Library, 25 min</div>
+
+<div style="position: absolute; left: 56px; right: 4px; top: 141px; height: 81px; box-sizing: border-box; border-radius: 5px; background: #2a2114; border: 1px solid #6a5226; padding: 6px 10px; display: flex; flex-direction: column; gap: 2px">
+<div style="display: flex; justify-content: space-between"><span style="font-family: 'JetBrains Mono', monospace; font-size: 10.5px; color: #f6c873">ONSITE · #48199</span><span style="font-size: 11px; color: #a8b3c1">10:30 to 12:00</span></div>
+<div style="font-weight: 600">Oak Ridge Library: guest Wi-Fi gets 169.254</div>
+<div style="font-size: 12px; color: #f6d9a8">Flag: no return travel before the 12:30 P1</div>
+</div>
+
+<div style="position: absolute; left: 56px; right: 4px; top: 225px; height: 25px; border-radius: 5px; border: 1px dashed #3a4656; display: flex; align-items: center; gap: 8px; padding: 0 10px; font-size: 12px; color: #a8b3c1"><span style="font-family: 'JetBrains Mono', monospace; font-size: 10.5px">BREAK</span>Lunch</div>
+
+<div style="position: absolute; left: 56px; right: 4px; top: 253px; height: 81px; box-sizing: border-box; border-radius: 5px; background: #2a1414; border: 1px solid #8a3030; padding: 6px 10px; display: flex; flex-direction: column; gap: 2px">
+<div style="display: flex; justify-content: space-between"><span style="font-family: 'JetBrains Mono', monospace; font-size: 10.5px; color: #ff8a80">P1 · #48211</span><span style="font-size: 11px; color: #a8b3c1">12:30 to 14:00</span></div>
+<div style="font-weight: 600">Main St Dental: phones rebooting, Exam 3 AP down</div>
+<div style="font-size: 12px; color: #ffb4ad">Moved in by dispatch. Hourly check-ins.</div>
+</div>
+
+<div style="position: absolute; left: 56px; right: 4px; top: 337px; height: 53px; box-sizing: border-box; border-radius: 5px; background: #201a2e; border: 1px solid #4b3a6e; padding: 6px 10px; display: flex; flex-direction: column; gap: 2px">
+<div style="display: flex; justify-content: space-between"><span style="font-family: 'JetBrains Mono', monospace; font-size: 10.5px; color: #c9a7ff">TEAMS CALL · #48207</span><span style="font-size: 11px; color: #a8b3c1">14:00 to 15:00</span></div>
+<div style="font-weight: 600">Harbor branch manager: confirm tunnel fix</div>
+</div>
+
+<div style="position: absolute; left: 56px; right: 4px; top: 393px; height: 53px; box-sizing: border-box; border-radius: 5px; background: #12263a; border: 1px solid #24537a; padding: 6px 10px; display: flex; flex-direction: column; gap: 2px">
+<div style="display: flex; justify-content: space-between"><span style="font-family: 'JetBrains Mono', monospace; font-size: 10.5px; color: #7cc4ff">ONE-TIME SESSION · BREAK-FIX</span><span style="font-size: 11px; color: #a8b3c1">15:00 to 16:00</span></div>
+<div style="font-weight: 600">Rosa's Bakery: card reader offline</div>
+</div>
+
+<div style="position: absolute; left: 56px; right: 4px; top: 449px; height: 53px; box-sizing: border-box; border-radius: 5px; background: #12261f; border: 1px solid #2a5a47; padding: 6px 10px; display: flex; flex-direction: column; gap: 2px">
+<div style="display: flex; justify-content: space-between"><span style="font-family: 'JetBrains Mono', monospace; font-size: 10.5px; color: #8fd3c4">NETWORK REVIEW · #48160</span><span style="font-size: 11px; color: #f6d9a8">Flag: 60 min booked, usually 90</span></div>
+<div style="font-weight: 600">Valley Credit Union quarterly review</div>
+</div>
+</div>
+
+<div style="margin: 12px 12px 0; padding-top: 10px; border-top: 1px solid #222c38; font-size: 11.5px; color: #8a96a6; font-family: 'JetBrains Mono', monospace">AFTER HOURS</div>
+<div style="margin: 8px 12px 12px 64px; padding: 8px 10px; border-radius: 5px; background: #181d2a; border: 1px solid #3a4470; display: flex; justify-content: space-between; align-items: center; gap: 12px">
+<div style="display: flex; flex-direction: column; gap: 2px">
+<span style="font-family: 'JetBrains Mono', monospace; font-size: 10.5px; color: #9fb0ff">WINDOW · 20:00 to 22:00 · CLIENT APPROVED</span>
+<span style="font-weight: 600">Main St Dental: firmware upgrade MSD-FW01 (10.20.1.1)</span>
+</div>
+<div style="display: flex; gap: 10px; font-size: 11.5px; color: #b9c3cf; flex-shrink: 0"><span style="color: #3fb950">Backup ready</span><span style="color: #3fb950">Foothold set</span><span style="color: #f0a43a">Release notes unread</span></div>
+</div>
+</section>
+
+<section aria-label="Handoff and phone" style="display: flex; flex-direction: column; gap: 12px; min-height: 0">
+<form style="background: #121922; border: 1px solid #222c38; border-radius: 8px; padding: 12px 14px; display: flex; flex-direction: column; gap: 10px">
+<div style="display: flex; justify-content: space-between; align-items: baseline"><span style="font-weight: 600">Hand off #48207 to dispatch</span><span style="font-size: 11.5px; color: #8a96a6">Status: Dispatch Review</span></div>
+<fieldset style="border: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; font-size: 12.5px">
+<legend style="font-size: 11.5px; color: #8a96a6; margin-bottom: 6px">Handoff type</legend>
+<label style="display: flex; gap: 6px; align-items: center"><input type="radio" name="handoff">Resolved</label>
+<label style="display: flex; gap: 6px; align-items: center"><input type="radio" name="handoff">Reschedule</label>
+<label style="display: flex; gap: 6px; align-items: center"><input type="radio" name="handoff">Teams call with client</label>
+<label style="display: flex; gap: 6px; align-items: center; color: #f0f4f8; font-weight: 500"><input type="radio" name="handoff" checked>After-hours window</label>
+<label style="display: flex; gap: 6px; align-items: center"><input type="radio" name="handoff">Sales</label>
+<label style="display: flex; gap: 6px; align-items: center"><input type="radio" name="handoff">Customer question</label>
+<label style="display: flex; gap: 6px; align-items: center"><input type="radio" name="handoff">New ticket</label>
+</fieldset>
+<div style="display: flex; flex-direction: column; gap: 6px; font-size: 12.5px">
+<label for="avail" style="font-size: 11.5px; color: #8a96a6">Your availability</label>
+<select id="avail" style="height: 32px; border-radius: 6px; border: 1px solid #2a3644; background: #0e141b; color: #e6edf3; font-family: inherit; font-size: 12.5px; padding: 0 8px"><option>Tue to Thu, after 8 PM</option></select>
+<label style="display: flex; gap: 6px; align-items: center"><input type="checkbox">Client must be present</label>
+</div>
+<fieldset style="border: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; font-size: 12px">
+<legend style="font-size: 11.5px; color: #8a96a6; margin-bottom: 6px">Pick the note</legend>
+<label style="display: flex; gap: 6px; align-items: flex-start; color: #b9c3cf"><input type="radio" name="note" style="margin-top: 2px">Tunnel is broken, need to fix it later.</label>
+<label style="display: flex; gap: 6px; align-items: flex-start; color: #f0f4f8"><input type="radio" name="note" checked style="margin-top: 2px">HFW-FW01 (203.0.113.10) tunnel to Branch-2 down: branch WAN changed to 198.51.100.24 after ISP work. Need after-hours window to update peer and phase 2 on both firewalls. Client not needed onsite.</label>
+<label style="display: flex; gap: 6px; align-items: flex-start; color: #b9c3cf"><input type="radio" name="note" style="margin-top: 2px">IKEv2 SA negotiation failing on proxy-ID mismatch, rekey needed, DPD flapping.</label>
+</fieldset>
+<button type="button" style="height: 34px; border-radius: 6px; border: 1px solid {{accent}}; background: {{accent}}; color: #1a1206; font-size: 12.5px; font-weight: 600">Send to dispatch</button>
+</form>
+
+<div style="background: #121922; border: 1px solid #222c38; border-radius: 8px; padding: 12px 14px; display: flex; gap: 14px; align-items: center; flex: 1; min-height: 0">
+<div style="width: 150px; height: 220px; flex-shrink: 0; border-radius: 22px; border: 2px solid #3a4656; background: #070a0d; padding: 12px; box-sizing: border-box; display: flex; flex-direction: column; gap: 8px; align-items: center">
+<div style="width: 36px; height: 4px; border-radius: 2px; background: #2a3440" aria-hidden="true"></div>
+<div style="font-size: 10.5px; color: #8a96a6; align-self: flex-start">Authenticator</div>
+<div style="align-self: stretch; background: #10161e; border-radius: 8px; padding: 8px; display: flex; flex-direction: column; gap: 4px">
+<span style="font-size: 10.5px; color: #a8b3c1">MSP · MSD-SSLVPN</span>
+<span style="font-family: 'JetBrains Mono', monospace; font-size: 20px; font-weight: 600; color: #e6edf3; letter-spacing: 0.06em">482 913</span>
+<div style="height: 3px; border-radius: 2px; background: #222c38; overflow: hidden"><div style="width: 40%; height: 3px; background: {{accent}}"></div></div>
+<span style="font-size: 10.5px; color: #f0a43a">12 s left</span>
+</div>
+<div style="align-self: stretch; background: #10161e; border-radius: 8px; padding: 8px; display: flex; flex-direction: column; gap: 2px">
+<span style="font-size: 10.5px; color: #a8b3c1">HFW cloud portal</span>
+<span style="font-family: 'JetBrains Mono', monospace; font-size: 15px; color: #c7d0db">071 556</span>
+</div>
+</div>
+<div style="display: flex; flex-direction: column; gap: 8px; font-size: 12.5px">
+<div style="font-weight: 600">VPN login</div>
+<div style="color: #b9c3cf">FortressClient 7.2 · profile MSD-SSLVPN from docs</div>
+<label for="otp" style="font-size: 11.5px; color: #8a96a6">Code</label>
+<input id="otp" value="482 9" style="height: 32px; border-radius: 6px; border: 1px solid #2a3644; background: #0e141b; color: #e6edf3; font-family: 'JetBrains Mono', monospace; font-size: 14px; padding: 0 10px">
+<span style="font-size: 11.5px; color: #8a96a6">2 tries left before lockout</span>
+</div>
+</div>
+</section>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#f0a43a","options":["#f0a43a","#4cc2ff","#3fb950","#c9a7ff"]},"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return { accent: this.props.accent ?? '#f0a43a' };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>After-hours window</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&amp;family=JetBrains+Mono:wght@400;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#0b0f14}
+a{color:#7cb7ff}a:hover{color:#a9cfff}
+button{font-family:inherit;cursor:pointer}
+</style>
+</helmet>
+<div style="width: 1440px; height: 900px; box-sizing: border-box; background: #0b0f14; color: #d6dde6; font-family: 'IBM Plex Sans', sans-serif; font-size: 13px; display: flex; flex-direction: column; overflow: hidden">
+
+<header style="height: 56px; flex-shrink: 0; display: flex; align-items: center; gap: 20px; padding: 0 16px; background: #10161e; border-bottom: 1px solid #222c38">
+<div style="font-family: 'JetBrains Mono', monospace; font-weight: 600; font-size: 14px; color: {{accent}}; letter-spacing: 0.04em">[WORKING TITLE]</div>
+<div style="display: flex; flex-direction: column; gap: 2px">
+<span style="font-weight: 600">After-hours window · Main St Dental · #48230</span>
+<span style="font-size: 11.5px; color: #a8b3c1">Firmware upgrade MSD-FW01 (10.20.1.1) · client approved · notice sent</span>
+</div>
+<div style="margin-left: auto; display: flex; flex-direction: column; gap: 4px; width: 260px">
+<div style="display: flex; justify-content: space-between; font-family: 'JetBrains Mono', monospace; font-size: 11.5px"><span style="color: #a8b3c1">20:00 to 22:00</span><span style="color: #e6edf3">46 of 120 min used</span></div>
+<div style="height: 6px; border-radius: 3px; background: #222c38; overflow: hidden"><div style="width: 38%; height: 6px; background: {{accent}}"></div></div>
+</div>
+</header>
+
+<main style="flex: 1; min-height: 0; display: grid; grid-template-columns: 300px minmax(0, 1fr) 360px; gap: 12px; padding: 12px; box-sizing: border-box">
+
+<section aria-label="Window steps" style="background: #121922; border: 1px solid #222c38; border-radius: 8px; overflow: hidden; display: flex; flex-direction: column">
+<div style="padding: 10px 12px; border-bottom: 1px solid #222c38; font-weight: 600">Window plan</div>
+<ol style="margin: 0; padding: 10px 12px 12px 32px; display: flex; flex-direction: column; gap: 12px; font-size: 12.5px">
+<li><div style="display: flex; justify-content: space-between; gap: 8px"><span>Client notice sent</span><span style="color: #3fb950; font-size: 11.5px">Done</span></div></li>
+<li><div style="display: flex; justify-content: space-between; gap: 8px"><span>Foothold: FRONTDESK-PC left on, power settings saved</span><span style="color: #3fb950; font-size: 11.5px">Done</span></div></li>
+<li><div style="display: flex; justify-content: space-between; gap: 8px"><span>Config backup of MSD-FW01</span><span style="color: #3fb950; font-size: 11.5px">Done</span></div></li>
+<li><div style="display: flex; justify-content: space-between; gap: 8px"><span>Firmware staged on jump box</span><span style="color: #3fb950; font-size: 11.5px">Done</span></div></li>
+<li><div style="display: flex; flex-direction: column; gap: 6px"><div style="display: flex; justify-content: space-between; gap: 8px"><span style="font-weight: 600; color: #f0f4f8">Upgrade path</span><span style="color: {{accent}}; font-size: 11.5px">Step 2 of 2</span></div>
+<div style="display: flex; align-items: center; gap: 6px; font-family: 'JetBrains Mono', monospace; font-size: 11.5px"><span style="color: #8a96a6">7.2.8</span><span aria-hidden="true" style="color: #6e7a8a">&gt;</span><span style="color: #3fb950">7.2.11</span><span aria-hidden="true" style="color: #6e7a8a">&gt;</span><span style="color: {{accent}}; font-weight: 600">7.4.9</span></div></div></li>
+<li><div style="display: flex; justify-content: space-between; gap: 8px; color: #8a96a6"><span>Verify: switches, APs, phones, VPN users</span><span style="font-size: 11.5px">Pending</span></div></li>
+<li><div style="display: flex; justify-content: space-between; gap: 8px; color: #8a96a6"><span>Close-out: labels, docs, ticket, client</span><span style="font-size: 11.5px">Pending</span></div></li>
+<li><div style="display: flex; justify-content: space-between; gap: 8px; color: #8a96a6"><span>Restore FRONTDESK-PC power settings</span><span style="font-size: 11.5px">Pending</span></div></li>
+</ol>
+</section>
+
+<section aria-label="Upgrade wait" style="display: flex; flex-direction: column; gap: 12px; min-height: 0">
+<div style="background: #121922; border: 1px solid #222c38; border-radius: 8px; padding: 14px 16px; display: flex; flex-direction: column; gap: 12px">
+<div style="display: flex; justify-content: space-between; align-items: flex-end">
+<div style="display: flex; flex-direction: column; gap: 2px">
+<span style="font-size: 11.5px; color: #8a96a6">Waiting for MSD-FW01 to answer</span>
+<span style="font-family: 'JetBrains Mono', monospace; font-size: 40px; font-weight: 600; color: #f0f4f8; line-height: 1.1">06:42</span>
+</div>
+<div style="text-align: right; font-family: 'JetBrains Mono', monospace; font-size: 11.5px; color: #a8b3c1; display: flex; flex-direction: column; gap: 2px">
+<span>Upgrade to 7.4.9 started 20:39:31</span>
+<span>Last reply 20:39:18</span>
+</div>
+</div>
+<div style="display: flex; flex-direction: column; gap: 6px">
+<div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); height: 10px; border-radius: 5px; overflow: hidden; background: #222c38">
+<div style="background: #1d3a2a"></div><div style="background: #3a3220"></div><div style="background: #3a1f1f"></div>
+</div>
+<div style="position: relative; height: 14px">
+<div style="position: absolute; left: 33%; top: -18px; width: 2px; height: 16px; background: {{accent}}" aria-hidden="true"></div>
+</div>
+<div style="display: flex; justify-content: space-between; font-family: 'JetBrains Mono', monospace; font-size: 10.5px; color: #6e7a8a; margin-top: -10px"><span>0 min</span><span>normal?</span><span>slow?</span><span>broken?</span><span>20 min</span></div>
+<span style="font-size: 11.5px; color: #8a96a6">The real boot time for this model is hidden, and the bands overlap.</span>
+</div>
+</div>
+
+<pre style="margin: 0; background: #05080b; border: 1px solid #222c38; border-radius: 8px; padding: 12px 14px; flex: 1; min-height: 0; overflow: hidden; font-family: 'JetBrains Mono', monospace; font-size: 12px; line-height: 1.6; color: #8a96a6">PS C:\&gt; ping -t 10.20.1.1   (from FRONTDESK-PC via ScreenLink)
+
+Reply from 10.20.1.1: bytes=32 time=1ms TTL=255
+Reply from 10.20.1.1: bytes=32 time=1ms TTL=255
+Request timed out.
+Request timed out.
+Request timed out.
+Request timed out.
+Request timed out.
+Request timed out.
+Request timed out.
+<span style="color: #c9d4df">Request timed out.</span>
+<span style="color: #c9d4df">Request timed out.</span></pre>
+
+<div style="background: #121922; border: 1px solid #222c38; border-radius: 8px; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px">
+<div style="font-weight: 600; font-size: 14px; color: #f0f4f8">Still no reply after 6 min 42 s. What now?</div>
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px">
+<button style="text-align: left; padding: 10px 12px; border-radius: 6px; border: 1px solid #2f3b4a; background: #1a2430; color: #e6edf3; display: flex; flex-direction: column; gap: 3px"><span style="font-weight: 600; font-size: 12.5px">A. Keep waiting</span><span style="font-size: 11.5px; color: #8a96a6">Check again in 2 minutes</span></button>
+<button style="text-align: left; padding: 10px 12px; border-radius: 6px; border: 1px solid #2f3b4a; background: #1a2430; color: #e6edf3; display: flex; flex-direction: column; gap: 3px"><span style="font-weight: 600; font-size: 12.5px">B. Console through remote hands</span><span style="font-size: 11.5px; color: #8a96a6">Nobody is onsite after 8 PM</span></button>
+<button style="text-align: left; padding: 10px 12px; border-radius: 6px; border: 1px solid #2f3b4a; background: #1a2430; color: #e6edf3; display: flex; flex-direction: column; gap: 3px"><span style="font-weight: 600; font-size: 12.5px">C. Power cycle the firewall</span><span style="font-size: 11.5px; color: #8a96a6">Mid-upgrade, this can corrupt the image</span></button>
+<button style="text-align: left; padding: 10px 12px; border-radius: 6px; border: 1px solid #2f3b4a; background: #1a2430; color: #e6edf3; display: flex; flex-direction: column; gap: 3px"><span style="font-weight: 600; font-size: 12.5px">D. Call it failed</span><span style="font-size: 11.5px; color: #8a96a6">Book onsite for 7 AM, before they open</span></button>
+</div>
+</div>
+</section>
+
+<section aria-label="Reference" style="display: flex; flex-direction: column; gap: 12px; min-height: 0">
+<div style="background: #121922; border: 1px solid #222c38; border-radius: 8px; overflow: hidden">
+<div style="padding: 10px 12px; border-bottom: 1px solid #222c38; display: flex; justify-content: space-between"><span style="font-weight: 600">Vendor KB · 7.4.9 release notes</span><span style="font-size: 11.5px; color: #f0a43a">Unread</span></div>
+<div style="padding: 10px 12px; display: flex; flex-direction: column; gap: 10px; font-size: 12.5px">
+<div style="font-size: 11.5px; color: #8a96a6">Known issues and changes for FortressGate 60 (2 GB RAM)</div>
+<div><div style="font-weight: 600">SSL VPN removed on 2 GB models</div><div style="font-size: 11.5px; color: #a8b3c1">Remote users on MSD-SSLVPN lose access after upgrade.</div></div>
+<div><div style="font-weight: 600">Proxy inspection no longer supported</div><div style="font-size: 11.5px; color: #a8b3c1">Proxy-based policies convert to flow on upgrade.</div></div>
+<div><div style="font-weight: 600">Memory conserve mode under heavy UTM</div><div style="font-size: 11.5px; color: #a8b3c1">New sessions may drop at peak load.</div></div>
+<div><div style="font-weight: 600">SIP session helper default changed</div><div style="font-size: 11.5px; color: #a8b3c1">Check desk phone registration after upgrade.</div></div>
+</div>
+</div>
+<div style="background: #121922; border: 1px solid #222c38; border-radius: 8px; overflow: hidden">
+<div style="padding: 10px 12px; border-bottom: 1px solid #222c38; font-weight: 600">Rollback plan</div>
+<ul style="list-style: none; margin: 0; padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; font-size: 12.5px">
+<li style="display: flex; justify-content: space-between; gap: 8px"><span>Backup image on second partition</span><span style="font-family: 'JetBrains Mono', monospace; font-size: 11.5px; color: #a8b3c1">7.2.11</span></li>
+<li style="display: flex; justify-content: space-between; gap: 8px"><span>Config backup</span><span style="font-family: 'JetBrains Mono', monospace; font-size: 11.5px; color: #a8b3c1">20:31</span></li>
+<li style="display: flex; justify-content: space-between; gap: 8px"><span>Console cable in the bag</span><span style="font-size: 11.5px; color: #3fb950">RJ45 rollover</span></li>
+</ul>
+</div>
+<div style="background: #121922; border: 1px solid #222c38; border-radius: 8px; padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; flex: 1; min-height: 0">
+<div style="font-weight: 600">Team chat</div>
+<div style="font-size: 12.5px; color: #b9c3cf"><span style="color: #c9a7ff">Senior tech:</span> the 60s take a while on that jump, give it a few</div>
+</div>
+</section>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#f0a43a","options":["#f0a43a","#4cc2ff","#3fb950","#c9a7ff"]},"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return { accent: this.props.accent ?? '#f0a43a' };
+  }
+}
+</script>
+</body>
+</html>

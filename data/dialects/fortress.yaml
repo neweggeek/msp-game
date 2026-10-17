@@ -1,0 +1,118 @@
+# Fortress dialect: FortressGate firewalls and FortressSwitch (managed from the gate).
+# Grammar is block based: config <section>, edit <item>, set, unset, next, end.
+# Changes are staged and only apply on "end". Leave without "end" and nothing applies.
+id: fortress
+name: Fortress
+abbreviations: unique-prefix
+save: on-end
+banner:
+  - "Connected to {hostname} ({ip})"
+  - ""
+prompts:
+  exec: "{hostname} # "
+  section: "{hostname} ({section}) # "
+  item: "{hostname} ({item}) # "
+
+sections:
+  - { path: "system global", model: system, kind: single }
+  - { path: "system interface", model: interfaces, kind: table, prompt: interface }
+  - { path: "router static", model: routes, kind: table, prompt: static, autoKey: true }
+
+fields:
+  system:
+    hostname: { model: hostname, codec: string }
+    timezone: { model: timezone, codec: string }
+    admin-sport: { model: adminHttpsPort, codec: int }
+  interfaces:
+    ip: { model: ip, codec: ip-mask }
+    allowaccess: { model: allowaccess, codec: list, values: [ping, https, ssh, http, snmp, fabric] }
+    status: { model: status, codec: enum, values: [up, down] }
+    alias: { model: alias, codec: quoted }
+    vlanid: { model: vlanid, codec: int }
+    interface: { model: parent, codec: quoted }
+    role: { model: role, codec: enum, values: [lan, wan, dmz, undefined] }
+    type: { model: type, codec: enum, values: [physical, vlan, fortresslink], readOnly: true }
+  routes:
+    dst: { model: dst, codec: ip-mask }
+    gateway: { model: gateway, codec: ip }
+    device: { model: device, codec: quoted }
+
+# Help text for a first word shared by several commands.
+keywords:
+  get: "Get dynamic and system information."
+  diagnose: "Diagnose facility."
+  execute: "Execute static commands."
+  show: "Show configuration."
+
+commands:
+  - { words: "config {section+}", verb: enter-config, modes: [exec], help: "Configure object." }
+  - { words: "edit {name}", verb: select, modes: [section], help: "Add or edit an entry." }
+  - { words: "set {field} {value*}", verb: set, modes: [section, item], help: "Modify value." }
+  - { words: "unset {field}", verb: negate, modes: [section, item], help: "Set to default value." }
+  - { words: "next", verb: exit-item, modes: [item], help: "Configure next table entry." }
+  - { words: "end", verb: save-exit, modes: [section, item], help: "End and save last config." }
+  - { words: "abort", verb: discard-exit, modes: [section, item], help: "End and discard last config." }
+  - { words: "show {path*}", verb: show, modes: [exec, section, item], help: "Show configuration." }
+  - { words: "get system status", verb: view, view: system-status, modes: [exec], help: "Get system status." }
+  - { words: "get system arp", verb: view, view: arp, modes: [exec], help: "Get ARP table." }
+  - { words: "get system interface", verb: view, view: interface-list, modes: [exec], help: "Get interface list." }
+  - { words: "get router info routing-table all", verb: view, view: routes, modes: [exec], help: "Get routing table." }
+  - { words: "diagnose switch poe status", verb: counters, view: poe-status, modes: [exec], help: "Show PoE power on managed switches." }
+  - { words: "diagnose switch port-stats {port}", verb: counters, view: port-stats, modes: [exec], help: "Show counters for a managed switch port." }
+  - { words: "execute ping {target}", verb: ping, modes: [exec], help: "Ping a host." }
+  - { words: "execute traceroute {target}", verb: traceroute, modes: [exec], help: "Trace the route to a host." }
+  - { words: "exit", verb: exit-shell, modes: [exec], help: "Exit the CLI." }
+
+errors:
+  unknown-command: "Unknown action 0\nCommand fail. Return code -1"
+  ambiguous: "ambiguous command before '{token}'\nCommand fail. Return code -61"
+  unknown-field: "command parse error before '{token}'\nCommand fail. Return code -61"
+  bad-value: "value parse error before '{token}'\nCommand fail. Return code -8"
+  missing-arg: "Command fail. Return code -61"
+  no-entry: "entry not found in datasource\nCommand fail. Return code -3"
+  read-only: "The field is read-only.\nCommand fail. Return code -651"
+  no-target: "Unable to resolve hostname."
+
+views:
+  system-status:
+    lines:
+      - "Version: {model} v{firmware},build{build} (GA)"
+      - "Serial-Number: {serial}"
+      - "Hostname: {hostname}"
+      - "Operation Mode: NAT"
+      - "Current HA mode: standalone"
+      - "System time: {time}"
+  arp:
+    lines: ["Address           Age(min)   Hardware Addr      Interface"]
+    each: { rows: entries, lines: ["{ip:<17} {age:<10} {mac:<18} {iface}"] }
+  interface-list:
+    each:
+      rows: interfaces
+      lines: ["== [ {name} ]", "name: {name}   mode: static   ip: {ipMask}   status: {status}   type: {type}   alias: {alias}"]
+  routes:
+    lines: ["Codes: S - static, C - connected", ""]
+    each: { rows: routes, lines: ["{code}       {dst} {via}"] }
+  poe-status:
+    empty: "No managed switches found."
+    each:
+      rows: switches
+      lines:
+        - "Switch: {hostname} ({model})"
+        - "Power budget: {budgetW} W   Allocated: {allocatedW} W   Requested: {requestedW} W"
+        - ""
+        - "Port     State        Class  Priority  Power(W)  Device"
+      each: { rows: ports, lines: ["{port:<8} {state:<12} {class:<6} {priority:<9} {powerW:<9} {device}"] }
+  port-stats:
+    lines:
+      - "Switch: {hostname}  Port: {port}  Link: {link}  Speed: {speed}"
+      - "  Rx packets: {rxPackets}   Rx errors: {rxErrors}   CRC: {crc}"
+      - "  Tx packets: {txPackets}   Tx errors: {txErrors}   Drops: {drops}"
+  ping-ok:
+    lines: ["PING {target} ({target}): 56 data bytes"]
+    each: { rows: replies, lines: ["64 bytes from {target}: icmp_seq={seq} ttl={ttl} time={ms} ms"] }
+    footer: ["", "--- {target} ping statistics ---", "5 packets transmitted, 5 packets received, 0% packet loss"]
+  ping-fail:
+    lines: ["PING {target} ({target}): 56 data bytes", "", "--- {target} ping statistics ---", "5 packets transmitted, 0 packets received, 100% packet loss"]
+  traceroute:
+    lines: ["traceroute to {target} ({target}), 32 hops max, 3 probe packets per hop, 72 byte packets"]
+    each: { rows: hops, lines: [" {n}  {ip}  {ms} ms"] }
