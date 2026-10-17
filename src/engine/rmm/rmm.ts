@@ -232,11 +232,11 @@ function rmmExec(s: RmmSession, line: string, world: World, d: Device, now: numb
   const words = line.trim().split(/\s+/).filter(Boolean);
   const cmd = (words[0] ?? "").toLowerCase();
   const arg = words.slice(1).join(" ");
-  // The host for ping, nslookup and tracert: the last word that is not a switch or its count.
+  // The host for ping, nslookup and tracert: the first word that is not a switch or its count.
+  // First, not last, so "nslookup host 8.8.8.8" looks up the host, not the server.
   const host = words
     .slice(1)
-    .filter((w, i, all) => !/^[-/]/.test(w) && !/^[-/][nlwih]$/i.test(all[i - 1] ?? ""))
-    .pop();
+    .find((w, i, all) => !/^[-/]/.test(w) && !/^[-/][nlwih]$/i.test(all[i - 1] ?? ""));
   const out = (output: string[]): RmmLineResult => ({ output });
   switch (cmd) {
     case "":

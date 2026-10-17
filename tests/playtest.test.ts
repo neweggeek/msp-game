@@ -41,6 +41,8 @@ describe("playtest fixes", () => {
     expect(rmm("ping 10.27.99")).toContain("could not find host");
     expect(rmm(`ping -n 2 ${server.ip}`)).toContain(`Reply from ${server.ip}`);
     expect(rmm(`nslookup ${server.ip}`)).toContain(`Name:    ${server.hostname}.`);
+    expect(rmm(`nslookup ${server.ip} 8.8.8.8`)).toContain(`Name:    ${server.hostname}.`);
+    expect(rmm(`ping ${server.ip} -n 2`)).toContain(`Reply from ${server.ip}`);
     const fw = g.world.devices.find((d) => d.kind === "firewall" && d.siteId === "hq") as Device;
     expect(rmm(`ssh admin@${fw.hostname}`)).not.toContain("usage");
     expect(rmm("ssh admin@nowhere-01")).toContain("Could not resolve hostname");
