@@ -10,8 +10,8 @@ industries:
     rooms: office
     names: ["{place} Accounting", "{place} Law Group", "{place} Insurance", "{place} Realty"]
 places: [Maple Ridge, Cedar Point, Riverbend, Oak Hollow, Lakeview, Pinecrest, Stonebridge, Willow Creek, Harbor, Summit]
-firstNames: [Dana, Marcus, Priya, Tom, Alicia, Kenji, Rosa, Brent, Mei, Omar, Janet, Luis, Tara, Frank]
-lastNames: [Okafor, Lindqvist, Patel, Moreno, Brennan, Hughes, Nakamura, Kowalski, Reyes, Fischer]
+firstNames: [Dana, Marcus, Priya, Tom, Alicia, Kenji, Rosa, Brent, Mei, Omar, Janet, Luis, Tara, Frank, Nadia, Greg, Ines, Darnell, Hana, Victor, Colleen, Raj, Beth, Tomas, Yvette, Sean, Lila, Hector, Gwen, Andre, Paula, Ivan, Keisha, Rob, Sofia, Wes, Amara, Dmitri, Jo, Carmen, Neil, Bea, Theo, Lena, Felix, Ruth, Sam, Noor, Owen, Mira, Cal, Esther, Jun, Tess, Bruno, Ada, Rhys, Gail, Milo, Zara]
+lastNames: [Okafor, Lindqvist, Patel, Moreno, Brennan, Hughes, Nakamura, Kowalski, Reyes, Fischer, Adeyemi, Sorensen, Castillo, Dubois, Haddad, Ivanova, Jensen, Kaur, Larsen, Mbeki, Novak, Oduya, Petrov, Quinn, Rossi, Silva, Tanaka, Ueda, Varga, Walsh, Yilmaz, Zielinski]
 contactRoles: [Office Manager, Practice Manager, Owner, Front Desk Lead]
 afterHoursWindows:
   - { label: "after 8 PM", start: 1200, end: 1440, weight: 6 }

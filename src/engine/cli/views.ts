@@ -47,7 +47,8 @@ function ifaceForIp(fw: Device, ip: string): string {
 /** "12 days, 4 hours, 9 minutes" */
 export function uptimeText(minutes: number): string {
   const m = Math.max(0, minutes);
-  return `${Math.floor(m / 1440)} days, ${Math.floor((m % 1440) / 60)} hours, ${m % 60} minutes`;
+  const n = (v: number, unit: string) => `${v} ${unit}${v === 1 ? "" : "s"}`;
+  return `${n(Math.floor(m / 1440), "day")}, ${n(Math.floor((m % 1440) / 60), "hour")}, ${n(m % 60, "minute")}`;
 }
 
 function clockOf(now: number): string {

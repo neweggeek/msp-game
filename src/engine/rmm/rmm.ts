@@ -14,6 +14,8 @@ export interface RmmSession {
   closed: boolean;
   transcript: string[];
   last?: { line: string; output: string[] };
+  /** Recent commands that printed something, oldest first, so earlier output can be attached. */
+  outputs?: { line: string; output: string[] }[];
 }
 
 export interface AgentRow {
@@ -162,7 +164,7 @@ function nslookup(world: World, d: Device, name: string, ns: NetState): string[]
     // Reverse lookup: only the client's own DNS knows its hosts.
     const serverName =
       world.devices.find((x) => x.ip === server)?.hostname ??
-      (server.startsWith("8.8.") ? "dns.google" : "UnKnown");
+      (server.startsWith("8.8.") ? "resolver.openquad.net" : "UnKnown");
     const internal = world.devices.some((x) => x.ip === server && x.kind === "server");
     const hit = world.devices.find((x) => x.ip === name && x.kind !== "camera");
     if (!canReach(world, d.id, server, ns))
@@ -189,7 +191,7 @@ function nslookup(world: World, d: Device, name: string, ns: NetState): string[]
   const r = resolveName(world, d, name, ns);
   const serverName =
     world.devices.find((x) => x.ip === server)?.hostname ??
-    (server.startsWith("8.8.") ? "dns.google" : "UnKnown");
+    (server.startsWith("8.8.") ? "resolver.openquad.net" : "UnKnown");
   const head = [`Server:  ${serverName}`, `Address:  ${server}`, ""];
   if (r.ok)
     return [
@@ -308,7 +310,7 @@ function rmmExec(s: RmmSession, line: string, world: World, d: Device, now: numb
         "",
         "Name       InterfaceDescription            Status  MacAddress         LinkSpeed",
         "----       --------------------            ------  ----------         ---------",
-        `Ethernet   Intel(R) Ethernet Connection    Up      ${d.mac.toUpperCase().replace(/:/g, "-")}  1 Gbps`,
+        `Ethernet   Kestrel(R) Gigabit Network Conn Up      ${d.mac.toUpperCase().replace(/:/g, "-")}  1 Gbps`,
       ]);
     case "powercfg": {
       const a = arg.toLowerCase();

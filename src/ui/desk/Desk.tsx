@@ -311,12 +311,25 @@ function TicketView() {
               >
                 <option value="">Attach output...</option>
                 <option value="ovik">Ovik status of the device</option>
-                {sessions.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {game.world.devices.find((d) => d.id === s.deviceId)?.hostname}: {s.last?.line}
-                    {s.id === session ? " (current tab)" : ""}
-                  </option>
-                ))}
+                {sessions.map((s) => {
+                  const host = game.world.devices.find((d) => d.id === s.deviceId)?.hostname;
+                  const outs = s.outputs ?? (s.last ? [s.last] : []);
+                  return (
+                    <optgroup
+                      key={s.id}
+                      label={`${host}${s.id === session ? " (current tab)" : ""}`}
+                    >
+                      {outs
+                        .map((o, i) => ({ o, i }))
+                        .reverse()
+                        .map(({ o, i }) => (
+                          <option key={`${s.id}#${i}`} value={s.outputs ? `${s.id}#${i}` : s.id}>
+                            {o.line}
+                          </option>
+                        ))}
+                    </optgroup>
+                  );
+                })}
               </select>
               <button
                 type="button"

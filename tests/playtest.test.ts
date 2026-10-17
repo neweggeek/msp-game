@@ -275,3 +275,26 @@ describe("playtest leftovers", () => {
     expect(g.score.filter((e) => e.reason.startsWith("Fixed the docs"))).toHaveLength(2);
   });
 });
+
+describe("playtest small leftovers", () => {
+  it("an earlier command's output can be attached, not just the last one", () => {
+    const { g, act, shell, rmm, server } = setup();
+    rmm("ipconfig");
+    rmm(`ping ${server.ip}`);
+    const t = g.book.tickets[0];
+    if (!t) throw new Error("no ticket");
+    expect(g.sessions[shell]?.outputs?.map((o) => o.line)).toEqual([
+      "ipconfig",
+      `ping ${server.ip}`,
+    ]);
+    expect(act({ t: "attach-proof", ticket: t.id, source: `${shell}#0` }).ok).toBe(true);
+    expect(t.proofs.at(-1)?.source).toContain(": ipconfig");
+    expect(act({ t: "attach-proof", ticket: t.id, source: `${shell}#9` }).ok).toBe(false);
+  });
+
+  it("staff first names do not repeat at one client", () => {
+    const g = newGame("playtest-1", data);
+    const firsts = g.world.client.staff.slice(0, 40).map((n) => n.split(" ")[0]);
+    expect(new Set(firsts).size).toBe(firsts.length);
+  });
+});

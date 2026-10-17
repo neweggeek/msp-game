@@ -457,6 +457,13 @@ function editField(world: World, target: string, field: string): EditField | und
   return undefined;
 }
 
+const KEEP_OUTPUTS = 10;
+
+function remember(s: TermSession, line: string, output: string[]): void {
+  s.last = { line, output };
+  s.outputs = [...(s.outputs ?? []), s.last].slice(-KEEP_OUTPUTS);
+}
+
 function openDeviceSession(
   state: GameState,
   data: GameData,
@@ -504,7 +511,7 @@ function run(state: GameState, data: GameData, a: Action): ActionResult {
         output.push(...lockedOut(state, data, s, before));
       // Keep the last command that printed something, so there is real output to attach.
       // A password line never counts: it would show the password on the ticket.
-      if (output.length > 0 && !typedPassword) s.last = { line: a.line, output };
+      if (output.length > 0 && !typedPassword) remember(s, a.line, output);
       spend(state, data, cost(data, "cli"));
       return { ok: true, output };
     }
@@ -522,7 +529,7 @@ function run(state: GameState, data: GameData, a: Action): ActionResult {
       const s = state.sessions[a.session];
       if (!s || s.kind !== "rmm") return { ok: false, error: `No session ${a.session}.` };
       const res = runRmmLine(s, a.line, world, clock.now);
-      if (res.output.length > 0) s.last = { line: a.line, output: res.output };
+      if (res.output.length > 0) remember(s, a.line, res.output);
       spend(state, data, cost(data, "rmm-command"));
       if (!res.ssh) return { ok: true, output: res.output };
       // SSH from the agent: the target must answer on 22 from here.
@@ -657,11 +664,15 @@ function run(state: GameState, data: GameData, a: Action): ActionResult {
               `${v.alerts.length} active alerts`,
             ];
       } else {
-        const s = state.sessions[a.source];
-        if (!s?.last) return { ok: false, error: "Run a command first, then attach its output." };
+        // "s3" is the session's last output, "s3#1" an earlier one from its list.
+        const [sid = "", n] = a.source.split("#");
+        const s = state.sessions[sid];
+        const pick = n === undefined ? s?.last : s?.outputs?.[Number(n)];
+        if (!s || !pick)
+          return { ok: false, error: "Run a command first, then attach its output." };
         const host = world.devices.find((d) => d.id === s.deviceId)?.hostname ?? s.deviceId;
-        source = `${host}: ${s.last.line}`;
-        lines = s.last.output.slice(0, 40);
+        source = `${host}: ${pick.line}`;
+        lines = pick.output.slice(0, 40);
       }
       t.proofs.push({ at: clock.now, kind: "output", source, lines, provesFixed: fixed });
       t.history.push({ at: clock.now, by: "tech", text: `Attached output: ${source}` });

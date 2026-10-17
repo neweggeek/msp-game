@@ -22,9 +22,13 @@ export function genProfile(rng: Rng, data: GameData, forceTier?: Tier): ClientPr
   const window = rng.pickWeighted(rules.afterHoursWindows);
 
   // Staff names, unique, so a ticket can name the user and RMM can find their PC.
-  const staff = rng
-    .shuffle(rules.firstNames.flatMap((f) => rules.lastNames.map((l) => `${f} ${l}`)))
-    .slice(0, 60);
+  // First names do not repeat until the pool runs out, so four Toms never share an office.
+  const firsts = rng.shuffle([...rules.firstNames]);
+  const staff: string[] = [];
+  for (let i = 0; staff.length < 60 && i < 600; i++) {
+    const name = `${firsts[i % firsts.length]} ${rng.pick(rules.lastNames)}`;
+    if (!staff.includes(name)) staff.push(name);
+  }
 
   const contacts: Contact[] = [];
   const count = rng.int(2, 3);

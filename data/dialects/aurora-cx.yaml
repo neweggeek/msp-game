@@ -23,7 +23,7 @@ fields:
   ports:
     description: { model: description, codec: string }
     shutdown: { model: shutdown, codec: bool }
-    vlan-access: { model: vlan, codec: int }
+    vlan-access: { model: vlan, codec: int, min: 1, max: 4094, refersTo: vlans }
     poe: { model: poeEnabled, codec: bool }
     poe-priority: { model: poePriority, codec: enum, values: [low, high, critical] }
   vlans:
@@ -89,6 +89,7 @@ errors:
   no-entry: "Port {token} does not exist."
   read-only: "Invalid input: {token}"
   no-target: "ping: unknown host {token}"
+  no-ref: "VLAN {token} does not exist. Create it first with \"vlan {token}\"."
 
 views:
   version:

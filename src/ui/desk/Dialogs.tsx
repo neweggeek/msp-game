@@ -66,7 +66,9 @@ function Handoff({ ticket }: { ticket: string }) {
   const { act, setDialog } = useUi();
   const t = game.book.tickets.find((x) => x.id === ticket);
   const types = data.handoffs.handoffs;
-  const [type, setType] = useState(types[1]?.id ?? "");
+  const [type, setType] = useState(
+    types.find((h) => h.id === "customer-question")?.id ?? types[1]?.id ?? "",
+  );
   const [detail, setDetail] = useState("");
   const [note, setNote] = useState<number>();
   const [askClose, setAskClose] = useState(false);

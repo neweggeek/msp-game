@@ -302,6 +302,11 @@ export const dialectSchema = z.object({
         codec: codecSchema,
         values: z.array(z.string()).optional(),
         readOnly: z.boolean().optional(),
+        /** int codec: allowed range. */
+        min: z.number().optional(),
+        max: z.number().optional(),
+        /** The value must name an entry in this config table, like a VLAN that exists. */
+        refersTo: z.string().optional(),
       }),
     ),
   ),
