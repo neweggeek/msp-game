@@ -141,7 +141,8 @@ export function genDocs(
       name: s.name,
       address: s.address,
       vlans: structuredClone(s.vlans),
-      isp: { ...s.isp },
+      // Nobody wrote the ISP's security PIN down at some clients. It is on the bill.
+      isp: { ...s.isp, pin: rng.chance(level.missingCredential * 3) ? "" : s.isp.pin },
     })),
     devices,
     credentials,

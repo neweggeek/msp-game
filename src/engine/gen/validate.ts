@@ -23,9 +23,16 @@ export function accessPaths(
   );
   if (rmmHosts.length > 0) access.push("rmm");
   const collector = w.devices.find((d) => d.id === w.monitoring?.collectorId);
-  if (collector && ns.online.get(collector.id)) access.push("monitoring");
+  if (collector && ns.online.get(collector.id) && canReach(w, collector.id, "1.1.1.1", ns))
+    access.push("monitoring");
   // Someone at the client can always be called and act as remote hands.
   if (w.client.contacts.length > 0) access.push("hands");
+  // The ISP talks once you have the PIN: from the docs, or read off the bill by a contact.
+  const pinKnown = docs.sites.every((s) => {
+    const real = w.sites.find((x) => x.id === s.siteId)?.isp;
+    return s.isp.pin === real?.pin && s.isp.account === real.account;
+  });
+  if (pinKnown || w.client.contacts.length > 0) access.push("isp");
   if (!c) return access;
 
   for (const [role, id] of Object.entries(c.bindings)) {

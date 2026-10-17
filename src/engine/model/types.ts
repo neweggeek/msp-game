@@ -14,7 +14,7 @@ export type Priority = "P1" | "P2" | "P3" | "P4";
 export type PoePriority = "low" | "high" | "critical";
 export type Staleness = "fresh" | "partly" | "stale";
 export type Origin = "client" | "alert" | "tech";
-/** "docs", "monitoring", "rmm", "hands", or "ssh:<role>" / "rmm:<role>" for one bound device. */
+/** "docs", "monitoring", "rmm", "hands", "isp", or "ssh:<role>" / "rmm:<role>" for one bound device. */
 export type AccessToken = string;
 
 export interface Contact {
@@ -70,6 +70,13 @@ export interface Isp {
   wanCidr: string;
   gateway: string;
   phone: string;
+  /** The ISP's support line asks for both before it talks about the account. */
+  account: string;
+  pin: string;
+  /** The ISP's side is down: a modem stuck after a provisioning push, for example. */
+  outage?: { since: number; until?: number };
+  /** The ISP rebooted the modem from their end. Down until then. */
+  rebootUntil?: number;
 }
 
 export interface Site {

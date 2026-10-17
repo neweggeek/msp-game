@@ -22,6 +22,8 @@ export function caseFixed(world: World, c: CaseInstance, now: number): boolean {
         return dev.sleep === undefined;
       case "no-power-cut":
         return !dev.powerCut || (dev.powerCut.until !== undefined && dev.powerCut.until <= now);
+      case "isp-up":
+        return !ns.ispDown.get(dev.siteId);
       case "no-loop":
         return !loopLinks(world, dev.id).length;
       default:

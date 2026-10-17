@@ -1,4 +1,4 @@
-import type { Device, Fields, PoePriority, World } from "../model/types";
+import type { Device, Fields, Isp, PoePriority, World } from "../model/types";
 import { inDailyWindow, inDayWindow, lastWindowEnd } from "../util/time";
 
 export interface PoePortState {
@@ -28,6 +28,8 @@ export interface NetState {
   cut: Map<string, boolean>;
   /** Switches drowning in a broadcast storm from a loop. Nothing on them passes traffic. */
   storm: Map<string, boolean>;
+  /** Sites whose ISP side is down: no internet and no tunnel, whatever the firewall says. */
+  ispDown: Map<string, boolean>;
   poe: Map<string, PoeSwitchState>;
 }
 
@@ -134,7 +136,18 @@ export function netState(world: World, now: number, opts: { ignoreCuts?: boolean
     }
     online.set(d.id, up);
   }
-  return { now, online, powered, asleep, cut, storm, poe };
+  const ispDown = new Map<string, boolean>();
+  for (const s of world.sites) ispDown.set(s.id, ispOutage(s.isp, now));
+  return { now, online, powered, asleep, cut, storm, ispDown, poe };
+}
+
+/** Is the ISP's side down: an outage not yet fixed, or a modem rebooting? */
+export function ispOutage(isp: Isp, now: number): boolean {
+  const o = isp.outage;
+  return (
+    (!!o && now >= o.since && (o.until === undefined || now < o.until)) ||
+    (isp.rebootUntil !== undefined && now < isp.rebootUntil)
+  );
 }
 
 /** Good cables with both ends on this switch. */

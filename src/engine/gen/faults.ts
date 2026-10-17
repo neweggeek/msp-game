@@ -158,6 +158,12 @@ function applyFault(
         p2.dst = `${a}.${Number(b2) + 1}.${c}.${d}/${prefix}`;
         break;
       }
+      case "isp-outage": {
+        const site = draft.sites.find((s) => s.id === dev.siteId);
+        if (!site) return null;
+        site.isp.outage = { since: parseGameTime(def.startedAt) };
+        break;
+      }
       case "loop-cable": {
         // Two spare wall jacks under one desk, joined by a loose patch cable.
         const free = rng.shuffle(dev.ports.filter((p) => p.role === "access" && !p.link));

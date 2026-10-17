@@ -16,6 +16,8 @@ asks:
   - { id: power-cycle, kind: power-cycle, minutes: 8, device: true, label: "Unplug {device}, count to ten, and plug it back in." }
   - { id: after-hours, kind: fact, minutes: 2, label: "Is anyone in the office after hours?", default: "Not really. We lock up when we leave." }
   - { id: recent-changes, kind: fact, minutes: 2, label: "Did anything change around the office lately?", default: "Not that I know of." }
+  - { id: isp-bill, kind: isp-bill, minutes: 4, label: "Can you find the internet bill and read me the account number and security PIN?" }
+  - { id: modem-lights, kind: fact, minutes: 4, label: "Can you look at the internet provider's modem? What lights are on?", default: "All the lights are green, I think." }
   - { id: closet-power, kind: fact, minutes: 3, label: "What does the network closet plug into?", default: "The outlets on the wall, I think. I don't go in there much." }
 
 lines:
@@ -37,3 +39,30 @@ lines:
   testBroken: "{name}: No, still not working."
   testCollateral: "{name}: That part works now, but {down} stopped working."
   fixDone: "{name}: Done."
+  ispBill: "{name}: Found it. The account number is {account} and the PIN is {pin}."
+  ispBillNone: "{name}: I don't have the bill here. Our office manager keeps those."
+
+# The ISP's support line for each site. The number comes from the docs.
+isp:
+  holdMinutes: [6, 30]
+  patience: 8
+  rebootMinutes: 6
+  agents: [Dana, Marcus, Priya, Jordan, Lena, Tomas, Keisha, Ravi]
+  asks:
+    - { id: isp-verify, kind: isp-verify, minutes: 3, label: "Read the account number and PIN from the docs." }
+    - { id: isp-status, kind: isp-status, minutes: 6, label: "Can you check the modem and the line at {site}?" }
+    - { id: isp-reboot, kind: isp-reboot, minutes: 5, label: "Can you reboot the modem from your end?" }
+  lines:
+    hold: "On hold for {hold} minutes."
+    hello: "{name}: Thanks for calling {isp} support. Can I have the account number and the security PIN?"
+    you: "You: Account {account}, PIN {pin}."
+    noPin: "You: The docs have no PIN for this account."
+    noPinReply: "{name}: Without the PIN I can't go into the account. It's printed on the monthly bill."
+    verified: "{name}: Thank you, you're verified. How can I help?"
+    badPin: "{name}: I'm sorry, that doesn't match what we have. I can't go into the account without the right PIN."
+    needVerify: "{name}: I need to verify the account first. Can I have the account number and PIN?"
+    statusOutage: "{name}: I see the modem stopped checking in at {since}, right after a firmware push went out. It's stuck. I can reboot it from here."
+    statusNothing: "{name}: The modem is online and the line is clean. I don't see anything behind the modem answering, though. Check your equipment."
+    statusClean: "{name}: The modem is online, the line is clean, and I see traffic going both ways. Everything looks good on our side."
+    reboot: "{name}: OK, I sent the reboot. Give it about {minutes} minutes to come back."
+    tired: "{name}: Is there anything else? Then I'll note the account and let you go."

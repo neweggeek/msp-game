@@ -84,6 +84,10 @@ export function DocsView({ full = false }: { full?: boolean }) {
                   <dd>
                     {s.isp.name} · circuit {s.isp.circuitId} · {s.isp.phone}
                   </dd>
+                  <dt>ISP account</dt>
+                  <dd>{editable(`site:${s.siteId}`, "account", s.isp.account)}</dd>
+                  <dt>ISP PIN</dt>
+                  <dd>{editable(`site:${s.siteId}`, "pin", s.isp.pin)}</dd>
                   <dt>WAN IP</dt>
                   <dd>{editable(`site:${s.siteId}`, "wanIp", s.isp.wanIp)}</dd>
                   <dt>WAN block</dt>
