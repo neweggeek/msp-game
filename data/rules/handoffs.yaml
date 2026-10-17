@@ -78,4 +78,7 @@ scoring:
   closedNoProof: -10
   reopened: -25
   slaBreach: -15
+  lockedOut: -40
+  collateralOutage: -20
+  closedNotOurs: -15
   docFix: 5

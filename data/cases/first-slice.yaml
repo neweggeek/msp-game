@@ -22,11 +22,11 @@
     - { type: device-online, role: ap }
   redHerring: "AP and phone firmware are a few versions behind, so it looks like a firmware bug."
   rootCause: "Four new cameras pushed {switch.hostname} past its PoE budget. Every port is low priority, so the switch cut power to the highest ports, including {ap.hostname}."
-  fix: "Set PoE priority high on the AP and phone ports, then quote a bigger PoE switch or a camera switch."
+  fix: "Set PoE priority high on every AP and phone port so only cameras get shed, then quote a bigger PoE switch or a camera switch."
   note:
     issue: "Desk phones rebooting and {ap.hostname} ({ap.ip}) in {ap.room} offline since Monday."
     findings: "{switch.hostname} ({switch.ip}) was asking for more PoE than its budget after four new cameras were plugged in. Every port was low priority, so {ap.hostname} was denied power."
-    changes: "Set PoE priority high on the {ap.hostname} port and the phone ports on {switch.hostname}."
+    changes: "Set PoE priority high on every AP and phone port on {switch.hostname}, so a camera is shed instead of {ap.hostname}."
     rootCause: "Four new cameras pushed {switch.hostname} past its PoE budget."
     nextSteps: "Sales: quote a larger PoE switch or a separate camera switch. Add the cameras to the docs."
     wrongCause: "AP and phone firmware bug after an update."

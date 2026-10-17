@@ -3,6 +3,7 @@ import { gameData } from "../src/engine/data";
 import type { Device } from "../src/engine/model/types";
 import { ovikView } from "../src/engine/monitor/ovik";
 import { type Action, applyAction, newGame, totalScore } from "../src/engine/save/game";
+import * as desk from "../src/engine/tickets/desk";
 import { webPage } from "../src/engine/web/web";
 
 // Bugs found in the first playtest. Each one is pinned here so it stays fixed.
@@ -99,5 +100,93 @@ describe("playtest fixes", () => {
     const s = act({ t: "cli-open", device: sw.id }).session as string;
     for (const line of ["show", "write"])
       expect(act({ t: "cli", session: s, line }).output).toEqual(["Incomplete command."]);
+  });
+});
+
+describe("playtest design calls", () => {
+  it("cutting your own access drops the session, costs points and rolls back later", () => {
+    const { g, act, rmm } = setup();
+    const fw = g.world.devices.find((d) => d.kind === "firewall" && d.siteId === "hq") as Device;
+    const cred = g.world.docs.credentials.find((c) => c.deviceId === fw.id);
+    const s = act({
+      t: "rmm",
+      session: Object.keys(g.sessions)[0] as string,
+      line: `ssh ${cred?.username}@${fw.ip}`,
+    }).session as string;
+    act({ t: "cli", session: s, line: cred?.password ?? "" });
+    const out = ["config system interface", "edit wan1", "set status down", "next", "end"]
+      .map((line) => (act({ t: "cli", session: s, line }).output ?? []).join("\n"))
+      .join("\n");
+    expect(out).toContain("closed by remote host");
+    expect(g.sessions[s]?.closed).toBe(true);
+    expect(g.score.some((e) => e.reason.startsWith("Locked yourself out"))).toBe(true);
+    expect(rmm("hostname")).toContain("Agent went offline");
+    act({ t: "advance", minutes: 24 * 60 });
+    const server = g.world.devices.find((d) => d.kind === "server") as Device;
+    expect(act({ t: "rmm-open", device: server.id }).ok).toBe(true);
+  });
+
+  it("Camera Day with only the AP and phones raised knocks other APs off and is not a clean close", () => {
+    let seen = 0;
+    for (const seed of ["case-a", "case-b", "case-c", "first-shift", "edge-1"]) {
+      const g = newGame(seed, data);
+      const act = (a: Action) => applyAction(g, data, a);
+      const c = g.world.cases.find((x) => x.caseId === "camera-day");
+      if (!c) continue;
+      const sw = g.world.devices.find((d) => d.id === c.bindings.switch) as Device;
+      const ap = c.bindings.ap;
+      const s = act({ t: "cli-open", device: sw.id }).session as string;
+      const ports = sw.ports
+        .filter((p) => {
+          const d = g.world.devices.find((x) => x.id === p.link?.device);
+          return d?.id === ap || d?.kind === "phone";
+        })
+        .map((p) => p.name);
+      for (const line of [
+        "configure terminal",
+        ...ports.flatMap((p) => [`interface ${p}`, "power-over-ethernet priority high"]),
+        "end",
+      ])
+        act({ t: "cli", session: s, line });
+      const t = g.book.tickets.find((x) => x.caseId === "camera-day");
+      if (!t) continue;
+      act({ t: "attach-proof", ticket: t.id, source: s });
+      act({ t: "advance", minutes: 120 });
+      act({
+        t: "handoff",
+        ticket: t.id,
+        handoff: "customer-question",
+        note: 0,
+        detail: "",
+        askClose: true,
+      });
+      act({ t: "advance", minutes: 240 });
+      if (!t.history.some((h) => h.text.includes("stopped working"))) continue;
+      seen++;
+      expect(t.clientConfirmed).toBe(false);
+      act({ t: "resolve", ticket: t.id, note: 0 });
+      expect(g.score.some((e) => e.reason.includes("because of a change"))).toBe(true);
+      expect(g.score.some((e) => e.reason.includes("closed with proof"))).toBe(false);
+    }
+    expect(seen).toBeGreaterThan(0);
+  });
+
+  it("every resolution note has the same six lines", () => {
+    const { g } = setup();
+    const { resolutionNotes } = desk;
+    for (const t of g.book.tickets) {
+      const c = g.world.cases.find((x) => x.caseId === t.caseId);
+      if (!c) continue;
+      for (const n of resolutionNotes(g.world, t, c)) expect(n.lines).toHaveLength(6);
+    }
+  });
+
+  it("resolving a misroute closes it but costs points", () => {
+    const { g, act } = setup();
+    const t = g.book.tickets.find((x) => x.extraId === "edr-misroute");
+    const r = act({ t: "resolve", ticket: t?.id as string, note: 0 });
+    expect(r.ok).toBe(true);
+    expect(t?.closedAt).toBeDefined();
+    expect(g.score.some((e) => e.reason.includes("not a network problem"))).toBe(true);
   });
 });
