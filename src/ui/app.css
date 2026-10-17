@@ -144,6 +144,22 @@ textarea {
   font-weight: 400;
 }
 
+/* Laptop screens: tighten the top bar so every tab stays in view. */
+@media (max-width: 1440px) {
+  .topbar {
+    gap: 10px;
+  }
+  .tab {
+    padding: 0 7px;
+  }
+  .tabs .sep {
+    margin: 0 3px;
+  }
+  .stats {
+    gap: 12px;
+  }
+}
+
 .main {
   flex: 1;
   min-height: 0;
@@ -621,20 +637,4 @@ h3:first-child {
 
 table.grid td.mono {
   white-space: nowrap;
-}
-
-/* Laptop screens: tighten the top bar so every tab stays in view. */
-@media (max-width: 1440px) {
-  .topbar {
-    gap: 10px;
-  }
-  .tab {
-    padding: 0 7px;
-  }
-  .tabs .sep {
-    margin: 0 3px;
-  }
-  .stats {
-    gap: 12px;
-  }
 }
