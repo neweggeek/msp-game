@@ -3,6 +3,7 @@ import { SLOTS, formatTime, ovikView, totalScore } from "../engine";
 import { DebugView } from "./debug/DebugView";
 import { Desk } from "./desk/Desk";
 import { Dialogs } from "./desk/Dialogs";
+import { diagCounts } from "./diag";
 import { DocsView } from "./docs/Docs";
 import { KbView } from "./kb/Kb";
 import { OvikPage } from "./ovik/Ovik";
@@ -151,7 +152,8 @@ function Clock() {
 
 function StatusBar() {
   const game = useGame();
-  const { message, slot, setSlot, loadSlot, exportFile, importFile, start } = useUi();
+  const { message, slot, setSlot, loadSlot, exportFile, importFile, start, setDialog } = useUi();
+  const issues = diagCounts();
   const file = useRef<HTMLInputElement>(null);
   const [seed, setSeed] = useState(game.seed);
   const v = ovikView(game.world, game.clock.now);
@@ -178,6 +180,12 @@ function StatusBar() {
         className="actions"
         onSubmit={(e) => {
           e.preventDefault();
+          // A new shift replaces the save in this slot. Ask before throwing work away.
+          if (
+            game.log.length > 0 &&
+            !window.confirm(`Start a new shift? It replaces the save in slot ${slot}.`)
+          )
+            return;
           start(seed);
         }}
       >
@@ -211,6 +219,23 @@ function StatusBar() {
       </button>
       <button type="button" className="btn small" onClick={() => file.current?.click()}>
         Import
+      </button>
+      <button
+        type="button"
+        className="btn small"
+        onClick={() => setDialog({ kind: "diag" })}
+        title="Errors and the action log, to copy and send back"
+      >
+        Diagnostics
+        {issues.errors > 0 && ` (${issues.errors} error${issues.errors === 1 ? "" : "s"})`}
+      </button>
+      <button
+        type="button"
+        className="btn small"
+        onClick={() => setDialog({ kind: "bug" })}
+        title="Something wrong or confusing? Tell us. It saves with the game details."
+      >
+        Report bug
       </button>
       <input
         ref={file}

@@ -82,10 +82,8 @@ export function matchCommand(dialect: Dialect, mode: CliMode, tokens: string[]):
     c.pats.slice(c.pi).every((p) => "ph" in p && p.rest === "*"),
   );
   if (complete.length === 0) {
-    const needsArg = cands.some((c) => {
-      const p = c.pats[c.pi];
-      return p && "ph" in p;
-    });
+    // Every word matched the start of some command, so the line is cut short, not wrong.
+    const needsArg = tokens.length > 0 && cands.length > 0;
     return { ok: false, error: needsArg ? "missing-arg" : "unknown-command" };
   }
   complete.sort((a, b) => b.lits - a.lits);

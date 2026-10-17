@@ -42,12 +42,15 @@ Phase 1 notes:
 - Scenario "slice" (data/scenarios) plants Camera Day, Wrong Phonebook, Nobody Home and Branch Silence on one client. "quick" plants one random case on a one-site client.
 - Docs are written from the network before the faults, then degraded by staleness. Devices a case is about are never dropped from docs.
 - Closing rule: client tickets need attached output plus a client OK (Customer question with "ask to close"). Alert and tech tickets need output only. Closing anyway is allowed; it costs points, and an unfixed close reopens 90 minutes later.
+- Response target: a ticket note, a handoff or a close is the first response. Until then the queue shows "Respond by". A close that reopens earns nothing for its resolution note.
 - Consent: opening a shell or running a script on a PC with a signed-in user, without asking first, costs points. Users answer only during the client's hidden business hours.
 - Every action costs game minutes (data/rules/actions.yaml). Scoring values live in data/rules/handoffs.yaml.
 - Camera Day needs a switch with its own CLI, so it only lands on Aurora CX switches. FortressSwitch is still read-only from the gate.
 - Out of scope for now: ScreenLink sessions, VPN clients, console, truck rolls, editing in the device web GUI.
 - Generator rerolls: a case that does not fit rerolls the client, fault placement rerolls up to 8 times, unsolvable docs reroll up to 8 times.
 - Asset types (data/rules/assets.yaml) group gear in Hoodoo Docs, Ovik and Shinobi RMM, IT Glue and Hudu style. Passwords sit as child rows under their asset. Devices with a CLI dialect get a copy button for `ssh {user}@{ip}` built from the docs, so stale docs give a stale command. Wi-Fi networks are docs only for now (no AP config behind them); their passphrases are vault entries keyed `wifi-<site>-<n>`.
+- Terminal pacing (src/ui/terminal/pace.ts) is UI only: ping replies 1s apart, Windows timeouts 4s each, Unix ping fail 5s, Ctrl+C or Esc skips. The engine still answers at once, so game time and tests do not change.
+- Diagnostics (src/ui/diag.ts): errors, warnings, crashes and every action go to a log kept in localStorage. "Report bug" saves the player's note plus a snapshot (tab, ticket, terminal tail, last actions) in a separate list that is never trimmed by the rolling log. The Diagnostics button in the status bar copies or saves the report, which includes the seed and action log for a replay.
 - If a change alters what an old seed builds, the golden-seed test fails. Bump `GENERATOR_VERSION` in `src/engine/gen/index.ts` on purpose, then run `UPDATE_GOLDEN=1 npm test`.
 
 ## Commands

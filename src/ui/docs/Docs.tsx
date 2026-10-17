@@ -90,6 +90,11 @@ export function DocsView({ full = false }: { full?: boolean }) {
         ))}
       </div>
       <div className="scroll">
+        {(tab === "devices" || tab === "sites") && (
+          <p className="dim" style={{ margin: "6px 12px", fontSize: 11.5 }}>
+            Docs can be wrong. Double-click an IP{full ? ", firmware" : ""} or WAN IP to fix it.
+          </p>
+        )}
         {tab === "devices" && (
           <AssetList full={full} editable={editable} revealed={revealed} reveal={reveal} />
         )}

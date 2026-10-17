@@ -80,7 +80,13 @@ export function ovikView(world: World, now: number): OvikView {
             state: h.state,
             note: h.state === "down" ? "Site down: no data from any device" : "Site back up",
           }
-        : { at: h.at, hostname: name(h.deviceId), state: h.state, note: h.note },
+        : {
+            at: h.at,
+            hostname: name(h.deviceId),
+            state: h.state,
+            // Ovik only sees pings. The real cause stays in the world history for the debug view.
+            note: h.state === "down" ? "Stopped responding" : "Responding again",
+          },
     )
     .sort((a, b) => b.at - a.at);
   return {

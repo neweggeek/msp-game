@@ -30,7 +30,17 @@ export function Desk() {
   );
 }
 
+/** The response target, while nobody has touched the ticket yet. */
+function respondBy(game: ReturnType<typeof useGame>, t: Ticket): string | undefined {
+  if (t.respondedAt !== undefined || t.breaches.response !== undefined) return undefined;
+  const due = fmt(t.responseDue);
+  const sameDay = Math.floor(t.responseDue / 1440) === Math.floor(game.clock.now / 1440);
+  return `Respond by ${sameDay ? due.slice(-5) : `${due.slice(0, 3)} ${due.slice(-5)}`}`;
+}
+
 function slaLeft(game: ReturnType<typeof useGame>, t: Ticket): string {
+  const respond = respondBy(game, t);
+  if (respond) return respond;
   const left = t.resolveDue - game.clock.now;
   if (left <= 0) return "SLA breached";
   const d = Math.floor(left / 1440);
@@ -38,7 +48,7 @@ function slaLeft(game: ReturnType<typeof useGame>, t: Ticket): string {
   const m = left % 60;
   return d > 0
     ? `SLA ${d}d ${String(h).padStart(2, "0")}h`
-    : `SLA ${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+    : `SLA ${h}h ${String(m).padStart(2, "0")}m`;
 }
 
 function Queue() {
@@ -183,6 +193,11 @@ function TicketView() {
                 : `Reported by ${t.contact ?? "client"}`}{" "}
             · {data_status(t.status)}
           </div>
+          {!closed && respondBy(game, t) && (
+            <div className="warn" style={{ fontSize: 12, marginBottom: 4 }}>
+              {respondBy(game, t)}. A ticket note, a handoff or a close counts as a response.
+            </div>
+          )}
           <h1>
             {game.world.client.name}: {t.title}
           </h1>

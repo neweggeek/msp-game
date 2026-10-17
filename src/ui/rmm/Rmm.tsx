@@ -2,9 +2,9 @@ import { useState } from "react";
 import { type Device, agents, publicIp } from "../../engine";
 import { SortTh, TypeChips, countBy, groupByType, ipKey, typeOf, useSort } from "../assets/assets";
 import { data, useGame, useUi } from "../store";
+import { Terminal } from "../terminal/Terminal";
 
 type AgentSort = "hostname" | "user" | "siteName" | "ip" | "publicIp" | "status";
-import { Terminal } from "../terminal/Terminal";
 
 export function RmmPage() {
   const game = useGame();

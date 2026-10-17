@@ -1,5 +1,5 @@
 import type { Device, World } from "../model/types";
-import { inSubnet, parseCidr } from "../util/ip";
+import { inSubnet, isIp, parseCidr } from "../util/ip";
 import { type NetState, firewallInterfaces, siteFirewall } from "./state";
 import { sitesLinked, wanIp } from "./vpn";
 
@@ -10,9 +10,12 @@ export interface Target {
 }
 
 const privateNets = ["10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"];
+/** Client WAN blocks come from these ranges. An address here that no firewall owns, like a branch's old WAN IP, does not answer. */
+const wanNets = ["192.0.2.0/24", "198.51.100.0/24", "203.0.113.0/24"];
 
 /** What answers at this IP, if anything. */
 export function resolveTarget(world: World, ip: string, ns: NetState): Target {
+  if (!isIp(ip)) return { kind: "none" };
   for (const fw of world.devices.filter((d) => d.kind === "firewall")) {
     for (const [name, f] of firewallInterfaces(fw)) {
       if (typeof f.ip === "string" && parseCidr(f.ip).ip === ip && f.status !== "down") {
@@ -25,7 +28,9 @@ export function resolveTarget(world: World, ip: string, ns: NetState): Target {
   const dev = world.devices.find((d) => d.ip === ip && d.kind !== "firewall");
   if (dev) return ns.online.get(dev.id) ? { kind: "device", device: dev } : { kind: "none" };
   if (world.sites.some((s) => s.isp.gateway === ip)) return { kind: "isp-gateway" };
-  return privateNets.some((n) => inSubnet(ip, n)) ? { kind: "none" } : { kind: "internet" };
+  return [...privateNets, ...wanNets].some((n) => inSubnet(ip, n))
+    ? { kind: "none" }
+    : { kind: "internet" };
 }
 
 function wanUp(fw: Device): boolean {
@@ -132,7 +137,8 @@ export function resolveName(world: World, dev: Device, name: string, ns: NetStat
       (d) => d.hostname.toLowerCase() === short && d.ip && d.kind !== "camera",
     );
     if (hit && internalServer) return { ok: true, ip: hit.ip as string, server };
-    if (lower.includes(".") && !lower.endsWith(".local")) {
+    // Internet names end in a real-looking top-level domain. "10.44.99" or "999.1.1.1" do not.
+    if (/\.[a-z]{2,}$/.test(lower) && !lower.endsWith(".local")) {
       let h = 0;
       for (const c of lower) h = (h * 31 + c.charCodeAt(0)) >>> 0;
       return { ok: true, ip: `142.250.${h % 200}.${(h >>> 8) % 250}`, server };
