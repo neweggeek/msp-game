@@ -33,6 +33,7 @@ import {
   setPriority,
   setStatus,
 } from "../tickets/tickets";
+import { isIp } from "../util/ip";
 
 export const SAVE_VERSION = 2;
 export const SNAPSHOT_EVERY = 50;
@@ -380,12 +381,10 @@ function consoleRollback(state: GameState, p: Record<string, string | number>): 
 }
 
 /** "10.1.20.5", or with cidr "203.0.113.8/29". */
-const isIp = (v: string, cidr = false) => {
-  const [ip = "", bits, ...rest] = v.split("/");
-  const octets = ip.split(".");
-  if (rest.length > 0 || (bits !== undefined) !== cidr) return false;
-  if (bits !== undefined && !(/^\d{1,2}$/.test(bits) && Number(bits) <= 32)) return false;
-  return octets.length === 4 && octets.every((n) => /^\d{1,3}$/.test(n) && Number(n) <= 255);
+const isAddress = (v: string, cidr = false) => {
+  if (!cidr) return isIp(v);
+  const [ip = "", bits = "", ...rest] = v.split("/");
+  return rest.length === 0 && isIp(ip) && /^\d{1,2}$/.test(bits) && Number(bits) <= 32;
 };
 
 interface EditField {
@@ -781,7 +780,7 @@ function run(state: GameState, data: GameData, a: Action): ActionResult {
       const value = a.value.trim();
       const before = f.get();
       if (!value) return { ok: false, error: `${a.field} cannot be empty.` };
-      if (f.format !== "text" && !isIp(value, f.format === "cidr"))
+      if (f.format !== "text" && !isAddress(value, f.format === "cidr"))
         return {
           ok: false,
           error: `"${value}" is not ${f.format === "cidr" ? "an address block like 203.0.113.8/29" : "an IP address"}.`,
