@@ -14,6 +14,7 @@ export {
   closeBlockers,
   handoffNotes,
   resolutionNotes,
+  plainResolutionNotes,
   ticketDevice,
   NOTE_PARTS,
   type NoteOption,

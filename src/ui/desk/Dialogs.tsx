@@ -1,5 +1,11 @@
 import { type ReactNode, useState } from "react";
-import { closeBlockers, handoffNotes, resolutionNotes, webPage } from "../../engine";
+import {
+  closeBlockers,
+  handoffNotes,
+  plainResolutionNotes,
+  resolutionNotes,
+  webPage,
+} from "../../engine";
 import { BugReportDialog, DiagnosticsBody, DiagnosticsButtons } from "../DiagnosticsPanel";
 import { data, useGame, useUi } from "../store";
 
@@ -146,27 +152,8 @@ function Resolve({ ticket }: { ticket: string }) {
   const t = game.book.tickets.find((x) => x.id === ticket);
   const c = game.world.cases.find((x) => x.caseId === t?.caseId);
   if (!t) return null;
-  if (!c)
-    return (
-      <Modal
-        title={`Resolve ${t.id}`}
-        footer={
-          <button
-            type="button"
-            className="btn"
-            onClick={() => setDialog({ kind: "send-back", ticket: t.id })}
-          >
-            Send back instead
-          </button>
-        }
-      >
-        <p>
-          There is nothing for the network team to fix on this one. Send it back to dispatch with a
-          reason.
-        </p>
-      </Modal>
-    );
-  const notes = resolutionNotes(game.world, t, c);
+  // A ticket with nothing to fix still gets notes, so the dialog does not give away a misroute.
+  const notes = c ? resolutionNotes(game.world, t, c).map((n) => n.lines) : plainResolutionNotes(t);
   const blockers = closeBlockers(t);
   return (
     <Modal
@@ -210,9 +197,9 @@ function Resolve({ ticket }: { ticket: string }) {
       )}
       <h3>Pick the resolution note</h3>
       {notes.map((n, i) => (
-        <label key={n.lines.join()} className={`choice ${pick === i ? "on" : ""}`}>
+        <label key={n.join()} className={`choice ${pick === i ? "on" : ""}`}>
           <input type="radio" checked={pick === i} onChange={() => setPick(i)} />
-          <span className="lines">{n.lines.join("\n")}</span>
+          <span className="lines">{n.join("\n")}</span>
         </label>
       ))}
     </Modal>

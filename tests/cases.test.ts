@@ -94,8 +94,13 @@ describe("first slice cases play end to end", () => {
       const [poe] = cli(s, ["show power-over-ethernet"]);
       expect(poe?.join("\n")).toContain("Denied");
       const apPort = sw.ports.find((p) => p.link?.device === ap.id)?.name as string;
+      // Every AP and phone port, or raising one AP knocks the next one off the budget.
       const phonePorts = sw.ports
-        .filter((p) => g.world.devices.find((d) => d.id === p.link?.device)?.kind === "phone")
+        .filter((p) =>
+          ["phone", "ap"].includes(
+            g.world.devices.find((d) => d.id === p.link?.device)?.kind as string,
+          ),
+        )
         .map((p) => p.name);
       cli(s, [
         "configure terminal",

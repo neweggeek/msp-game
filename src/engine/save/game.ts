@@ -17,7 +17,12 @@ import { canManage, resolveTarget } from "../net/reach";
 import { netState } from "../net/state";
 import { type RmmSession, agentOnline, openRmm, runRmmLine, runScript } from "../rmm/rmm";
 import { caseFixed } from "../tickets/checks";
-import { closeBlockers, handoffNotes, resolutionNotes } from "../tickets/desk";
+import {
+  closeBlockers,
+  handoffNotes,
+  plainResolutionNotes,
+  resolutionNotes,
+} from "../tickets/desk";
 import {
   type TicketBook,
   addNote,
@@ -99,6 +104,10 @@ export interface GameState {
   /** Doc fields already credited, "device:<id>:ip". */
   docFixes: string[];
   events: GameEvent[];
+  /** Devices up when the shift started. One that goes down later and is not asleep is your outage. */
+  baselineUp?: string[];
+  /** Devices already charged as collateral, so each outage costs once. */
+  collateral?: string[];
   log: Action[];
   snapshot?: { at: number; state: string };
 }
@@ -151,6 +160,7 @@ export function newGame(
       contact: x.origin === "client" ? contact : undefined,
     });
   }
+  const ns = netState(world, clock.now);
   const state: GameState = {
     saveVersion: SAVE_VERSION,
     generatorVersion: GENERATOR_VERSION,
@@ -165,6 +175,11 @@ export function newGame(
     calendar: [],
     docFixes: [],
     events: [],
+    // Gear a fault added (the new cameras) is the cause, so shedding it is fair game.
+    baselineUp: world.devices
+      .filter((d) => ns.online.get(d.id) && !ns.asleep.get(d.id) && !d.addedBy)
+      .map((d) => d.id),
+    collateral: [],
     log: [],
   };
   if (o.scenario) state.scenario = o.scenario;
@@ -190,6 +205,7 @@ function spend(state: GameState, data: GameData, minutes: number): void {
   advance(state.clock, minutes, (timer) => {
     if (timer.kind === "handoff-follow-up") return handoffFollowUp(state, data, timer.payload);
     if (timer.kind === "reopen") return reopen(state, data, String(timer.payload.ticket));
+    if (timer.kind === "console-rollback") return consoleRollback(state, timer.payload);
     if (timer.kind.startsWith("ticket-")) {
       const ev = onTicketTimer(state.book, state.clock, data, timer);
       if (ev) {
@@ -249,10 +265,13 @@ function handoffFollowUp(
   if (p.askClose === 1) {
     const c = state.world.cases.find((x) => x.caseId === t.caseId);
     const fixed = !!c && caseFixed(state.world, c, now);
-    t.clientConfirmed = fixed;
-    text = fixed
-      ? `${t.contact ?? "Client"}: Tested it, all good here. OK to close.`
-      : `${t.contact ?? "Client"}: Still not working here.`;
+    const broken = fixed ? collateralDown(state, caseSite(state, c)) : [];
+    t.clientConfirmed = fixed && broken.length === 0;
+    text = !fixed
+      ? `${t.contact ?? "Client"}: Still not working here.`
+      : broken.length > 0
+        ? `${t.contact ?? "Client"}: That part works now, but ${whereDown(state, broken)} stopped working. Not OK to close yet.`
+        : `${t.contact ?? "Client"}: Tested it, all good here. OK to close.`;
     t.proofs.push({ at: now, kind: "client", source: "client", lines: [text], provesFixed: fixed });
   }
   if (t.version === Number(p.version)) {
@@ -261,6 +280,22 @@ function handoffFollowUp(
   }
   t.history.push({ at: now, by: p.askClose === 1 ? "client" : "dispatch", text });
   state.events.push({ at: now, text: `${t.id}: ${text}` });
+}
+
+function caseSite(state: GameState, c: { bindings: Record<string, string>; primary: string }) {
+  return state.world.devices.find((d) => d.id === c.bindings[c.primary])?.siteId;
+}
+
+/** "LFC-AP-EXAM3 in Exam 3 and LFC-AP-EXAM4 in Exam 4", as the client would say it. */
+function whereDown(state: GameState, ids: string[]): string {
+  const rooms = state.world.sites.flatMap((x) => x.rooms);
+  return ids
+    .map((id) => state.world.devices.find((d) => d.id === id))
+    .map((d) => {
+      const room = rooms.find((r) => r.id === d?.roomId)?.name;
+      return room ? `${d?.hostname} in ${room}` : (d?.hostname ?? "");
+    })
+    .join(" and ");
 }
 
 function reopen(state: GameState, data: GameData, id: string): void {
@@ -277,6 +312,68 @@ function reopen(state: GameState, data: GameData, id: string): void {
   });
   state.events.push({ at: state.clock.now, text: `${t.id} reopened. The problem is not fixed.` });
   points(state, data, "reopened", `${t.id} reopened after close.`, t.id);
+}
+
+/** Devices at a site that were up at the start, are down now and are not just asleep. */
+export function collateralDown(state: GameState, siteId?: string): string[] {
+  const ns = netState(state.world, state.clock.now);
+  return (state.baselineUp ?? []).filter((id) => {
+    const d = state.world.devices.find((x) => x.id === id);
+    return !!d && (!siteId || d.siteId === siteId) && !ns.online.get(id) && !ns.asleep.get(id);
+  });
+}
+
+/** Can this SSH session still reach its device the way it came in? */
+function sessionReaches(state: GameState, s: CliSession): boolean {
+  if (!s.fromId || !s.address) return true;
+  const { world } = state;
+  const ns = netState(world, state.clock.now);
+  const host = world.devices.find((d) => d.id === s.fromId);
+  return !!host && agentOnline(world, host, ns) && canManage(world, host.id, s.address, "ssh", ns);
+}
+
+/**
+ * A change that cut your own SSH path. The session drops, it costs points, and the on-call senior
+ * talks the client's contact through a console rollback an hour of business time later.
+ */
+function lockedOut(
+  state: GameState,
+  data: GameData,
+  s: CliSession,
+  before: { running?: unknown; startup?: unknown },
+): string[] {
+  const { world, clock } = state;
+  const dev = world.devices.find((d) => d.id === s.deviceId);
+  if (!dev) return [];
+  s.closed = true;
+  const contact = world.client.contacts[0]?.name ?? "the client";
+  const at = addBusinessMinutes(data.calendar, clock.now, 60);
+  schedule(clock, at, "console-rollback", {
+    device: dev.id,
+    running: JSON.stringify(before.running ?? null),
+    startup: JSON.stringify(before.startup ?? null),
+  });
+  const when = formatTime(data.calendar, at);
+  const text = `You cut off your own access to ${dev.hostname}. The on-call senior will walk ${contact} through a console rollback at ${when}. That undoes your last change.`;
+  points(state, data, "lockedOut", `Locked yourself out of ${dev.hostname} with a remote change.`);
+  state.events.push({ at: clock.now, text });
+  const lines = [`Connection to ${s.address} closed by remote host.`, "", text];
+  s.transcript.pop(); // the fresh prompt runLine left behind
+  s.transcript.push(...lines);
+  return lines;
+}
+
+function consoleRollback(state: GameState, p: Record<string, string | number>): void {
+  const dev = state.world.devices.find((d) => d.id === p.device);
+  if (!dev) return;
+  const running = JSON.parse(String(p.running));
+  const startup = JSON.parse(String(p.startup));
+  if (running) dev.running = running;
+  if (startup) dev.startup = startup;
+  state.events.push({
+    at: state.clock.now,
+    text: `${dev.hostname} was rolled back from the console. Your last change is gone and access is back.`,
+  });
 }
 
 function openDeviceSession(
@@ -310,7 +407,20 @@ function run(state: GameState, data: GameData, a: Action): ActionResult {
       const s = state.sessions[a.session];
       if (!s || s.kind !== "device") return { ok: false, error: `No session ${a.session}.` };
       const typedPassword = !!s.login;
+      const dev = world.devices.find((d) => d.id === s.deviceId);
+      const before = {
+        running: structuredClone(dev?.running),
+        startup: structuredClone(dev?.startup),
+      };
+      const reached = !typedPassword && sessionReaches(state, s);
       const output = runLine(s, a.line, cliContext(state, data, s));
+      if (
+        reached &&
+        !s.closed &&
+        JSON.stringify(dev?.running) !== JSON.stringify(before.running) &&
+        !sessionReaches(state, s)
+      )
+        output.push(...lockedOut(state, data, s, before));
       // Keep the last command that printed something, so there is real output to attach.
       // A password line never counts: it would show the password on the ticket.
       if (output.length > 0 && !typedPassword) s.last = { line: a.line, output };
@@ -481,8 +591,26 @@ function run(state: GameState, data: GameData, a: Action): ActionResult {
       const t = find(book, a.ticket);
       const c = t ? world.cases.find((x) => x.caseId === t.caseId) : undefined;
       if (!t) return { ok: false, error: `No ticket ${a.ticket}.` };
-      if (!c) return { ok: false, error: "There is nothing to fix here. Send it back instead." };
-      if (t.closedAt !== undefined) return { ok: false, error: `${t.id} is closed.` };
+      if (t.closedAt !== undefined || t.sentBack)
+        return { ok: false, error: `${t.id} is not in your queue.` };
+      if (!c) {
+        // Closing works, but a misroute or a duplicate should have gone back to dispatch.
+        if (!plainResolutionNotes(t)[a.note])
+          return { ok: false, error: "Pick a resolution note." };
+        spend(state, data, cost(data, "resolve"));
+        const x = world.extraTickets.find((e) => e.id === t.extraId);
+        points(
+          state,
+          data,
+          "closedNotOurs",
+          x?.kind === "duplicate"
+            ? `${t.id} was a duplicate. Send duplicates back so dispatch can merge them.`
+            : `${t.id} was not a network problem. Send it back so the right team gets it.`,
+          t.id,
+        );
+        setStatus(book, clock, data, t.id, "closed", plainResolutionNotes(t)[a.note]?.join("\n"));
+        return { ok: true, output: [] };
+      }
       const note = resolutionNotes(world, t, c)[a.note];
       if (!note) return { ok: false, error: "Pick a resolution note." };
       spend(state, data, cost(data, "resolve"));
@@ -502,6 +630,19 @@ function run(state: GameState, data: GameData, a: Action): ActionResult {
       setStatus(book, clock, data, t.id, "closed", note.lines.join("\n"));
       if (!fixed) {
         schedule(clock, clock.now + 90, "reopen", { ticket: t.id });
+      } else if (collateralDown(state, caseSite(state, c)).length > 0) {
+        const fresh = collateralDown(state, caseSite(state, c)).filter(
+          (id) => !(state.collateral ?? []).includes(id),
+        );
+        state.collateral = [...(state.collateral ?? []), ...fresh];
+        if (fresh.length > 0)
+          points(
+            state,
+            data,
+            "collateralOutage",
+            `Closed ${t.id} while ${whereDown(state, fresh)} is down because of a change.`,
+            t.id,
+          );
       } else if (
         blockers.length === 0 &&
         t.proofs.some((p) => p.kind === "output" && p.provesFixed)

@@ -43,6 +43,9 @@ Phase 1 notes:
 - Docs are written from the network before the faults, then degraded by staleness. Devices a case is about are never dropped from docs.
 - Closing rule: client tickets need attached output plus a client OK (Customer question with "ask to close"). Alert and tech tickets need output only. Closing anyway is allowed; it costs points, and an unfixed close reopens 90 minutes later.
 - Response target: a ticket note, a handoff or a close is the first response. Until then the queue shows "Respond by". A close that reopens earns nothing for its resolution note.
+- Lockout: a remote change that cuts your own SSH path drops the session, costs points, and a console rollback undoes it one business hour later.
+- Collateral: a device that was up at shift start and is down now (not asleep, not added by a fault) blocks the client OK and costs points on close.
+- Resolution notes all have the same six lines. Resolving a misroute or duplicate is allowed but costs points.
 - Consent: opening a shell or running a script on a PC with a signed-in user, without asking first, costs points. Users answer only during the client's hidden business hours.
 - Every action costs game minutes (data/rules/actions.yaml). Scoring values live in data/rules/handoffs.yaml.
 - Camera Day needs a switch with its own CLI, so it only lands on Aurora CX switches. FortressSwitch is still read-only from the gate.

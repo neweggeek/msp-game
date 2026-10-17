@@ -53,40 +53,61 @@ export interface ResolutionOption {
   wrongCause: boolean;
 }
 
-/** Four resolution notes: one covers all six parts, the rest miss parts or blame the wrong thing. */
+/**
+ * Four resolution notes with the same six lines, so length gives nothing away. One is right on
+ * every line; the others blame the wrong thing, name a change that did not fix it, or say nothing.
+ */
 export function resolutionNotes(world: World, t: Ticket, c: CaseInstance): ResolutionOption[] {
   const n = c.note;
   const rng = new Rng(`${world.seed}:${t.id}:resolve`);
+  const note = (
+    findings: string,
+    changes: string,
+    rootCause: string,
+    nextSteps: string,
+  ): string[] => [
+    `Issue: ${n.issue}`,
+    `Findings: ${findings}`,
+    `Changes: ${changes}`,
+    `Root cause: ${rootCause}`,
+    `Next steps: ${nextSteps}`,
+    "Status: Resolved.",
+  ];
   return rng.shuffle<ResolutionOption>([
     {
-      lines: [
-        `Issue: ${n.issue}`,
-        `Findings: ${n.findings}`,
-        `Changes: ${n.changes}`,
-        `Root cause: ${n.rootCause}`,
-        `Next steps: ${n.nextSteps}`,
-        "Status: Resolved.",
-      ],
+      lines: note(n.findings, n.changes, n.rootCause, n.nextSteps),
       parts: [...NOTE_PARTS],
       wrongCause: false,
     },
     {
-      lines: [
-        `Issue: ${n.issue}`,
-        `Changes: ${n.wrongChange}`,
-        `Root cause: ${n.wrongCause}`,
-        "Status: Resolved.",
-      ],
-      parts: ["issue", "status"],
+      lines: note(n.findings, n.wrongChange, n.wrongCause, "Watch it for a day."),
+      parts: ["issue", "findings", "status"],
       wrongCause: true,
     },
     {
-      lines: [`Issue: ${n.issue}`, `Findings: ${n.findings}`, "Status: Resolved."],
-      parts: ["issue", "findings", "status"],
+      lines: note(n.findings, n.wrongChange, n.rootCause, "None."),
+      parts: ["issue", "findings", "rootCause", "status"],
       wrongCause: false,
     },
-    { lines: ["Fixed the issue. Closing."], parts: ["status"], wrongCause: false },
+    {
+      lines: note(
+        "Checked the devices involved. See ticket.",
+        "Made the needed changes.",
+        "Config issue.",
+        "None.",
+      ),
+      parts: ["issue", "status"],
+      wrongCause: false,
+    },
   ]);
+}
+
+/** Notes for a ticket with nothing to fix. Every one closes it; none of them is right. */
+export function plainResolutionNotes(t: Ticket): string[][] {
+  return [
+    [`Issue: ${t.title}`, "Findings: Checked it over, nothing wrong found.", "Status: Resolved."],
+    [`Issue: ${t.title}`, "Changes: Fixed it.", "Status: Resolved."],
+  ];
 }
 
 /** What the closing rule still wants before this ticket can close cleanly. */
