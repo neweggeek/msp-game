@@ -18,7 +18,7 @@ import { diag, errorText } from "./diag";
 
 const data = gameData();
 
-export type Tab = "desk" | "rmm" | "ovik" | "docs" | "terminal" | "kb" | "debug";
+export type Tab = "desk" | "rmm" | "screenlink" | "ovik" | "docs" | "terminal" | "kb" | "debug";
 export type Dialog =
   | { kind: "handoff" | "resolve" | "send-back"; ticket: string }
   | { kind: "web"; from: string; address: string }

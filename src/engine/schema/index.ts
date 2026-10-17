@@ -72,7 +72,7 @@ export const roomTemplateSchema = z.object({
 /** "docs", "monitoring", "rmm", "hands" (a phone call), "isp" (its support line), or "ssh:<role>" / "rmm:<role>". */
 export const accessTokenSchema = z
   .string()
-  .regex(/^(docs|rmm|monitoring|hands|isp|(ssh|rmm):[a-z-]+)$/);
+  .regex(/^(docs|rmm|monitoring|hands|isp|screen|(ssh|rmm):[a-z-]+)$/);
 /** "<day>d HH:MM", day 0 is the Monday epoch. Negative days are before it. */
 export const gameTimeSchema = z.string().regex(/^-?\d+d \d{2}:\d{2}$/);
 const clock = z.string().regex(/^\d{2}:\d{2}$/);
@@ -236,6 +236,8 @@ export const scenarioSchema = z.object({
   tier: z.enum(["low", "mid", "high"]).optional(),
   switchBrand: z.string().optional(),
   probe: z.boolean().optional(),
+  /** false: a break-fix client. No RMM agents and no monitoring; one-time sessions only. */
+  managed: z.boolean().optional(),
   cases: z.array(z.string()),
   extraTickets: z.array(z.string()),
 });
@@ -295,6 +297,7 @@ export const callRulesSchema = z.object({
         "isp-bill",
         "device-password",
         "enable-account",
+        "screenlink-join",
       ]),
       minutes: z.number().int().min(0),
       label: z.string(),

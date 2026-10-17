@@ -419,6 +419,57 @@ describe("first slice cases play end to end", () => {
     );
   });
 
+  it("break-fix client: Wrong Phonebook through a ScreenLink session", () => {
+    let seed = "";
+    for (let i = 0; i < 50 && !seed; i++) {
+      const g = newGame(`bf-${i}`, data, { scenario: "breakfix" });
+      if (g.world.cases[0]?.caseId === "wrong-phonebook") seed = `bf-${i}`;
+    }
+    const g = newGame(seed, data, { scenario: "breakfix" });
+    const act = (a: Parameters<typeof applyAction>[2]) => applyAction(g, data, a);
+    const c = g.world.cases[0] as (typeof g.world.cases)[number];
+    const pc = g.world.devices.find((d) => d.id === c.bindings["user-pc"]) as Device;
+    const t = g.book.tickets.find((x) => x.caseId === c.caseId) as Ticket;
+    expect(g.world.devices.some((d) => d.rmmAgent)).toBe(false);
+    expect(act({ t: "rmm-open", device: pc.id }).ok).toBe(false);
+    const code = act({ t: "sl-new" }).output?.[0]?.match(/\d{6}/)?.[0] as string;
+    waitForClient(g, act);
+    // The ticket's user joins from their own PC. A slip means a mistyped code; ask again.
+    const user = () => {
+      for (let i = 0; i < 40; i++) {
+        const r = act({ t: "call", person: `user:${pc.user}`, ticket: t.id }).session as string;
+        if (g.calls?.[r]?.answered) return r;
+        act({ t: "advance", minutes: 20 });
+      }
+      throw new Error("no answer");
+    };
+    let id = user();
+    for (let i = 0; i < 10 && !g.screenlink?.[0]?.deviceId; i++) {
+      if (g.calls?.[id]?.closed) id = user();
+      act({ t: "call-ask", call: id, ask: "screenlink-join" });
+    }
+    const inv = g.screenlink?.[0];
+    expect(inv?.code).toBe(code);
+    const shell = act({ t: "sl-open", code }).session as string;
+    expect(shell).toBeTruthy();
+    expect(inv?.deviceId).toBe(pc.id);
+    expect(act({ t: "rmm", session: shell, line: "ipconfig /all" }).output?.join("\n")).toContain(
+      "8.8.8.8",
+    );
+    act({
+      t: "rmm",
+      session: shell,
+      line: "Set-DnsClientServerAddress -InterfaceAlias Ethernet -ResetServerAddresses",
+    });
+    expect(caseFixed(g.world, c, g.clock.now)).toBe(true);
+    expect(g.score.some((e) => e.reason.includes("without"))).toBe(false);
+    // They leave when their patience runs out, and the shell closes.
+    act({ t: "advance", minutes: 200 });
+    expect(act({ t: "rmm", session: shell, line: "hostname" }).output?.join(" ")).toContain(
+      "session ended",
+    );
+  });
+
   it("misroute and duplicate go back to dispatch", () => {
     const { g, act } = setup("case-a");
     const edr = g.book.tickets.find((t) => t.extraId === "edr-misroute");

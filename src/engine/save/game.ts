@@ -18,6 +18,7 @@ import { ovikView } from "../monitor/ovik";
 import { canManage, resolveTarget } from "../net/reach";
 import { netState } from "../net/state";
 import { type RmmSession, agentOnline, openRmm, runRmmLine, runScript } from "../rmm/rmm";
+import { Rng } from "../rng/rng";
 import { caseFixed } from "../tickets/checks";
 import {
   closeBlockers,
@@ -72,7 +73,17 @@ export type Action =
   | { t: "vault-view"; device: string }
   | { t: "call"; person: string; ticket?: string }
   | { t: "call-ask"; call: string; ask: string; device?: string }
-  | { t: "call-end"; call: string };
+  | { t: "call-end"; call: string }
+  | { t: "sl-new" }
+  | { t: "sl-open"; code: string };
+
+export interface ScreenLinkInvite {
+  code: string;
+  createdAt: number;
+  deviceId?: string;
+  person?: string;
+  until?: number;
+}
 
 export interface GameEvent {
   at: number;
@@ -124,6 +135,8 @@ export interface GameState {
   heard?: string[];
   /** "contact-id:day" for direct calls a scheduled-only client did not want. */
   unwantedCalls?: string[];
+  /** ScreenLink support sessions: a join code, then who joined from which PC and until when. */
+  screenlink?: ScreenLinkInvite[];
   log: Action[];
   snapshot?: { at: number; state: string };
 }
@@ -570,6 +583,12 @@ function run(state: GameState, data: GameData, a: Action): ActionResult {
     case "rmm": {
       const s = state.sessions[a.session];
       if (!s || s.kind !== "rmm") return { ok: false, error: `No session ${a.session}.` };
+      if (s.until !== undefined && clock.now >= s.until && !s.closed) {
+        s.closed = true;
+        const line = `The ScreenLink session ended. ${s.via} closed it to get back to work.`;
+        s.transcript.push(line);
+        return { ok: true, output: [line] };
+      }
       const res = runRmmLine(s, a.line, world, clock.now);
       if (res.output.length > 0) remember(s, a.line, res.output);
       spend(state, data, cost(data, "rmm-command"));
@@ -970,12 +989,20 @@ function run(state: GameState, data: GameData, a: Action): ActionResult {
         data.calls.isp.asks.find((x) => x.id === a.ask) ??
         data.calls.team.asks.find((x) => x.id === a.ask);
       const before = call.transcript.length;
+      // The newest code nobody has joined yet.
+      const waiting = [...(state.screenlink ?? [])].reverse().find((x) => !x.deviceId);
       const res = ask(callCtx(state, data, Number(call.id.slice(1))), call, person, a.ask, {
         ...(a.device ? { device: a.device } : {}),
         ...(c ? { caseInst: c } : {}),
         collateral: () => (c ? whereDown(state, collateralDown(state, caseSite(state, c))) : ""),
+        ...(waiting ? { screenCode: waiting.code } : {}),
       });
       if ("error" in res) return { ok: false, error: res.error };
+      if (res.joined && waiting) {
+        waiting.deviceId = res.joined.deviceId;
+        waiting.person = person.name;
+        waiting.until = res.joined.until;
+      }
       if (res.cycled) touchUserPc(state, data, res.cycled, "Had someone unplug");
       if (res.fact) {
         state.heard ??= [];
@@ -1005,6 +1032,31 @@ function run(state: GameState, data: GameData, a: Action): ActionResult {
         });
       spend(state, data, def?.minutes ?? 5);
       return { ok: true, output: call.transcript.slice(before) };
+    }
+    case "sl-new": {
+      state.screenlink ??= [];
+      const rng = new Rng(`${world.seed}:screenlink:${state.screenlink.length}`);
+      const code = rng.digits(6);
+      state.screenlink.push({ code, createdAt: clock.now });
+      spend(state, data, 1);
+      return { ok: true, output: [`Support session created. Join code ${code}.`] };
+    }
+    case "sl-open": {
+      const inv = state.screenlink?.find((x) => x.code === a.code);
+      if (!inv?.deviceId || inv.until === undefined)
+        return { ok: false, error: "Nobody has joined that session yet." };
+      if (clock.now >= inv.until)
+        return { ok: false, error: `${inv.person} has left the session.` };
+      const dev = world.devices.find((d) => d.id === inv.deviceId);
+      if (!dev || !netState(world, clock.now).online.get(dev.id))
+        return { ok: false, error: "The PC dropped off the session." };
+      const id = `s${state.nextSession++}`;
+      state.sessions[id] = openRmm(id, world, dev.id, {
+        via: inv.person ?? "the client",
+        until: inv.until,
+      });
+      spend(state, data, cost(data, "rmm-open"));
+      return { ok: true, session: id };
     }
     case "call-end": {
       const call = state.calls?.[a.call];

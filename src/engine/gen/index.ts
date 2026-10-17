@@ -10,7 +10,7 @@ import { genSite } from "./site";
 import { checkSolvable } from "./validate";
 
 /** Bump when a code change alters what an existing seed builds. */
-export const GENERATOR_VERSION = 9;
+export const GENERATOR_VERSION = 10;
 
 const MAX_WORLD_ATTEMPTS = 200;
 const MAX_FAULT_ATTEMPTS = 8;
@@ -35,6 +35,7 @@ function buildBase(
   const scenario = data.scenarios.get(scenarioId);
   if (!scenario) throw new GenerationError(`no scenario ${scenarioId}`);
   const client = genProfile(rng.fork("profile"), data, scenario.tier);
+  if (scenario.managed === false) client.managed = false;
   const ctx: GearContext = {
     devices: [],
     links: [],
@@ -71,9 +72,11 @@ function buildBase(
   const branch = sites.find((s) => s.id === "branch");
   if (hq && branch) addTunnel(rng.fork("tunnel"), fwOf("hq"), hq, fwOf("branch"), branch);
 
-  const collector =
-    ctx.devices.find((d) => d.tags?.includes("probe")) ??
-    ctx.devices.find((d) => d.kind === "server");
+  // Break-fix clients have no Ovik collector.
+  const collector = !client.managed
+    ? undefined
+    : (ctx.devices.find((d) => d.tags?.includes("probe")) ??
+      ctx.devices.find((d) => d.kind === "server"));
   const draft: Draft = {
     generatorVersion: GENERATOR_VERSION,
     seed,

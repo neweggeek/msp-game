@@ -1,4 +1,12 @@
-import type { AccessToken, CaseInstance, Docs, SolvabilityReport, World } from "../model/types";
+import { personPc } from "../calls/calls";
+import type {
+  AccessToken,
+  CaseInstance,
+  Device,
+  Docs,
+  SolvabilityReport,
+  World,
+} from "../model/types";
 import { canManage, canReach } from "../net/reach";
 import { netState } from "../net/state";
 
@@ -33,12 +41,24 @@ export function accessPaths(
     return s.isp.pin === real?.pin && s.isp.account === real.account;
   });
   if (pinKnown || w.client.contacts.length > 0) access.push("isp");
+  // ScreenLink: a contact, or the user on a ticket, shares the PC they sit at.
+  const live = (d: Device | undefined): d is Device =>
+    !!d && ns.online.get(d.id) === true && canReach(w, d.id, "1.1.1.1", ns);
+  const screenHosts = w.client.contacts
+    .map((p) => personPc(w, { id: p.id, name: p.name }))
+    .filter(live);
+  if (screenHosts.length > 0) access.push("screen");
   if (!c) return access;
+  for (const id of Object.values(c.bindings)) {
+    const d = w.devices.find((x) => x.id === id);
+    if (d?.kind === "pc" && d.user && live(d)) screenHosts.push(d);
+  }
+  const hosts = [...rmmHosts, ...screenHosts];
 
   for (const [role, id] of Object.entries(c.bindings)) {
     const dev = w.devices.find((d) => d.id === id);
     if (!dev) continue;
-    if (rmmHosts.some((h) => h.id === id)) access.push(`rmm:${role}`);
+    if (hosts.some((h) => h.id === id)) access.push(`rmm:${role}`);
     if (!dev.credentials) continue;
     const cred = docs.credentials.find((x) => x.deviceId === id);
     const docsWork =
@@ -48,7 +68,7 @@ export function accessPaths(
     // Otherwise the credential ladder: docs history, factory login, a coworker, or the client.
     if (!docsWork && w.client.contacts.length === 0) continue;
     const docIp = docs.devices.find((x) => x.deviceId === id)?.ip;
-    const via = rmmHosts.some((h) =>
+    const via = hosts.some((h) =>
       [docIp, h.gateway].some(
         (ip) => ip !== undefined && canManage(w, h.id, ip, "ssh", ns) && ownedBy(w, ip, id),
       ),

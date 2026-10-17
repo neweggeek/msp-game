@@ -12,3 +12,10 @@
   sites: [hq]
   cases: []
   extraTickets: []
+
+- id: breakfix
+  name: "Break-fix client: one random case, ScreenLink only"
+  sites: [hq]
+  managed: false
+  cases: []
+  extraTickets: []
