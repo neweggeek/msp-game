@@ -87,7 +87,7 @@ describe("credential ladder", () => {
         (d) => d.kind === "firewall" && d.siteId === "hq" && d.credentials?.disabled,
       ),
     );
-    expect(g.world.docs.accessNotes.join(" ")).toContain("turns our admin accounts off");
+    expect(g.world.docs.accessNotes.join(" ")).toContain("turns our firewall admin account off");
     const pw = dev.credentials?.password ?? "";
     expect(login(g, dev, pw)).toBe(false);
     const main = g.world.client.contacts[0]?.id as string;

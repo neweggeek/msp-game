@@ -44,6 +44,8 @@ lines:
   ispBill: "{name}: The bill for {site} says account {account}, PIN {pin}."
   devicePassword: "{name}: Let me look. It's {password}."
   devicePasswordNone: "{name}: I don't have that. {main} keeps the passwords."
+  devicePasswordBlank: "{name}: There's no password on it. Just press Enter."
+  accountAlreadyOn: "{name}: I looked, and your account is already on. I didn't change anything."
   accountEnabled: "{name}: OK, I logged in and turned it back on."
   accountNotMine: "{name}: I can't do that. {main} is the only one with the login."
   ispBillNone: "{name}: I don't have the bill here. Our office manager keeps those."
@@ -58,7 +60,7 @@ team:
     - { id: vault-password, kind: vault-password, minutes: 3, label: "Did you change the password on {device}? The vault one doesn't work." }
   lines:
     hello: "{name}: Hey, what's up?"
-    closed: "{name} is off for the day. Voicemail."
+    closed: "{name} isn't in right now. Voicemail."
     unsaved: "{name}: Oh no. I changed it on the box and never saved it to the vault. It's {password}. I'll fix the entry, sorry."
     typo: "{name}: I updated that vault entry. I might have fat-fingered it. Try the version before mine in the docs history."
     notMe: "{name}: I haven't touched {device}. Try the docs history, the factory login, or the client."

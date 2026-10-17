@@ -922,7 +922,14 @@ function run(state: GameState, data: GameData, a: Action): ActionResult {
       );
       state.calls[id] = call;
       spend(state, data, data.calls.dialMinutes + (call.hold ?? 0));
-      if (call.answered && person.insider && world.client.contactPreference === "scheduled-only") {
+      // A client that switches our account off has said a call to switch it back on is fine.
+      const lockedOut = world.devices.some((d) => d.credentials?.disabled);
+      if (
+        call.answered &&
+        person.insider &&
+        world.client.contactPreference === "scheduled-only" &&
+        !lockedOut
+      ) {
         // They take the call, but they asked for scheduled contact only.
         call.transcript.push(
           fill(data.calls.lines.unwanted ?? "", (k) => (k === "name" ? person.name : "")),

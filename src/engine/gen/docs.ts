@@ -134,7 +134,7 @@ export function genDocs(
   if (snapshot.client.disablesMspAccounts) {
     const main = snapshot.client.contacts[0]?.name ?? "the client";
     accessNotes.push(
-      `${snapshot.client.name} turns our admin accounts off when no ticket is open. Ask ${main} to turn them back on.`,
+      `${snapshot.client.name} turns our firewall admin account off when no ticket is open. Call ${main} to turn it back on. They are fine with a call for this.`,
     );
   }
 

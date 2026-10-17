@@ -283,7 +283,10 @@ export function ask(
         if (def.kind === "device-password") {
           const pw = dev.credentials.password;
           const read = slip() && pw ? `${pw.slice(0, -1)}${pw.endsWith("1") ? "l" : "1"}` : pw;
-          out.lines.push(say(data, "devicePassword", { ...vars, password: read || "(blank)" }));
+          if (!read) out.lines.push(say(data, "devicePasswordBlank", vars));
+          else out.lines.push(say(data, "devicePassword", { ...vars, password: read }));
+        } else if (!dev.credentials.disabled) {
+          out.lines.push(say(data, "accountAlreadyOn", vars));
         } else {
           if (!slip()) dev.credentials.disabled = false;
           out.lines.push(say(data, "accountEnabled", vars));
