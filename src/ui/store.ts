@@ -3,6 +3,7 @@ import {
   type Action,
   type ActionResult,
   type GameState,
+  type ScoreEntry,
   applyAction,
   exportSave,
   gameData,
@@ -22,6 +23,7 @@ export type Dialog =
   | { kind: "handoff" | "resolve" | "send-back"; ticket: string }
   | { kind: "web"; from: string; address: string }
   | { kind: "diag" }
+  | { kind: "score"; summary?: boolean }
   | { kind: "bug" }
   | null;
 
@@ -35,6 +37,8 @@ interface UiState {
   session?: string;
   dialog: Dialog;
   message?: string;
+  /** Score changes from the last action, shown briefly so points never move without a reason. */
+  toast?: { id: number; entries: ScoreEntry[] };
   start: (seed: string, scenario?: string) => void;
   act: (a: Action) => ActionResult;
   setTab: (t: Tab) => void;
@@ -90,6 +94,8 @@ export const useUi = create<UiState>((set, get) => ({
     const { game, slot } = get();
     if (!game) return { ok: false, error: "No game." };
     let result: ActionResult;
+    const scored = game.score.length;
+    const queued = openCount(game);
     try {
       result = applyAction(game, data, a);
     } catch (e) {
@@ -104,6 +110,10 @@ export const useUi = create<UiState>((set, get) => ({
       message: result.ok ? undefined : result.error,
     };
     if (result.session) patch.session = result.session;
+    const fresh = game.score.slice(scored);
+    if (fresh.length > 0) patch.toast = { id: game.log.length, entries: fresh };
+    // The queue just emptied: end of shift.
+    if (queued > 0 && openCount(game) === 0) patch.dialog = { kind: "score", summary: true };
     set(patch);
     autosave(game, slot);
     return result;
@@ -171,6 +181,11 @@ export const useUi = create<UiState>((set, get) => ({
     }
   },
 }));
+
+/** Tickets still in your queue. */
+export function openCount(game: GameState): number {
+  return game.book.tickets.filter((t) => t.closedAt === undefined && !t.sentBack).length;
+}
 
 /** The open session the player typed in last, so a reload lands back in the same tab. */
 function lastSession(game: GameState): string | undefined {

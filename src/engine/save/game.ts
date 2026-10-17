@@ -11,7 +11,7 @@ import {
 } from "../clock/clock";
 import type { GameData } from "../data";
 import { GENERATOR_VERSION, generate } from "../gen";
-import type { Priority, World } from "../model/types";
+import { DEVICE_KINDS, type DeviceKind, type Priority, type World } from "../model/types";
 import { ovikView } from "../monitor/ovik";
 import { canManage, resolveTarget } from "../net/reach";
 import { netState } from "../net/state";
@@ -64,6 +64,7 @@ export type Action =
   | { t: "resolve"; ticket: string; note: number }
   | { t: "send-back"; ticket: string; reason: string }
   | { t: "doc-edit"; target: string; field: string; value: string }
+  | { t: "doc-add"; site: string; hostname: string; ip: string; kind: DeviceKind }
   | { t: "vault-view"; device: string };
 
 export interface GameEvent {
@@ -103,6 +104,8 @@ export interface GameState {
   calendar: CalendarEntry[];
   /** Doc fields already credited, "device:<id>:ip". */
   docFixes: string[];
+  /** Each edited field's value before your first edit, keyed like docFixes. */
+  edits?: Record<string, string>;
   events: GameEvent[];
   /** Devices up when the shift started. One that goes down later and is not asleep is your outage. */
   baselineUp?: string[];
@@ -376,6 +379,85 @@ function consoleRollback(state: GameState, p: Record<string, string | number>): 
   });
 }
 
+/** "10.1.20.5", or with cidr "203.0.113.8/29". */
+const isIp = (v: string, cidr = false) => {
+  const [ip = "", bits, ...rest] = v.split("/");
+  const octets = ip.split(".");
+  if (rest.length > 0 || (bits !== undefined) !== cidr) return false;
+  if (bits !== undefined && !(/^\d{1,2}$/.test(bits) && Number(bits) <= 32)) return false;
+  return octets.length === 4 && octets.every((n) => /^\d{1,3}$/.test(n) && Number(n) <= 255);
+};
+
+interface EditField {
+  name: string;
+  /** What the network really has. A fix is an edit that lands on this. */
+  truth: string;
+  format: "ip" | "cidr" | "text";
+  get: () => string;
+  set: (v: string) => void;
+}
+
+/** The fields a player can correct: docs device rows, docs site WAN details and Ovik inventory. */
+function editField(world: World, target: string, field: string): EditField | undefined {
+  const [kind, id] = target.split(":");
+  if (kind === "device") {
+    const doc = world.docs.devices.find((d) => d.deviceId === id);
+    const dev = world.devices.find((d) => d.id === id);
+    if (!doc) return undefined;
+    if (field === "ip")
+      return {
+        name: doc.hostname,
+        truth: dev?.ip ?? "",
+        format: "ip",
+        get: () => doc.ip ?? "",
+        set: (v) => {
+          doc.ip = v;
+        },
+      };
+    if (field === "firmware")
+      return {
+        name: doc.hostname,
+        truth: dev?.firmware ?? "",
+        format: "text",
+        get: () => doc.firmware,
+        set: (v) => {
+          doc.firmware = v;
+        },
+      };
+    return undefined;
+  }
+  if (kind === "site") {
+    const doc = world.docs.sites.find((s) => s.siteId === id);
+    const site = world.sites.find((s) => s.id === id);
+    const f = field as "wanIp" | "wanCidr" | "gateway";
+    if (!doc || !site || !["wanIp", "wanCidr", "gateway"].includes(field)) return undefined;
+    return {
+      name: doc.name,
+      truth: site.isp[f],
+      format: f === "wanCidr" ? "cidr" : "ip",
+      get: () => doc.isp[f],
+      set: (v) => {
+        doc.isp[f] = v;
+      },
+    };
+  }
+  if (kind === "ovik") {
+    const row = world.monitoring.inventory.find((o) => o.deviceId === id);
+    const dev = world.devices.find((d) => d.id === id);
+    if (!row || !dev || (field !== "ip" && field !== "hostname")) return undefined;
+    return {
+      name: row.hostname,
+      truth: (field === "ip" ? dev.ip : dev.hostname) ?? "",
+      format: field === "ip" ? "ip" : "text",
+      get: () => row[field],
+      set: (v) => {
+        row[field] = v;
+      },
+    };
+  }
+  return undefined;
+}
+
 function openDeviceSession(
   state: GameState,
   data: GameData,
@@ -630,25 +712,23 @@ function run(state: GameState, data: GameData, a: Action): ActionResult {
       setStatus(book, clock, data, t.id, "closed", note.lines.join("\n"));
       if (!fixed) {
         schedule(clock, clock.now + 90, "reopen", { ticket: t.id });
-      } else if (collateralDown(state, caseSite(state, c)).length > 0) {
-        const fresh = collateralDown(state, caseSite(state, c)).filter(
-          (id) => !(state.collateral ?? []).includes(id),
+        return { ok: true, output: blockers };
+      }
+      const down = collateralDown(state, caseSite(state, c));
+      const fresh = down.filter((id) => !(state.collateral ?? []).includes(id));
+      state.collateral = [...(state.collateral ?? []), ...fresh];
+      if (fresh.length > 0)
+        points(
+          state,
+          data,
+          "collateralOutage",
+          `Closed ${t.id} while ${whereDown(state, fresh)} is down because of a change.`,
+          t.id,
         );
-        state.collateral = [...(state.collateral ?? []), ...fresh];
-        if (fresh.length > 0)
-          points(
-            state,
-            data,
-            "collateralOutage",
-            `Closed ${t.id} while ${whereDown(state, fresh)} is down because of a change.`,
-            t.id,
-          );
-      } else if (
-        blockers.length === 0 &&
-        t.proofs.some((p) => p.kind === "output" && p.provesFixed)
-      ) {
-        points(state, data, "closedClean", `${t.id} closed with proof.`, t.id);
-      } else {
+      // An outage you already paid for still rules out a clean close, and the proof rule still holds.
+      const proven =
+        blockers.length === 0 && t.proofs.some((p) => p.kind === "output" && p.provesFixed);
+      if (!proven)
         points(
           state,
           data,
@@ -656,7 +736,8 @@ function run(state: GameState, data: GameData, a: Action): ActionResult {
           `${t.id} closed without the proof the closing rule wants.`,
           t.id,
         );
-      }
+      else if (down.length === 0)
+        points(state, data, "closedClean", `${t.id} closed with proof.`, t.id);
       return { ok: true, output: blockers };
     }
     case "send-back": {
@@ -695,43 +776,81 @@ function run(state: GameState, data: GameData, a: Action): ActionResult {
       return { ok: true };
     }
     case "doc-edit": {
-      const [kind, id] = a.target.split(":");
-      const docs = world.docs;
-      let before: string | undefined;
-      let truth: string | undefined;
-      if (kind === "device") {
-        const doc = docs.devices.find((d) => d.deviceId === id);
-        const dev = world.devices.find((d) => d.id === id);
-        if (!doc || !dev || !["ip", "firmware"].includes(a.field))
-          return { ok: false, error: "Cannot edit that." };
-        before = a.field === "ip" ? doc.ip : doc.firmware;
-        truth = a.field === "ip" ? dev.ip : dev.firmware;
-        if (a.field === "ip") doc.ip = a.value;
-        else doc.firmware = a.value;
-      } else if (kind === "site") {
-        const doc = docs.sites.find((s) => s.siteId === id);
-        const site = world.sites.find((s) => s.id === id);
-        if (!doc || !site || a.field !== "wanIp") return { ok: false, error: "Cannot edit that." };
-        before = doc.isp.wanIp;
-        truth = site.isp.wanIp;
-        doc.isp.wanIp = a.value;
-      } else return { ok: false, error: "Cannot edit that." };
-      docs.history.push({
-        at: clock.now,
-        by: "You",
-        entry: a.target,
-        field: a.field,
-        from: before ?? "",
-        to: a.value,
-      });
+      const f = editField(world, a.target, a.field);
+      if (!f) return { ok: false, error: "Cannot edit that." };
+      const value = a.value.trim();
+      const before = f.get();
+      if (!value) return { ok: false, error: `${a.field} cannot be empty.` };
+      if (f.format !== "text" && !isIp(value, f.format === "cidr"))
+        return {
+          ok: false,
+          error: `"${value}" is not ${f.format === "cidr" ? "an address block like 203.0.113.8/29" : "an IP address"}.`,
+        };
+      f.set(value);
+      // Ovik is its own tool. Only Hoodoo edits land in the docs history.
+      if (!a.target.startsWith("ovik:"))
+        world.docs.history.push({
+          at: clock.now,
+          by: "You",
+          entry: a.target,
+          field: a.field,
+          from: before,
+          to: value,
+        });
       const key = `${a.target}:${a.field}`;
       // Judge against the value before your first edit, so breaking a right entry and fixing it pays nothing.
-      const original =
-        docs.history.find((h) => h.by === "You" && h.entry === a.target && h.field === a.field)
-          ?.from ?? before;
-      if (original !== truth && a.value === truth && !state.docFixes.includes(key)) {
+      state.edits ??= {};
+      state.edits[key] ??= before;
+      const original = state.edits[key];
+      if (original !== f.truth && value === f.truth && !state.docFixes.includes(key)) {
         state.docFixes.push(key);
-        points(state, data, "docFix", `Fixed the docs: ${a.field} on ${a.target}.`);
+        points(
+          state,
+          data,
+          "docFix",
+          a.target.startsWith("ovik:")
+            ? `Fixed Ovik: ${a.field} on ${f.name}.`
+            : `Fixed the docs: ${a.field} on ${f.name}.`,
+        );
+      }
+      spend(state, data, cost(data, "doc-edit"));
+      return { ok: true };
+    }
+    case "doc-add": {
+      const site = world.docs.sites.find((x) => x.siteId === a.site);
+      const hostname = a.hostname.trim();
+      const ip = a.ip.trim();
+      if (!site) return { ok: false, error: "Pick a site." };
+      if (!hostname) return { ok: false, error: "Type a name." };
+      if (!isIp(ip)) return { ok: false, error: `"${ip}" is not an IP address.` };
+      if (!DEVICE_KINDS.includes(a.kind)) return { ok: false, error: "Pick a type." };
+      const real = world.devices.find((d) => d.siteId === a.site && d.ip === ip);
+      // Credit a device that really sits at that address and the docs never had.
+      const credit = !!real && !world.docs.devices.some((d) => d.deviceId === real.id);
+      const id = credit && real ? real.id : `added-${world.docs.devices.length + 1}`;
+      world.docs.devices.push({
+        deviceId: id,
+        siteId: a.site,
+        hostname,
+        kind: a.kind,
+        model: "",
+        ip,
+        firmware: "",
+        roomId: real?.roomId && credit ? real.roomId : "",
+        notes: `Added by you ${formatTime(data.calendar, clock.now)}.`,
+      });
+      world.docs.history.push({
+        at: clock.now,
+        by: "You",
+        entry: `device:${id}`,
+        field: "added",
+        from: "",
+        to: `${hostname} ${ip}`,
+      });
+      const key = `device:${id}:added`;
+      if (credit && !state.docFixes.includes(key)) {
+        state.docFixes.push(key);
+        points(state, data, "docAdd", `Added ${hostname} (${ip}) to the docs.`);
       }
       spend(state, data, cost(data, "doc-edit"));
       return { ok: true };

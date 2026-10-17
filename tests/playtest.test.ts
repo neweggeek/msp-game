@@ -2,7 +2,13 @@ import { describe, expect, it } from "vitest";
 import { gameData } from "../src/engine/data";
 import type { Device } from "../src/engine/model/types";
 import { ovikView } from "../src/engine/monitor/ovik";
-import { type Action, applyAction, newGame, totalScore } from "../src/engine/save/game";
+import {
+  type Action,
+  applyAction,
+  collateralDown,
+  newGame,
+  totalScore,
+} from "../src/engine/save/game";
 import * as desk from "../src/engine/tickets/desk";
 import { webPage } from "../src/engine/web/web";
 
@@ -103,6 +109,45 @@ describe("playtest fixes", () => {
   });
 });
 
+const CAMERA_SEEDS = ["case-a", "case-b", "case-c", "first-shift", "edge-1"];
+
+/** Camera Day "fixed" by raising only the AP and phones, with the client saying other gear died. */
+function cameraDayCollateral(seed: string) {
+  const g = newGame(seed, data);
+  const act = (a: Action) => applyAction(g, data, a);
+  const c = g.world.cases.find((x) => x.caseId === "camera-day");
+  const t = g.book.tickets.find((x) => x.caseId === "camera-day");
+  if (!c || !t) return undefined;
+  const sw = g.world.devices.find((d) => d.id === c.bindings.switch) as Device;
+  const ap = c.bindings.ap;
+  const s = act({ t: "cli-open", device: sw.id }).session as string;
+  const ports = sw.ports
+    .filter((p) => {
+      const d = g.world.devices.find((x) => x.id === p.link?.device);
+      return d?.id === ap || d?.kind === "phone";
+    })
+    .map((p) => p.name);
+  for (const line of [
+    "configure terminal",
+    ...ports.flatMap((p) => [`interface ${p}`, "power-over-ethernet priority high"]),
+    "end",
+  ])
+    act({ t: "cli", session: s, line });
+  act({ t: "attach-proof", ticket: t.id, source: s });
+  act({ t: "advance", minutes: 120 });
+  act({
+    t: "handoff",
+    ticket: t.id,
+    handoff: "customer-question",
+    note: 0,
+    detail: "",
+    askClose: true,
+  });
+  act({ t: "advance", minutes: 240 });
+  if (!t.history.some((h) => h.text.includes("stopped working"))) return undefined;
+  return { g, act, t };
+}
+
 describe("playtest design calls", () => {
   it("cutting your own access drops the session, costs points and rolls back later", () => {
     const { g, act, rmm } = setup();
@@ -128,45 +173,33 @@ describe("playtest design calls", () => {
 
   it("Camera Day with only the AP and phones raised knocks other APs off and is not a clean close", () => {
     let seen = 0;
-    for (const seed of ["case-a", "case-b", "case-c", "first-shift", "edge-1"]) {
-      const g = newGame(seed, data);
-      const act = (a: Action) => applyAction(g, data, a);
-      const c = g.world.cases.find((x) => x.caseId === "camera-day");
-      if (!c) continue;
-      const sw = g.world.devices.find((d) => d.id === c.bindings.switch) as Device;
-      const ap = c.bindings.ap;
-      const s = act({ t: "cli-open", device: sw.id }).session as string;
-      const ports = sw.ports
-        .filter((p) => {
-          const d = g.world.devices.find((x) => x.id === p.link?.device);
-          return d?.id === ap || d?.kind === "phone";
-        })
-        .map((p) => p.name);
-      for (const line of [
-        "configure terminal",
-        ...ports.flatMap((p) => [`interface ${p}`, "power-over-ethernet priority high"]),
-        "end",
-      ])
-        act({ t: "cli", session: s, line });
-      const t = g.book.tickets.find((x) => x.caseId === "camera-day");
-      if (!t) continue;
-      act({ t: "attach-proof", ticket: t.id, source: s });
-      act({ t: "advance", minutes: 120 });
-      act({
-        t: "handoff",
-        ticket: t.id,
-        handoff: "customer-question",
-        note: 0,
-        detail: "",
-        askClose: true,
-      });
-      act({ t: "advance", minutes: 240 });
-      if (!t.history.some((h) => h.text.includes("stopped working"))) continue;
+    for (const seed of CAMERA_SEEDS) {
+      const run = cameraDayCollateral(seed);
+      if (!run) continue;
+      const { g, act, t } = run;
       seen++;
       expect(t.clientConfirmed).toBe(false);
       act({ t: "resolve", ticket: t.id, note: 0 });
       expect(g.score.some((e) => e.reason.includes("because of a change"))).toBe(true);
       expect(g.score.some((e) => e.reason.includes("closed with proof"))).toBe(false);
+    }
+    expect(seen).toBeGreaterThan(0);
+  });
+
+  it("an outage already paid for still blocks the clean bonus and still costs the proof penalty", () => {
+    let seen = 0;
+    for (const seed of CAMERA_SEEDS) {
+      const run = cameraDayCollateral(seed);
+      if (!run) continue;
+      const { g, act, t } = run;
+      seen++;
+      // As if an earlier close at this site already paid for these outages.
+      g.collateral = collateralDown(g);
+      act({ t: "resolve", ticket: t.id, note: 0 });
+      const mine = g.score.filter((e) => e.ticketId === t.id).map((e) => e.reason);
+      expect(mine.some((r) => r.includes("because of a change"))).toBe(false);
+      expect(mine.some((r) => r.includes("closed with proof"))).toBe(false);
+      expect(mine.some((r) => r.includes("without the proof"))).toBe(true);
     }
     expect(seen).toBeGreaterThan(0);
   });
@@ -188,5 +221,57 @@ describe("playtest design calls", () => {
     expect(r.ok).toBe(true);
     expect(t?.closedAt).toBeDefined();
     expect(g.score.some((e) => e.reason.includes("not a network problem"))).toBe(true);
+  });
+});
+
+describe("playtest leftovers", () => {
+  it("a stale Ovik address can be pointed at the device, which clears the alert and pays once", () => {
+    const { g, act } = setup();
+    const row = g.world.monitoring.inventory.find(
+      (o) => o.ip !== g.world.devices.find((d) => d.id === o.deviceId)?.ip,
+    );
+    expect(row).toBeTruthy();
+    const dev = g.world.devices.find((d) => d.id === row?.deviceId) as Device;
+    const target = `ovik:${dev.id}`;
+    expect(act({ t: "doc-edit", target, field: "ip", value: "not an ip" }).ok).toBe(false);
+    act({ t: "doc-edit", target, field: "ip", value: dev.ip as string });
+    const v = ovikView(g.world, g.clock.now);
+    expect(v.inventory.find((r) => r.deviceId === dev.id)?.ip).toBe(dev.ip);
+    expect(v.alerts.some((a) => a.deviceId === dev.id)).toBe(false);
+    act({ t: "doc-edit", target, field: "ip", value: "10.9.9.9" });
+    act({ t: "doc-edit", target, field: "ip", value: dev.ip as string });
+    expect(g.score.filter((e) => e.reason.startsWith("Fixed Ovik"))).toHaveLength(1);
+    // Ovik edits are Ovik's, not a Hoodoo docs change.
+    expect(g.world.docs.history.some((h) => h.entry === target)).toBe(false);
+  });
+
+  it("a device missing from the docs can be added, and only a real one pays", () => {
+    const { g, act } = setup();
+    const missing = g.world.devices.find(
+      (d) => d.ip && !g.world.docs.devices.some((x) => x.deviceId === d.id),
+    ) as Device;
+    expect(missing).toBeTruthy();
+    const add = (ip: string) =>
+      act({ t: "doc-add", site: missing.siteId, hostname: "CAM-NEW", ip, kind: missing.kind });
+    expect(add("10.300.1.1").ok).toBe(false);
+    expect(add("10.250.250.250").ok).toBe(true);
+    expect(g.score.some((e) => e.reason.startsWith("Added"))).toBe(false);
+    expect(add(missing.ip as string).ok).toBe(true);
+    expect(add(missing.ip as string).ok).toBe(true);
+    expect(g.score.filter((e) => e.reason.startsWith("Added"))).toHaveLength(1);
+    expect(g.world.docs.devices.filter((d) => d.ip === missing.ip)).toHaveLength(2);
+    expect(g.world.docs.devices.some((d) => d.deviceId === missing.id)).toBe(true);
+  });
+
+  it("the WAN block and gateway can be fixed after a WAN IP change", () => {
+    const { g, act } = setup("first-shift");
+    const site = g.world.sites.find((s) => s.id === "branch");
+    const doc = g.world.docs.sites.find((s) => s.siteId === "branch");
+    if (!site || !doc) throw new Error("no branch");
+    expect(doc.isp.wanCidr).not.toBe(site.isp.wanCidr);
+    act({ t: "doc-edit", target: "site:branch", field: "wanCidr", value: site.isp.wanCidr });
+    act({ t: "doc-edit", target: "site:branch", field: "gateway", value: site.isp.gateway });
+    expect(doc.isp.wanCidr).toBe(site.isp.wanCidr);
+    expect(g.score.filter((e) => e.reason.startsWith("Fixed the docs"))).toHaveLength(2);
   });
 });

@@ -1,5 +1,14 @@
 export type Tier = "low" | "mid" | "high";
-export type DeviceKind = "firewall" | "switch" | "ap" | "phone" | "camera" | "pc" | "server";
+export const DEVICE_KINDS = [
+  "firewall",
+  "switch",
+  "ap",
+  "phone",
+  "camera",
+  "pc",
+  "server",
+] as const;
+export type DeviceKind = (typeof DEVICE_KINDS)[number];
 export type Priority = "P1" | "P2" | "P3" | "P4";
 export type PoePriority = "low" | "high" | "critical";
 export type Staleness = "fresh" | "partly" | "stale";

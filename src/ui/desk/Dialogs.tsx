@@ -7,6 +7,7 @@ import {
   webPage,
 } from "../../engine";
 import { BugReportDialog, DiagnosticsBody, DiagnosticsButtons } from "../DiagnosticsPanel";
+import { ScoreDialog } from "../score/Score";
 import { data, useGame, useUi } from "../store";
 
 function Modal({
@@ -53,6 +54,7 @@ export function Dialogs() {
         <DiagnosticsBody />
       </Modal>
     );
+  if (dialog.kind === "score") return <ScoreDialog Modal={Modal} summary={!!dialog.summary} />;
   if (dialog.kind === "web") return <Web from={dialog.from} address={dialog.address} />;
   if (dialog.kind === "handoff") return <Handoff ticket={dialog.ticket} />;
   if (dialog.kind === "resolve") return <Resolve ticket={dialog.ticket} />;
