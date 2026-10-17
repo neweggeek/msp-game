@@ -108,11 +108,13 @@ export function DebugView() {
                     <td className={ns.online.get(d.id) ? "ok" : "bad"}>
                       {ns.asleep.get(d.id)
                         ? "asleep"
-                        : ns.online.get(d.id)
-                          ? "online"
-                          : ns.powered.get(d.id)
-                            ? "offline"
-                            : "no power"}
+                        : ns.cut.get(d.id)
+                          ? "power cut"
+                          : ns.online.get(d.id)
+                            ? "online"
+                            : ns.powered.get(d.id)
+                              ? "offline"
+                              : "no power"}
                     </td>
                   </tr>
                 ))}

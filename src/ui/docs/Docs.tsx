@@ -20,7 +20,7 @@ type DocTab = "devices" | "sites" | "vault" | "history" | "access";
 /** Hoodoo Docs: what the MSP wrote down. It can be wrong. */
 export function DocsView({ full = false }: { full?: boolean }) {
   const game = useGame();
-  const { act, say } = useUi();
+  const { act, say, setDialog } = useUi();
   const [tab, setTab] = useState<DocTab>("devices");
   const [revealed, setRevealed] = useState<Record<string, string>>({});
   const docs = game.world.docs;
@@ -106,9 +106,24 @@ export function DocsView({ full = false }: { full?: boolean }) {
               <p key={n}>{n}</p>
             ))}
             <h3>Contacts</h3>
+            {game.world.client.contactPreference === "scheduled-only" && (
+              <p className="warn">Client asks that calls be scheduled through dispatch.</p>
+            )}
             {docs.contacts.map((c) => (
-              <p key={c.id}>
-                {c.name}, {c.role} · {c.phone}
+              <p key={c.id} className="actions">
+                <span>
+                  {c.name}, {c.role} · {c.phone}
+                </span>
+                <button
+                  type="button"
+                  className="btn small"
+                  onClick={() => {
+                    const r = act({ t: "call", person: c.id });
+                    if (r.session) setDialog({ kind: "phone", call: r.session });
+                  }}
+                >
+                  Call
+                </button>
               </p>
             ))}
           </div>

@@ -24,6 +24,8 @@ export function accessPaths(
   if (rmmHosts.length > 0) access.push("rmm");
   const collector = w.devices.find((d) => d.id === w.monitoring?.collectorId);
   if (collector && ns.online.get(collector.id)) access.push("monitoring");
+  // Someone at the client can always be called and act as remote hands.
+  if (w.client.contacts.length > 0) access.push("hands");
   if (!c) return access;
 
   for (const [role, id] of Object.entries(c.bindings)) {

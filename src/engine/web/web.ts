@@ -1,7 +1,7 @@
 import { uptimeText } from "../cli/views";
 import type { Fields, World } from "../model/types";
 import { canManage, resolveName, resolveTarget } from "../net/reach";
-import { netState } from "../net/state";
+import { bootTime, netState } from "../net/state";
 import { tunnelStates } from "../net/vpn";
 import { isIp } from "../util/ip";
 
@@ -41,7 +41,7 @@ export function webPage(world: World, now: number, fromId: string, address: stri
       ["Model", d.model],
       ["Firmware", d.firmware],
       ["Serial", d.serial],
-      ["Uptime", uptimeText(now - d.bootAt)],
+      ["Uptime", uptimeText(now - bootTime(d, now))],
     ],
   };
   if (d.kind === "firewall") {

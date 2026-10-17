@@ -18,3 +18,24 @@ export function inDailyWindow(now: number, window: { from: number; to: number })
     ? m >= window.from && m < window.to
     : m >= window.from || m < window.to;
 }
+
+/** Is a weekly window (day 0 is Monday, same-day only) active at this game minute? */
+export function inWeeklyWindow(now: number, w: { day: number; from: number; to: number }): boolean {
+  const day = ((Math.floor(now / 1440) % 7) + 7) % 7;
+  const m = ((now % 1440) + 1440) % 1440;
+  return day === w.day && m >= w.from && m < w.to;
+}
+
+/** The most recent end of a weekly window at or before now, or undefined. */
+export function lastWeeklyEnd(
+  now: number,
+  w: { day: number; from: number; to: number },
+): number | undefined {
+  const week = 7 * 1440;
+  const firstMonday = Math.floor(now / week) * week;
+  for (let k = 0; k < 2; k++) {
+    const end = firstMonday - k * week + w.day * 1440 + w.to;
+    if (end <= now) return end;
+  }
+  return undefined;
+}

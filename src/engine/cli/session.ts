@@ -28,6 +28,8 @@ export interface CliSession {
   login?: { username: string; tries: number };
   /** Last command and its output, for attaching as proof. */
   last?: { line: string; output: string[] };
+  /** Recent commands that printed something, oldest first, so earlier output can be attached. */
+  outputs?: { line: string; output: string[] }[];
   closed: boolean;
   transcript: string[];
 }
@@ -244,6 +246,11 @@ function commit(model: string, staged: Fields | Record<string, Fields>, dev: Dev
   dev.startup = structuredClone(dev.running);
 }
 
+/** Make the device's live state match its running config, after a boot or a restore. */
+export function applyRunning(dev: Device): void {
+  afterChange(dev, "system");
+}
+
 function afterChange(dev: Device, model: string): void {
   if (model === "system") {
     const host = (dev.running?.system as Fields | undefined)?.hostname;
@@ -373,7 +380,16 @@ function execute(s: CliSession, line: string, ctx: CliContext, dev: Device): str
       } else {
         const parsed = parseValue(def, cmd.value !== undefined ? [cmd.value] : (args.value ?? []));
         if (!parsed.ok) return err(dialect, parsed.error, parsed.token);
-        target[def.model] = parsed.value;
+        const v = parsed.value;
+        if (
+          typeof v === "number" &&
+          ((def.min !== undefined && v < def.min) || (def.max !== undefined && v > def.max))
+        )
+          return err(dialect, "bad-value", String(v));
+        const refs = def.refersTo ? (dev.running?.[def.refersTo] ?? {}) : undefined;
+        if (refs && !(String(v) in refs))
+          return err(dialect, dialect.errors["no-ref"] ? "no-ref" : "no-entry", String(v));
+        target[def.model] = v;
       }
       if (live) afterChange(dev, sec.model);
       return [];

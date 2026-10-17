@@ -20,6 +20,8 @@ export function caseFixed(world: World, c: CaseInstance, now: number): boolean {
       }
       case "no-sleep":
         return dev.sleep === undefined;
+      case "no-power-cut":
+        return !dev.powerCut || (dev.powerCut.until !== undefined && dev.powerCut.until <= now);
       default:
         return false;
     }

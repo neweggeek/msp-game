@@ -121,6 +121,16 @@ function applyFault(
       case "sleep-nightly":
         dev.sleep = { from: parseClock(e.from), to: parseClock(e.to) };
         break;
+      case "power-cut-weekly":
+        dev.powerCut = {
+          day: e.day,
+          from: parseClock(e.from),
+          to: parseClock(e.to),
+          since: parseGameTime(def.startedAt),
+          source: e.source,
+          fixedSource: e.fixedSource,
+        };
+        break;
       case "change-wan-ip": {
         const site = draft.sites.find((s) => s.id === dev.siteId);
         if (!site) return null;
@@ -211,6 +221,29 @@ function faultHistory(
     }
     return events;
   }
+  const cuts = def.effects.flatMap((e) => (e.type === "power-cut-weekly" ? [e] : []));
+  if (cuts.length > 0) {
+    // Ovik sees what goes dark each week, one window at a time. Its collector going dark reads as
+    // the whole site.
+    const week = 7 * 1440;
+    const windows = [...new Set(cuts.map((e) => `${e.day} ${e.from} ${e.to}`))];
+    for (const w of windows) {
+      const [day = "0", from = "", to = ""] = w.split(" ");
+      for (let t = Math.floor(at / week) * week; t < playStart; t += week) {
+        const down = t + Number(day) * 1440 + parseClock(from);
+        const up = t + Number(day) * 1440 + parseClock(to);
+        if (down < at || down >= playStart) continue;
+        const dark = visibleMap(draft, down + 1);
+        for (const d of draft.devices) {
+          if (!before.get(d.id) || dark.get(d.id)) continue;
+          events.push({ at: down, deviceId: d.id, state: "down", note: "Lost power" });
+          if (up < playStart)
+            events.push({ at: up, deviceId: d.id, state: "up", note: "Power back" });
+        }
+      }
+    }
+    return events.sort((a, b) => a.at - b.at);
+  }
   const after = visibleMap(draft, at);
   for (const d of draft.devices) {
     if (before.get(d.id) && after.get(d.id) === false)
@@ -255,6 +288,14 @@ export function plantCase(
     }));
   }
   const n = c.note;
+  const call: CaseInstance["call"] = c.call
+    ? {
+        facts: Object.fromEntries(Object.entries(c.call.facts).map(([k, v]) => [k, r(v)])),
+        fixes: c.call.fixes.map((f) => ({ ...f, label: r(f.label), roles: [...f.roles] })),
+        ...(c.call.testFixed ? { testFixed: r(c.call.testFixed) } : {}),
+        ...(c.call.testBroken ? { testBroken: r(c.call.testBroken) } : {}),
+      }
+    : undefined;
   return {
     caseId: c.id,
     name: c.name,
@@ -283,6 +324,7 @@ export function plantCase(
       wrongCause: r(n.wrongCause),
       wrongChange: r(n.wrongChange),
     },
+    ...(call ? { call } : {}),
     faults: planted,
   };
 }

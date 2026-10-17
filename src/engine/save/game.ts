@@ -1,3 +1,4 @@
+import { type PhoneCall, ask, dial, findPerson } from "../calls/calls";
 import { type CliContext, type CliSession, openSession, runLine } from "../cli/session";
 import {
   type ClockState,
@@ -34,6 +35,7 @@ import {
   setStatus,
 } from "../tickets/tickets";
 import { isIp } from "../util/ip";
+import { fill } from "../util/template";
 
 export const SAVE_VERSION = 2;
 export const SNAPSHOT_EVERY = 50;
@@ -66,7 +68,10 @@ export type Action =
   | { t: "send-back"; ticket: string; reason: string }
   | { t: "doc-edit"; target: string; field: string; value: string }
   | { t: "doc-add"; site: string; hostname: string; ip: string; kind: DeviceKind }
-  | { t: "vault-view"; device: string };
+  | { t: "vault-view"; device: string }
+  | { t: "call"; person: string; ticket?: string }
+  | { t: "call-ask"; call: string; ask: string; device?: string }
+  | { t: "call-end"; call: string };
 
 export interface GameEvent {
   at: number;
@@ -112,6 +117,12 @@ export interface GameState {
   baselineUp?: string[];
   /** Devices already charged as collateral, so each outage costs once. */
   collateral?: string[];
+  /** Phone calls, by id. */
+  calls?: Record<string, PhoneCall>;
+  /** Fact asks a contact has answered with something real, so their fixes stay on offer. */
+  heard?: string[];
+  /** "contact-id:day" for direct calls a scheduled-only client did not want. */
+  unwantedCalls?: string[];
   log: Action[];
   snapshot?: { at: number; state: string };
 }
@@ -318,12 +329,22 @@ function reopen(state: GameState, data: GameData, id: string): void {
   points(state, data, "reopened", `${t.id} reopened after close.`, t.id);
 }
 
-/** Devices at a site that were up at the start, are down now and are not just asleep. */
+/**
+ * Devices at a site that were up at the start, are down now and are not just asleep. Gear that
+ * is only down because of a scheduled power cut or a power-cycle does not count.
+ */
 export function collateralDown(state: GameState, siteId?: string): string[] {
   const ns = netState(state.world, state.clock.now);
+  const lit = netState(state.world, state.clock.now, { ignoreCuts: true });
   return (state.baselineUp ?? []).filter((id) => {
     const d = state.world.devices.find((x) => x.id === id);
-    return !!d && (!siteId || d.siteId === siteId) && !ns.online.get(id) && !ns.asleep.get(id);
+    return (
+      !!d &&
+      (!siteId || d.siteId === siteId) &&
+      !ns.online.get(id) &&
+      !ns.asleep.get(id) &&
+      !lit.online.get(id)
+    );
   });
 }
 
@@ -457,6 +478,24 @@ function editField(world: World, target: string, field: string): EditField | und
   return undefined;
 }
 
+const KEEP_OUTPUTS = 10;
+
+function remember(s: TermSession, line: string, output: string[]): void {
+  s.last = { line, output };
+  s.outputs = [...(s.outputs ?? []), s.last].slice(-KEEP_OUTPUTS);
+}
+
+function callCtx(state: GameState, data: GameData, serial: number) {
+  return {
+    world: state.world,
+    data,
+    now: state.clock.now,
+    open: clientAvailable(state, state.clock.now),
+    serial,
+    heard: state.heard ?? [],
+  };
+}
+
 function openDeviceSession(
   state: GameState,
   data: GameData,
@@ -489,6 +528,13 @@ function run(state: GameState, data: GameData, a: Action): ActionResult {
       if (!s || s.kind !== "device") return { ok: false, error: `No session ${a.session}.` };
       const typedPassword = !!s.login;
       const dev = world.devices.find((d) => d.id === s.deviceId);
+      // The box lost power under you: the session is gone.
+      if (dev && netState(world, clock.now).cut.get(dev.id)) {
+        s.closed = true;
+        const line = `Connection to ${s.address ?? dev.hostname} closed by remote host.`;
+        s.transcript.push(line);
+        return { ok: true, output: [line] };
+      }
       const before = {
         running: structuredClone(dev?.running),
         startup: structuredClone(dev?.startup),
@@ -504,7 +550,7 @@ function run(state: GameState, data: GameData, a: Action): ActionResult {
         output.push(...lockedOut(state, data, s, before));
       // Keep the last command that printed something, so there is real output to attach.
       // A password line never counts: it would show the password on the ticket.
-      if (output.length > 0 && !typedPassword) s.last = { line: a.line, output };
+      if (output.length > 0 && !typedPassword) remember(s, a.line, output);
       spend(state, data, cost(data, "cli"));
       return { ok: true, output };
     }
@@ -522,7 +568,7 @@ function run(state: GameState, data: GameData, a: Action): ActionResult {
       const s = state.sessions[a.session];
       if (!s || s.kind !== "rmm") return { ok: false, error: `No session ${a.session}.` };
       const res = runRmmLine(s, a.line, world, clock.now);
-      if (res.output.length > 0) s.last = { line: a.line, output: res.output };
+      if (res.output.length > 0) remember(s, a.line, res.output);
       spend(state, data, cost(data, "rmm-command"));
       if (!res.ssh) return { ok: true, output: res.output };
       // SSH from the agent: the target must answer on 22 from here.
@@ -657,11 +703,15 @@ function run(state: GameState, data: GameData, a: Action): ActionResult {
               `${v.alerts.length} active alerts`,
             ];
       } else {
-        const s = state.sessions[a.source];
-        if (!s?.last) return { ok: false, error: "Run a command first, then attach its output." };
+        // "s3" is the session's last output, "s3#1" an earlier one from its list.
+        const [sid = "", n] = a.source.split("#");
+        const s = state.sessions[sid];
+        const pick = n === undefined ? s?.last : s?.outputs?.[Number(n)];
+        if (!s || !pick)
+          return { ok: false, error: "Run a command first, then attach its output." };
         const host = world.devices.find((d) => d.id === s.deviceId)?.hostname ?? s.deviceId;
-        source = `${host}: ${s.last.line}`;
-        lines = s.last.output.slice(0, 40);
+        source = `${host}: ${pick.line}`;
+        lines = pick.output.slice(0, 40);
       }
       t.proofs.push({ at: clock.now, kind: "output", source, lines, provesFixed: fixed });
       t.history.push({ at: clock.now, by: "tech", text: `Attached output: ${source}` });
@@ -852,6 +902,89 @@ function run(state: GameState, data: GameData, a: Action): ActionResult {
         points(state, data, "docAdd", `Added ${hostname} (${ip}) to the docs.`);
       }
       spend(state, data, cost(data, "doc-edit"));
+      return { ok: true };
+    }
+    case "call": {
+      const person = findPerson(world, a.person);
+      if (!person) return { ok: false, error: "Nobody by that name." };
+      const t = a.ticket ? find(book, a.ticket) : undefined;
+      if (a.ticket && !t) return { ok: false, error: `No ticket ${a.ticket}.` };
+      state.calls ??= {};
+      const id = `c${Object.keys(state.calls).length + 1}`;
+      const call = dial(
+        callCtx(state, data, Object.keys(state.calls).length + 1),
+        id,
+        person,
+        a.ticket,
+      );
+      state.calls[id] = call;
+      spend(state, data, data.calls.dialMinutes);
+      if (call.answered && person.insider && world.client.contactPreference === "scheduled-only") {
+        // They take the call, but they asked for scheduled contact only.
+        call.transcript.push(
+          fill(data.calls.lines.unwanted ?? "", (k) => (k === "name" ? person.name : "")),
+        );
+        const key = `${person.id}:${Math.floor(clock.now / 1440)}`;
+        state.unwantedCalls ??= [];
+        if (!state.unwantedCalls.includes(key)) {
+          state.unwantedCalls.push(key);
+          points(
+            state,
+            data,
+            "callUnwanted",
+            `Called ${person.name} directly. ${world.client.name} wants calls scheduled through dispatch.`,
+            a.ticket,
+          );
+        }
+      }
+      if (t) {
+        if (call.answered) t.respondedAt ??= clock.now;
+        t.history.push({
+          at: clock.now,
+          by: "tech",
+          text: `Called ${person.name}. ${call.transcript.at(-1) ?? ""}`,
+        });
+      }
+      return { ok: true, session: id, output: call.transcript };
+    }
+    case "call-ask": {
+      const call = state.calls?.[a.call];
+      if (!call) return { ok: false, error: `No call ${a.call}.` };
+      const person = findPerson(world, call.person);
+      if (!person) return { ok: false, error: "Nobody on the line." };
+      const t = call.ticket ? find(book, call.ticket) : undefined;
+      const c = t ? world.cases.find((x) => x.caseId === t.caseId) : undefined;
+      const def = data.calls.asks.find((x) => x.id === a.ask);
+      const before = call.transcript.length;
+      const res = ask(callCtx(state, data, Number(call.id.slice(1))), call, person, a.ask, {
+        ...(a.device ? { device: a.device } : {}),
+        ...(c ? { caseInst: c } : {}),
+        collateral: () => (c ? whereDown(state, collateralDown(state, caseSite(state, c))) : ""),
+      });
+      if ("error" in res) return { ok: false, error: res.error };
+      if (res.cycled) touchUserPc(state, data, res.cycled, "Had someone unplug");
+      if (res.fact) {
+        state.heard ??= [];
+        if (!state.heard.includes(res.fact)) state.heard.push(res.fact);
+      }
+      if (t && res.test) {
+        t.clientConfirmed = res.test.ok;
+        t.proofs.push({
+          at: clock.now,
+          kind: "client",
+          source: person.name,
+          lines: res.lines.slice(1),
+          provesFixed: res.test.fixed,
+        });
+      }
+      if (t) t.history.push({ at: clock.now, by: "client", text: res.lines.slice(1).join(" ") });
+      spend(state, data, def?.minutes ?? 5);
+      return { ok: true, output: call.transcript.slice(before) };
+    }
+    case "call-end": {
+      const call = state.calls?.[a.call];
+      if (!call) return { ok: false, error: `No call ${a.call}.` };
+      call.closed = true;
       return { ok: true };
     }
     case "vault-view": {

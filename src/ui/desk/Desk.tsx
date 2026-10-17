@@ -224,7 +224,16 @@ function TicketView() {
             <span>
               {contact?.name}, {contact?.role}
             </span>
-            <span className="dim">{contact?.phone} · ask through Customer question</span>
+            <span className="dim">{contact?.phone}</span>
+            <button
+              type="button"
+              className="btn small"
+              disabled={closed}
+              onClick={() => setDialog({ kind: "phone", ticket: t.id })}
+              title="A quick question, a quick test, or someone's hands at the site"
+            >
+              Call
+            </button>
           </div>
           <div className="card off">
             <span className="k">Console / truck roll</span>
@@ -311,12 +320,25 @@ function TicketView() {
               >
                 <option value="">Attach output...</option>
                 <option value="ovik">Ovik status of the device</option>
-                {sessions.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {game.world.devices.find((d) => d.id === s.deviceId)?.hostname}: {s.last?.line}
-                    {s.id === session ? " (current tab)" : ""}
-                  </option>
-                ))}
+                {sessions.map((s) => {
+                  const host = game.world.devices.find((d) => d.id === s.deviceId)?.hostname;
+                  const outs = s.outputs ?? (s.last ? [s.last] : []);
+                  return (
+                    <optgroup
+                      key={s.id}
+                      label={`${host}${s.id === session ? " (current tab)" : ""}`}
+                    >
+                      {outs
+                        .map((o, i) => ({ o, i }))
+                        .reverse()
+                        .map(({ o, i }) => (
+                          <option key={`${s.id}#${i}`} value={s.outputs ? `${s.id}#${i}` : s.id}>
+                            {o.line}
+                          </option>
+                        ))}
+                    </optgroup>
+                  );
+                })}
               </select>
               <button
                 type="button"

@@ -7,6 +7,7 @@ import {
   webPage,
 } from "../../engine";
 import { BugReportDialog, DiagnosticsBody, DiagnosticsButtons } from "../DiagnosticsPanel";
+import { PhoneDialog } from "../phone/Phone";
 import { ScoreDialog } from "../score/Score";
 import { data, useGame, useUi } from "../store";
 
@@ -54,6 +55,8 @@ export function Dialogs() {
         <DiagnosticsBody />
       </Modal>
     );
+  if (dialog.kind === "phone")
+    return <PhoneDialog Modal={Modal} ticket={dialog.ticket} call={dialog.call} />;
   if (dialog.kind === "score") return <ScoreDialog Modal={Modal} summary={!!dialog.summary} />;
   if (dialog.kind === "web") return <Web from={dialog.from} address={dialog.address} />;
   if (dialog.kind === "handoff") return <Handoff ticket={dialog.ticket} />;
@@ -66,7 +69,9 @@ function Handoff({ ticket }: { ticket: string }) {
   const { act, setDialog } = useUi();
   const t = game.book.tickets.find((x) => x.id === ticket);
   const types = data.handoffs.handoffs;
-  const [type, setType] = useState(types[1]?.id ?? "");
+  const [type, setType] = useState(
+    types.find((h) => h.id === "customer-question")?.id ?? types[1]?.id ?? "",
+  );
   const [detail, setDetail] = useState("");
   const [note, setNote] = useState<number>();
   const [askClose, setAskClose] = useState(false);

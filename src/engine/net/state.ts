@@ -1,5 +1,5 @@
 import type { Device, Fields, PoePriority, World } from "../model/types";
-import { inDailyWindow } from "../util/time";
+import { inDailyWindow, inWeeklyWindow, lastWeeklyEnd } from "../util/time";
 
 export interface PoePortState {
   port: string;
@@ -24,6 +24,8 @@ export interface NetState {
   online: Map<string, boolean>;
   powered: Map<string, boolean>;
   asleep: Map<string, boolean>;
+  /** Dark on a schedule or mid power-cycle. Not the player's outage. */
+  cut: Map<string, boolean>;
   poe: Map<string, PoeSwitchState>;
 }
 
@@ -71,15 +73,27 @@ export function poeFor(world: World, sw: Device): PoeSwitchState {
 }
 
 /** Derived state at a game minute: computed from config, faults and time, never stored. */
-export function netState(world: World, now: number): NetState {
+export function netState(world: World, now: number, opts: { ignoreCuts?: boolean } = {}): NetState {
   const poe = new Map<string, PoeSwitchState>();
   for (const sw of world.devices.filter((d) => d.kind === "switch"))
     poe.set(sw.id, poeFor(world, sw));
 
   const powered = new Map<string, boolean>();
   const asleep = new Map<string, boolean>();
+  const cut = new Map<string, boolean>();
   for (const d of world.devices) {
     asleep.set(d.id, d.sleep !== undefined && inDailyWindow(now, d.sleep));
+    cut.set(
+      d.id,
+      !opts.ignoreCuts &&
+        (powerCutActive(d, now) || (d.rebootUntil !== undefined && now < d.rebootUntil)),
+    );
+  }
+  for (const d of world.devices) {
+    if (cut.get(d.id)) {
+      powered.set(d.id, false);
+      continue;
+    }
     if (!d.poe) {
       powered.set(d.id, true);
       continue;
@@ -88,7 +102,8 @@ export function netState(world: World, now: number): NetState {
     const sw = feed ? poe.get(feed.device) : undefined;
     const port = sw?.ports.find((p) => p.port === feed?.port);
     // Not fed by a managed PoE port means a local adapter or injector powers it.
-    powered.set(d.id, port ? port.state === "delivering" : true);
+    // A switch that is dark itself feeds nothing.
+    powered.set(d.id, port ? port.state === "delivering" && !cut.get(feed?.device ?? "") : true);
   }
 
   const online = new Map<string, boolean>();
@@ -108,7 +123,30 @@ export function netState(world: World, now: number): NetState {
     }
     online.set(d.id, up);
   }
-  return { now, online, powered, asleep, poe };
+  return { now, online, powered, asleep, cut, poe };
+}
+
+/** Is a scheduled power cut taking this device down right now? */
+export function powerCutActive(d: Device, now: number): boolean {
+  const c = d.powerCut;
+  return (
+    !!c && now >= c.since && (c.until === undefined || now < c.until) && inWeeklyWindow(now, c)
+  );
+}
+
+/** When the device last came up: first boot, the end of a power cut, or a power-cycle. */
+export function bootTime(d: Device, now: number): number {
+  let t = d.bootAt;
+  const c = d.powerCut;
+  if (c) {
+    const end = lastWeeklyEnd(Math.min(now, c.until ?? now), c);
+    if (end !== undefined && end >= c.since) t = Math.max(t, end);
+    // Fixed in the middle of a cut: power came back at the fix.
+    if (c.until !== undefined && c.until <= now && inWeeklyWindow(c.until, c) && c.until >= c.since)
+      t = Math.max(t, c.until);
+  }
+  if (d.rebootUntil !== undefined && d.rebootUntil <= now) t = Math.max(t, d.rebootUntil);
+  return t;
 }
 
 export function firewallInterfaces(fw: Device): [string, Fields][] {

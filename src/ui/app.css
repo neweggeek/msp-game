@@ -757,3 +757,29 @@ dd:hover .editable .pencil,
   border-top: 1px solid var(--line);
   margin-top: 8px;
 }
+.call-log {
+  font-size: 12.5px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 240px;
+  overflow: auto;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+.call-log .me {
+  color: var(--text-dim);
+}
+.call-asks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.call-asks .btn {
+  white-space: normal;
+  text-align: left;
+  height: auto;
+  min-height: 24px;
+  padding: 4px 8px;
+}

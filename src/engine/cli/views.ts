@@ -1,6 +1,6 @@
 import type { Device, Fields, World } from "../model/types";
 import { canReach } from "../net/reach";
-import { type NetState, firewallInterfaces, netState } from "../net/state";
+import { type NetState, bootTime, firewallInterfaces, netState } from "../net/state";
 import { tunnelStates, wanIp } from "../net/vpn";
 import type { ViewNode } from "../schema";
 import { fnv1a } from "../util/hash";
@@ -47,7 +47,8 @@ function ifaceForIp(fw: Device, ip: string): string {
 /** "12 days, 4 hours, 9 minutes" */
 export function uptimeText(minutes: number): string {
   const m = Math.max(0, minutes);
-  return `${Math.floor(m / 1440)} days, ${Math.floor((m % 1440) / 60)} hours, ${m % 60} minutes`;
+  const n = (v: number, unit: string) => `${v} ${unit}${v === 1 ? "" : "s"}`;
+  return `${n(Math.floor(m / 1440), "day")}, ${n(Math.floor((m % 1440) / 60), "hour")}, ${n(m % 60, "minute")}`;
 }
 
 function clockOf(now: number): string {
@@ -106,7 +107,7 @@ export function viewData(name: string, ctx: ViewContext): ViewResult {
           model: device.model.replace(/^Aurora CX /, ""),
           firmware: device.firmware,
           serial: device.serial,
-          uptime: uptimeText(ctx.now - device.bootAt),
+          uptime: uptimeText(ctx.now - bootTime(device, ctx.now)),
         },
       };
     case "performance": {
@@ -119,7 +120,7 @@ export function viewData(name: string, ctx: ViewContext): ViewResult {
           memUsed: Math.round((memTotal * memPct) / 100),
           memPct,
           netKbps: 400 + (fnv1a(`${device.id}${Math.floor(ctx.now / 5)}`) % 3000),
-          uptime: uptimeText(ctx.now - device.bootAt),
+          uptime: uptimeText(ctx.now - bootTime(device, ctx.now)),
         },
       };
     }
