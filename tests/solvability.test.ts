@@ -3,7 +3,7 @@ import { gameData } from "../src/engine/data";
 import { generate } from "../src/engine/gen";
 
 describe("solvability sweep", () => {
-  it("300 slice seeds generate with all five cases solvable", () => {
+  it("300 slice seeds generate with all six cases solvable", () => {
     const data = gameData();
     const attempts: number[] = [];
     const faultTries: number[] = [];
@@ -16,6 +16,7 @@ describe("solvability sweep", () => {
         "nobody-home",
         "branch-silence",
         "tuesday-seven",
+        "lights-out",
       ]);
       const text = JSON.stringify([w.cases, w.extraTickets]);
       expect(

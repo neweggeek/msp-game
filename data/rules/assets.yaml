@@ -13,6 +13,7 @@ types:
   - { id: workstation, label: Workstations, kinds: [pc] }
   - { id: phone, label: Phones, kinds: [phone] }
   - { id: camera, label: Cameras, kinds: [camera] }
+  - { id: nvr, label: Video recorders, kinds: [nvr] }
 
 # Wi-Fi networks the MSP documents for every site that has access points.
 # {code} is the client code. vlan is a VLAN role from the site plan.

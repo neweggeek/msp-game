@@ -1,5 +1,5 @@
 import type { Device, Fields, PoePriority, World } from "../model/types";
-import { inDailyWindow, inWeeklyWindow, lastWeeklyEnd } from "../util/time";
+import { inDailyWindow, inDayWindow, lastWindowEnd } from "../util/time";
 
 export interface PoePortState {
   port: string;
@@ -129,9 +129,7 @@ export function netState(world: World, now: number, opts: { ignoreCuts?: boolean
 /** Is a scheduled power cut taking this device down right now? */
 export function powerCutActive(d: Device, now: number): boolean {
   const c = d.powerCut;
-  return (
-    !!c && now >= c.since && (c.until === undefined || now < c.until) && inWeeklyWindow(now, c)
-  );
+  return !!c && now >= c.since && (c.until === undefined || now < c.until) && inDayWindow(now, c);
 }
 
 /** When the device last came up: first boot, the end of a power cut, or a power-cycle. */
@@ -139,10 +137,10 @@ export function bootTime(d: Device, now: number): number {
   let t = d.bootAt;
   const c = d.powerCut;
   if (c) {
-    const end = lastWeeklyEnd(Math.min(now, c.until ?? now), c);
+    const end = lastWindowEnd(Math.min(now, c.until ?? now), c);
     if (end !== undefined && end >= c.since) t = Math.max(t, end);
     // Fixed in the middle of a cut: power came back at the fix.
-    if (c.until !== undefined && c.until <= now && inWeeklyWindow(c.until, c) && c.until >= c.since)
+    if (c.until !== undefined && c.until <= now && inDayWindow(c.until, c) && c.until >= c.since)
       t = Math.max(t, c.until);
   }
   if (d.rebootUntil !== undefined && d.rebootUntil <= now) t = Math.max(t, d.rebootUntil);

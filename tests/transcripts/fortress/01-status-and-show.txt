@@ -1,15 +1,15 @@
 # seed: transcript-1
 # case: camera-day
 > get system status
-Version: FortressGate-60G v7.2.8,build3968 (GA)
-Serial-Number: FG60G633553216
+Version: FortressGate-60G v7.2.10,build6329 (GA)
+Serial-Number: FG60G261517811
 Hostname: FG-HPT01
 Operation Mode: NAT
 Current HA mode: standalone
 System time: Tue Oct 20 08:00:00 2026
 > get sys stat
-Version: FortressGate-60G v7.2.8,build3968 (GA)
-Serial-Number: FG60G633553216
+Version: FortressGate-60G v7.2.10,build6329 (GA)
+Serial-Number: FG60G261517811
 Hostname: FG-HPT01
 Operation Mode: NAT
 Current HA mode: standalone
@@ -35,7 +35,7 @@ end
 > show sys int
 config system interface
     edit "wan1"
-        set ip 198.51.100.50 255.255.255.248
+        set ip 198.51.100.218 255.255.255.248
         set allowaccess ping
         set status up
         set alias "ISP"
@@ -105,7 +105,7 @@ config system interface
 end
 > get system interface
 == [ wan1 ]
-name: wan1   mode: static   ip: 198.51.100.50 255.255.255.248   status: up   type: physical   alias: ISP
+name: wan1   mode: static   ip: 198.51.100.218 255.255.255.248   status: up   type: physical   alias: ISP
 == [ wan2 ]
 name: wan2   mode: static   ip: 0.0.0.0 0.0.0.0   status: down   type: physical   alias: 
 == [ internal1 ]
@@ -127,8 +127,8 @@ name: mgmt   mode: static   ip: 10.31.99.1 255.255.255.0   status: up   type: vl
 > get router info routing-table all
 Codes: S - static, C - connected
 
-S*       0.0.0.0/0 [10/0] via 198.51.100.49, wan1
-C        198.51.100.48/29 is directly connected, wan1
+S*       0.0.0.0/0 [10/0] via 198.51.100.217, wan1
+C        198.51.100.216/29 is directly connected, wan1
 C        10.31.10.0/24 is directly connected, data
 C        10.31.20.0/24 is directly connected, voice
 C        10.31.99.0/24 is directly connected, mgmt
@@ -136,7 +136,7 @@ C        10.31.99.0/24 is directly connected, mgmt
 config router static
     edit 1
         set dst 0.0.0.0 0.0.0.0
-        set gateway 198.51.100.49
+        set gateway 198.51.100.217
         set device "wan1"
     next
 end

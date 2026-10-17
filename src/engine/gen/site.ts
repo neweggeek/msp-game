@@ -1,5 +1,5 @@
 import type { GameData } from "../data";
-import type { ClientProfile, Room, Site } from "../model/types";
+import type { ClientProfile, DeviceKind, Room, Site } from "../model/types";
 import type { Rng } from "../rng/rng";
 
 export interface RoomPlan {
@@ -7,6 +7,8 @@ export interface RoomPlan {
   pcs: number;
   phones: number;
   ap: boolean;
+  /** Extra gear rolled for this room, with hostname templates like "{code}-NVR01". */
+  gear: { kind: DeviceKind; name: string }[];
 }
 
 function slug(text: string): string {
@@ -55,6 +57,10 @@ export function genSite(
         pcs: rng.range(spec.pcs),
         phones: rng.range(spec.phones),
         ap: rng.chance(spec.ap),
+        gear: spec.gear
+          .filter((g) => rng.chance(g.chance))
+          .filter((g) => !plan.some((p) => p.gear.some((x) => x.kind === g.kind)))
+          .map((g) => ({ kind: g.kind, name: g.name })),
       });
     }
   }

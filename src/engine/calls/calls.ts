@@ -201,10 +201,9 @@ export function ask(
           break;
         }
         const c = dev.powerCut;
-        if (c)
-          out.lines.push(
-            `${person.name}: ${c.until !== undefined && c.until <= now ? c.fixedSource : c.source}`,
-          );
+        const fixedNow = c?.until !== undefined && c.until <= now;
+        if (c) out.lines.push(`${person.name}: ${fixedNow ? c.fixedSource : c.source}`);
+        if (c && !fixedNow) out.fact = `power:${dev.id}`;
         else out.lines.push(say(data, dev.poe ? "poeOnly" : "wall", v));
         break;
       }

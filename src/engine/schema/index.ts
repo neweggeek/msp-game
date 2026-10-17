@@ -10,6 +10,7 @@ export const deviceKindSchema = z.enum([
   "camera",
   "pc",
   "server",
+  "nvr",
 ]);
 
 export const brandSchema = z.object({
@@ -57,6 +58,12 @@ export const roomTemplateSchema = z.object({
       phones: range,
       ap: z.number().min(0).max(1),
       networkCloset: z.boolean().optional(),
+      /** Other gear a room of this type may hold. One of each kind per site at most. */
+      gear: z
+        .array(
+          z.object({ kind: deviceKindSchema, chance: z.number().min(0).max(1), name: z.string() }),
+        )
+        .default([]),
     }),
   ),
 });
@@ -85,10 +92,10 @@ const effectSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("set-dns"), target: z.string(), servers: z.array(z.string()).min(1) }),
   z.object({ type: z.literal("sleep-nightly"), target: z.string(), from: clock, to: clock }),
   z.object({
-    type: z.literal("power-cut-weekly"),
+    type: z.literal("power-cut"),
     target: z.string(),
-    /** 0 is Monday. */
-    day: z.number().int().min(0).max(6),
+    /** Weekdays the cut starts on, 0 is Monday. The window may run past midnight. */
+    days: z.array(z.number().int().min(0).max(6)).min(1),
     from: clock,
     to: clock,
     /** What remote hands say the device is plugged into, before and after the fix. */
@@ -180,6 +187,7 @@ export const caseSchema = z.object({
           z.object({
             id: z.string(),
             label: z.string(),
+            /** A fact ask id, or "power:<role>" once someone says what that device plugs into. */
             unlockedBy: z.string(),
             effect: z.enum(["end-power-cut"]),
             roles: z.array(z.string()).min(1),

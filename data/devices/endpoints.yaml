@@ -46,3 +46,12 @@
   firmware: ["win11-23h2"]
   ports:
     - { pattern: "eth0", from: 1, to: 1 }
+
+- id: hawkvision-nvr8
+  kind: nvr
+  brand: hawkvision
+  model: Hawkvision NVR-8
+  tiers: [low, mid, high]
+  firmware: ["4.2.1", "4.3.0"]
+  ports:
+    - { pattern: "eth0", from: 1, to: 1 }

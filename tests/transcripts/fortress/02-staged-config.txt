@@ -51,8 +51,8 @@ end
 > set hostname FG-RENAMED
 > end
 > get system status
-Version: FortressGate-60G v7.2.8,build3968 (GA)
-Serial-Number: FG60G633553216
+Version: FortressGate-60G v7.2.10,build6329 (GA)
+Serial-Number: FG60G261517811
 Hostname: FG-RENAMED
 Operation Mode: NAT
 Current HA mode: standalone
@@ -67,7 +67,7 @@ System time: Tue Oct 20 08:16:00 2026
 config router static
     edit 1
         set dst 0.0.0.0 0.0.0.0
-        set gateway 198.51.100.49
+        set gateway 198.51.100.217
         set device "wan1"
     next
     edit 2

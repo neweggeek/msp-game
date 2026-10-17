@@ -270,6 +270,42 @@ describe("first slice cases play end to end", () => {
     });
   }
 
+  for (const seed of ["case-a", "case-b", "case-c"]) {
+    it(`${seed}: Lights Out, recorder moved off the switched outlet`, () => {
+      const { g, caseOf, dev, act, server } = setup(seed);
+      const c = caseOf("lights-out");
+      const nvr = dev("lights-out", "nvr");
+      const t = g.book.tickets.find((x) => x.caseId === "lights-out") as Ticket;
+      const hist = ovikView(g.world, g.clock.now).history.filter(
+        (h) => h.hostname === nvr.hostname,
+      );
+      expect(hist.some((h) => h.state === "down" && fmt(h.at).endsWith("18:30"))).toBe(true);
+      waitForClient(g, act);
+      let id = dialUntilAnswered(g, act, t.id);
+      const ask = (a: string, device?: string) => {
+        if (g.calls?.[id]?.closed) id = dialUntilAnswered(g, act, t.id);
+        return act({ t: "call-ask", call: id, ask: a, ...(device ? { device } : {}) });
+      };
+      // The fix only shows up once someone says what the recorder plugs into.
+      expect(ask("nvr-always-on").ok).toBe(false);
+      for (let i = 0; i < 10 && !g.heard?.includes(`power:${nvr.id}`); i++)
+        ask("power-source", nvr.id);
+      for (let i = 0; i < 20 && !caseFixed(g.world, c, g.clock.now); i++) {
+        ask("nvr-always-on");
+        ask("power-source", nvr.id);
+      }
+      expect(caseFixed(g.world, c, g.clock.now)).toBe(true);
+      expect(ask("test").output?.join("\n")).toContain("always-on");
+      const shell = act({ t: "rmm-open", device: server.id }).session as string;
+      act({ t: "rmm", session: shell, line: `ping ${nvr.ip}` });
+      act({ t: "attach-proof", ticket: t.id, source: shell });
+      const best = resolutionNotes(g.world, t, c).findIndex((n) => n.parts.length === 6);
+      expect(act({ t: "resolve", ticket: t.id, note: best }).output).toEqual([]);
+      act({ t: "advance", minutes: 14 * 60 });
+      expect(t.closedAt).toBeDefined();
+    });
+  }
+
   it("misroute and duplicate go back to dispatch", () => {
     const { g, act } = setup("case-a");
     const edr = g.book.tickets.find((t) => t.extraId === "edr-misroute");
