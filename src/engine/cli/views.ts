@@ -362,6 +362,8 @@ export function viewData(name: string, ctx: ViewContext): ViewResult {
         const up =
           !port.shutdown && !!peer && ns.powered.get(peer.id) === true && !ns.asleep.get(peer.id);
         const base = fnv1a(`${sw.id}:${port.name}`);
+        // A storm floods every port with broadcasts, and the switch drops most of them.
+        const storm = up && ns.storm.get(sw.id) === true;
         const poe = ns.poe.get(sw.id)?.ports.find((x) => x.port === port.name);
         return {
           ok: true,
@@ -374,12 +376,16 @@ export function viewData(name: string, ctx: ViewContext): ViewResult {
             vlan: port.vlan ?? 1,
             poe: poe ? stateWord(poe.state).toLowerCase() : "n/a",
             speed: up ? "1000M full" : "-",
-            rxPackets: up ? (base % 900000) + 10000 : 0,
-            txPackets: up ? ((base >>> 3) % 900000) + 10000 : 0,
+            rxPackets: storm ? 480000000 + (base % 9000000) : up ? (base % 900000) + 10000 : 0,
+            txPackets: storm
+              ? 470000000 + ((base >>> 3) % 9000000)
+              : up
+                ? ((base >>> 3) % 900000) + 10000
+                : 0,
             rxErrors: 0,
             txErrors: 0,
             crc: 0,
-            drops: 0,
+            drops: storm ? 210000000 + ((base >>> 5) % 9000000) : 0,
           },
         };
       }

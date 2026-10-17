@@ -14,8 +14,8 @@ import type { Ticket } from "../src/engine/tickets/tickets";
 const data = gameData();
 const fmt = (m: number) => formatTime(data.calendar, m);
 
-function setup(seed: string) {
-  const g = newGame(seed, data);
+function setup(seed: string, caseId?: string) {
+  const g = newGame(seed, data, caseId ? { caseId } : {});
   const caseOf = (id: string) =>
     g.world.cases.find((c) => c.caseId === id) as (typeof g.world.cases)[number];
   const dev = (caseId: string, role: string) =>
@@ -267,6 +267,84 @@ describe("first slice cases play end to end", () => {
       expect(
         g.score.some((e) => e.ticketId === t.id && e.reason.includes("closed with proof")),
       ).toBe(true);
+    });
+  }
+
+  for (const seed of ["case-a", "case-b", "case-c"]) {
+    it(`${seed}: Lights Out, recorder moved off the switched outlet`, () => {
+      const { g, caseOf, dev, act, server } = setup(seed);
+      const c = caseOf("lights-out");
+      const nvr = dev("lights-out", "nvr");
+      const t = g.book.tickets.find((x) => x.caseId === "lights-out") as Ticket;
+      const hist = ovikView(g.world, g.clock.now).history.filter(
+        (h) => h.hostname === nvr.hostname,
+      );
+      expect(hist.some((h) => h.state === "down" && fmt(h.at).endsWith("18:30"))).toBe(true);
+      waitForClient(g, act);
+      let id = dialUntilAnswered(g, act, t.id);
+      const ask = (a: string, device?: string) => {
+        if (g.calls?.[id]?.closed) id = dialUntilAnswered(g, act, t.id);
+        return act({ t: "call-ask", call: id, ask: a, ...(device ? { device } : {}) });
+      };
+      // The fix only shows up once someone says what the recorder plugs into.
+      expect(ask("nvr-always-on").ok).toBe(false);
+      for (let i = 0; i < 10 && !g.heard?.includes(`power:${nvr.id}`); i++)
+        ask("power-source", nvr.id);
+      for (let i = 0; i < 20 && !caseFixed(g.world, c, g.clock.now); i++) {
+        ask("nvr-always-on");
+        ask("power-source", nvr.id);
+      }
+      expect(caseFixed(g.world, c, g.clock.now)).toBe(true);
+      expect(ask("test").output?.join("\n")).toContain("always-on");
+      // One answer about the plug, not the fixed source plus a generic one.
+      const src = ask("power-source", nvr.id).output ?? [];
+      expect(src.join("\n")).not.toContain("The wall outlet.");
+      const shell = act({ t: "rmm-open", device: server.id }).session as string;
+      act({ t: "rmm", session: shell, line: `ping ${nvr.ip}` });
+      act({ t: "attach-proof", ticket: t.id, source: shell });
+      const best = resolutionNotes(g.world, t, c).findIndex((n) => n.parts.length === 6);
+      expect(act({ t: "resolve", ticket: t.id, note: best }).output).toEqual([]);
+      act({ t: "advance", minutes: 14 * 60 });
+      expect(t.closedAt).toBeDefined();
+    });
+  }
+
+  for (const seed of ["tidy-1", "tidy-2", "tidy-3"]) {
+    it(`${seed}: Tidy Desk, a loop under a desk takes the office down`, () => {
+      const { g, caseOf, dev, act, server } = setup(seed, "tidy-desk");
+      const c = caseOf("tidy-desk");
+      const sw = dev("tidy-desk", "switch");
+      const fw = g.world.devices.find((d) => d.kind === "firewall") as Device;
+      const t = g.book.tickets.find((x) => x.caseId === "tidy-desk") as Ticket;
+      let ns = netState(g.world, g.clock.now);
+      expect(ns.storm.get(sw.id)).toBe(true);
+      expect(ns.online.get(server.id)).toBe(false);
+      expect(ns.online.get(fw.id)).toBe(true);
+      expect(act({ t: "rmm-open", device: server.id }).ok).toBe(false);
+      waitForClient(g, act);
+      let id = dialUntilAnswered(g, act, t.id);
+      const ask = (a: string, device?: string) => {
+        if (g.calls?.[id]?.closed) id = dialUntilAnswered(g, act, t.id);
+        return act({ t: "call-ask", call: id, ask: a, ...(device ? { device } : {}) });
+      };
+      // Power-cycling the switch only buys a few quiet minutes.
+      ask("power-cycle", sw.id);
+      act({ t: "advance", minutes: 15 });
+      expect(netState(g.world, g.clock.now).storm.get(sw.id)).toBe(true);
+      expect(ask("unplug-desk-loop").ok).toBe(false);
+      for (let i = 0; i < 10 && !g.heard?.includes("recent-changes"); i++) ask("recent-changes");
+      for (let i = 0; i < 10 && !caseFixed(g.world, c, g.clock.now); i++) ask("unplug-desk-loop");
+      expect(caseFixed(g.world, c, g.clock.now)).toBe(true);
+      ns = netState(g.world, g.clock.now);
+      expect(ns.online.get(server.id)).toBe(true);
+      const shell = act({ t: "rmm-open", device: server.id }).session as string;
+      act({ t: "rmm", session: shell, line: `ping ${sw.ip}` });
+      act({ t: "attach-proof", ticket: t.id, source: shell });
+      ask("test");
+      const best = resolutionNotes(g.world, t, c).findIndex((n) => n.parts.length === 6);
+      expect(act({ t: "resolve", ticket: t.id, note: best }).output).toEqual([]);
+      act({ t: "advance", minutes: 120 });
+      expect(t.closedAt).toBeDefined();
     });
   }
 

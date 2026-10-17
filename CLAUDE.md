@@ -35,15 +35,18 @@ When the spec and the interview disagree, the interview wins. When a feature ID 
 
 ## Current phase
 
-Phase 1 (vertical slice) is built: one managed client with a main office and a branch, four cases, one misroute and one duplicate. Phase 2 (access and people) is in progress: calls and remote hands are in, with Tuesday 7 PM as the fifth slice case. Plan and order: /mnt/project-files/msp-game-reviews/phase-2-proposal.md (project files, not the repo).
+Phase 1 (vertical slice) is built: one managed client with a main office and a branch, four cases, one misroute and one duplicate. Phase 2 (access and people) is in progress: calls and remote hands are in. The slice now has six cases (Tuesday 7 PM and Lights Out added). Tidy Desk is quick-play only, since it takes the whole site down. Plan and order: /mnt/project-files/msp-game-reviews/phase-2-proposal.md (project files, not the repo).
 
 Phase 2 notes:
 
 - Calls (data/rules/calls.yaml, src/engine/calls): call a docs contact or the user on a ticket. Answered only in hidden business hours, by availability. Patience sets how many asks a call takes. Asks: a test (sets the client OK on the spot, so no 2 hour Customer question wait), lights, power source, power-cycle, and fact questions. Low competence gives wrong answers and can cycle the wrong box in the same room.
 - Cases add a `call` block: fact answers only docs contacts know, test answers for weekly problems, and remote hands fixes that show up once their fact has been heard.
-- Power-cycle: dark for `rebootMinutes` after the ask, then boots from startup config, so unsaved changes are lost. Weekly power cuts (`power-cut-weekly`) end when a fix sets `until`. Uptime comes from `bootTime()`. Gear dark from a cut or a power-cycle does not count as collateral.
+- Power-cycle: dark for `rebootMinutes` after the ask, then boots from startup config, so unsaved changes are lost. Scheduled power cuts (effect `power-cut`, a list of weekdays and a window that may run past midnight) end when a fix sets `until`. Uptime comes from `bootTime()`. Gear dark from a cut or a power-cycle does not count as collateral.
 - A client with contactPreference scheduled-only costs `callUnwanted` once per contact per day. The docs say so on the contacts list.
 - Access token `hands` (a call) is always available when the client has contacts.
+- Loops (effect `loop-cable`): a cable with both ends on one switch. While both ports are up, `netState` marks the switch as in a storm and everything on it is offline. A power-cycle does not help. The `unplug-loop` hands fix removes the cable.
+- Rooms can place fixed gear (`gear` in data/rooms), like the clinic NVR.
+- The status bar picks what a new shift plants: a scenario, or one case on the one-site quick client. Saves keep the pick.
 
 Phase 1 notes:
 

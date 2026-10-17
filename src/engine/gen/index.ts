@@ -10,7 +10,7 @@ import { genSite } from "./site";
 import { checkSolvable } from "./validate";
 
 /** Bump when a code change alters what an existing seed builds. */
-export const GENERATOR_VERSION = 5;
+export const GENERATOR_VERSION = 7;
 
 const MAX_WORLD_ATTEMPTS = 200;
 const MAX_FAULT_ATTEMPTS = 8;
@@ -92,7 +92,8 @@ function finishConfigs(draft: Draft): void {
 /** What Ovik thinks is out there. It was set up once and drifted. */
 function ovikInventory(rng: Rng, draft: Draft, snapshot: Draft): OvikDevice[] {
   const uplinkOf = (d: Device) => {
-    const p = d.ports.find((x) => x.link)?.link;
+    // A cable looped back into the same switch is not its uplink.
+    const p = d.ports.find((x) => x.link && x.link.device !== d.id)?.link;
     const sw = p ? draft.devices.find((x) => x.id === p.device) : undefined;
     return sw?.kind === "switch" ? `${sw.hostname} ${p?.port}` : undefined;
   };

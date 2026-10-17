@@ -64,6 +64,7 @@ const uptimeDays: Record<DeviceKind, [number, number]> = {
   ap: [20, 90],
   phone: [3, 60],
   camera: [1, 1],
+  nvr: [10, 60],
 };
 
 /** Build a device from a template. Exported so faults can add devices the same way. */
@@ -162,6 +163,8 @@ export interface GearContext {
   counters: Record<string, number>;
   staff: string[];
   now: number;
+  /** WAN blocks already handed to a site, so two sites never share one. */
+  wanBlocks?: number[];
 }
 
 export function nextId(ctx: GearContext, kind: string): string {
@@ -229,6 +232,8 @@ export function genSiteGear(
       endpoints.push(
         make(pick("ap"), "ap", `${code}-AP-${roomSlug(base, room.roomId)}`, room.roomId),
       );
+    for (const g of room.gear)
+      endpoints.push(make(pick(g.kind), g.kind, g.name.replace("{code}", code), room.roomId));
   }
 
   const fwT =
@@ -287,7 +292,9 @@ export function genSiteGear(
   for (const p of sw.ports)
     if (p.role === "access" && p.vlan === undefined) p.vlan = vlanOf("data").id;
 
-  const block = ipToInt("198.51.100.0") + rng.int(0, 31) * 8;
+  let block = ipToInt("198.51.100.0") + rng.int(0, 31) * 8;
+  while (ctx.wanBlocks?.includes(block)) block = ipToInt("198.51.100.0") + rng.int(0, 31) * 8;
+  ctx.wanBlocks = [...(ctx.wanBlocks ?? []), block];
   const isp: Isp = {
     name: rng.pick(ispNames),
     circuitId: `CID-${rng.digits(8)}`,

@@ -7,6 +7,7 @@ export const DEVICE_KINDS = [
   "camera",
   "pc",
   "server",
+  "nvr",
 ] as const;
 export type DeviceKind = (typeof DEVICE_KINDS)[number];
 export type Priority = "P1" | "P2" | "P3" | "P4";
@@ -127,8 +128,8 @@ export interface Device {
   /** Goes to sleep every night between these minutes of the day. */
   sleep?: { from: number; to: number };
   /**
-   * Loses power once a week in this window (day 0 is Monday), from `since` until someone fixes
-   * the cause at `until`.
+   * Loses power in this window on the listed weekdays (0 is Monday), from `since` until someone
+   * fixes the cause at `until`.
    */
   powerCut?: PowerCut;
   /** Power-cycled by remote hands; dark until this minute, then boots from its startup config. */
@@ -149,7 +150,7 @@ export interface Device {
 }
 
 export interface PowerCut {
-  day: number;
+  days: number[];
   from: number;
   to: number;
   since: number;
@@ -165,6 +166,8 @@ export interface Link {
   b: PortRef;
   lengthM: number;
   condition: "good" | "damaged";
+  /** The fault that plugged this cable in, like a loop under a desk. */
+  addedBy?: string;
 }
 
 export interface DocDevice {
@@ -258,7 +261,7 @@ export interface CaseCall {
     id: string;
     label: string;
     unlockedBy: string;
-    effect: "end-power-cut";
+    effect: "end-power-cut" | "unplug-loop";
     roles: string[];
   }[];
 }

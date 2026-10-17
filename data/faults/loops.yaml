@@ -1,0 +1,22 @@
+# Layer 2 faults: cables that make a loop.
+- id: desk-loop
+  name: Patch cable loops two wall jacks under a desk
+  layer: 2
+  device: switch
+  startedAt: "0d 19:24"
+  effects:
+    - { type: loop-cable, target: switch }
+  proof: []
+  clues:
+    - id: all-offline
+      text: "Shinobi RMM shows every agent at the site offline since last night, all at the same minute."
+      surface: rmm
+      requires: docs
+    - id: storm-lights
+      text: "On a call, a contact says every light on {switch.hostname} is flashing fast, all at the same time."
+      surface: call
+      requires: hands
+    - id: tidied
+      text: "On a call, a contact says the cleaning crew moved the desks in {pc.room} last night and plugged loose cables back in."
+      surface: call
+      requires: hands

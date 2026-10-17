@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { gameData } from "../src/engine/data";
 import type { Device } from "../src/engine/model/types";
 import { ovikView } from "../src/engine/monitor/ovik";
+import { netState } from "../src/engine/net/state";
 import {
   type Action,
   applyAction,
@@ -226,11 +227,21 @@ describe("playtest design calls", () => {
 
 describe("playtest leftovers", () => {
   it("a stale Ovik address can be pointed at the device, which clears the alert and pays once", () => {
-    const { g, act } = setup();
-    const row = g.world.monitoring.inventory.find(
-      (o) => o.ip !== g.world.devices.find((d) => d.id === o.deviceId)?.ip,
-    );
-    expect(row).toBeTruthy();
+    // A seed where the stale row is a device that is really up, so only the address is wrong.
+    const pick = ["playtest-1", "playtest-2", "playtest-3", "playtest-4", "playtest-5"]
+      .map((seed) => setup(seed))
+      .map((x) => {
+        const ns = netState(x.g.world, x.g.clock.now);
+        const row = x.g.world.monitoring.inventory.find(
+          (o) =>
+            o.ip !== x.g.world.devices.find((d) => d.id === o.deviceId)?.ip &&
+            ns.online.get(o.deviceId),
+        );
+        return { ...x, row };
+      })
+      .find((x) => x.row);
+    if (!pick) throw new Error("no seed with a stale Ovik row on a live device");
+    const { g, act, row } = pick;
     const dev = g.world.devices.find((d) => d.id === row?.deviceId) as Device;
     const target = `ovik:${dev.id}`;
     expect(act({ t: "doc-edit", target, field: "ip", value: "not an ip" }).ok).toBe(false);

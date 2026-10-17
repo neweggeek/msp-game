@@ -174,3 +174,87 @@
     nextSteps: "Sales: quote a small UPS for the closet."
     wrongCause: "Weekly ISP outage."
     wrongChange: "Opened a ticket with the ISP."
+
+- id: lights-out
+  name: Lights Out
+  pick: first-slice
+  playbook: one-device
+  requires:
+    sites: [hq]
+    kinds: { nvr: 1, switch: 1 }
+  roles:
+    nvr: { kind: nvr, site: hq }
+    switch: { kind: switch, site: hq }
+  primary: nvr
+  ticket:
+    origin: client
+    priority: P3
+    title: "Camera recorder has no video overnight"
+    body: "The camera recorder {nvr.hostname} in {nvr.room} has no recordings from about 6:30 PM until 7:40 AM. It started about a week ago. Daytime video is fine."
+  faults: [nvr-switched-outlet]
+  fixed:
+    - { type: no-power-cut, role: nvr }
+  call:
+    facts:
+      after-hours: "The last one out turns off all the lights, usually around 6:30."
+      recent-changes: "We had an electrician in last week. He put the office outlets on the light switches."
+    testBroken: "Still no video from last night. I won't know more until tomorrow morning."
+    testFixed: "It's on the always-on outlet now, with a label. Go ahead and close it. I'll check the video tomorrow."
+    fixes:
+      - id: nvr-always-on
+        label: "Move {nvr.hostname}'s plug to the always-on outlet on the wall, and put a label on it."
+        unlockedBy: "power:nvr"
+        effect: end-power-cut
+        roles: [nvr]
+  redHerring: "It looks like a firmware crash or a scheduled reboot on the recorder."
+  rootCause: "{nvr.hostname} is plugged into an outlet that the office light switch turns off."
+  fix: "Have a contact move the recorder to an always-on outlet and label it."
+  note:
+    issue: "{nvr.hostname} ({nvr.ip}) offline every night from 18:30 to 07:40, so no overnight video."
+    findings: "Ovik showed only {nvr.hostname} dropping, at the same times every day. The contact said it plugs into the outlet on the light switch, which an electrician wired last week."
+    changes: "A contact moved {nvr.hostname} to the always-on outlet and labeled it."
+    rootCause: "The recorder's outlet is switched with the office lights."
+    nextSteps: "Check overnight video tomorrow. Quote a small UPS for the recorder."
+    wrongCause: "Recorder firmware crashes every night."
+    wrongChange: "Updated the recorder firmware."
+
+- id: tidy-desk
+  name: Tidy Desk
+  pick: first-slice
+  playbook: site-down
+  requires:
+    sites: [hq]
+    kinds: { switch: 1, pc: 1 }
+  roles:
+    switch: { kind: switch, site: hq }
+    pc: { kind: pc, site: hq, pick: random }
+  primary: switch
+  ticket:
+    origin: client
+    priority: P1
+    title: "Nothing works at the office"
+    body: "Nothing works this morning. No internet, no phones, no printing. It was fine when we left last night."
+  faults: [desk-loop]
+  fixed:
+    - { type: no-loop, role: switch }
+    - { type: device-online, role: switch }
+  call:
+    facts:
+      recent-changes: "The cleaning crew moved the desks in {pc.room} last night. They plugged a bunch of loose cables back in."
+    fixes:
+      - id: unplug-desk-loop
+        label: "Look under the desks in {pc.room} for a cable with both ends in wall jacks, and unplug one end."
+        unlockedBy: recent-changes
+        effect: unplug-loop
+        roles: [switch]
+  redHerring: "It looks like the internet is down, or the firewall died overnight."
+  rootCause: "A patch cable joins two wall jacks in {pc.room}, which loops {switch.hostname} back into itself. Loop protection is off, so a broadcast storm floods the switch."
+  fix: "Have a contact find the cable with both ends in the wall in {pc.room} and unplug one end. Turn on loop protection later."
+  note:
+    issue: "Whole office down since 19:24 last night. {switch.hostname} ({switch.ip}) and everything behind it unreachable."
+    findings: "Every agent dropped at the same minute. A contact said all the lights on {switch.hostname} flash at once, and the cleaners replugged cables in {pc.room}."
+    changes: "A contact unplugged a patch cable that joined two wall jacks in {pc.room}."
+    rootCause: "A switch loop through two wall jacks caused a broadcast storm."
+    nextSteps: "Turn on loop protection and BPDU guard on {switch.hostname} access ports. Label spare jacks."
+    wrongCause: "The ISP circuit went down overnight."
+    wrongChange: "Opened a ticket with the ISP."

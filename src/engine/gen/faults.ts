@@ -121,9 +121,9 @@ function applyFault(
       case "sleep-nightly":
         dev.sleep = { from: parseClock(e.from), to: parseClock(e.to) };
         break;
-      case "power-cut-weekly":
+      case "power-cut":
         dev.powerCut = {
-          day: e.day,
+          days: [...e.days],
           from: parseClock(e.from),
           to: parseClock(e.to),
           since: parseGameTime(def.startedAt),
@@ -156,6 +156,15 @@ function applyFault(
         const [net = "", prefix = "16"] = p2.dst.split("/");
         const [a, b2, c, d] = net.split(".");
         p2.dst = `${a}.${Number(b2) + 1}.${c}.${d}/${prefix}`;
+        break;
+      }
+      case "loop-cable": {
+        // Two spare wall jacks under one desk, joined by a loose patch cable.
+        const free = rng.shuffle(dev.ports.filter((p) => p.role === "access" && !p.link));
+        const [pa, pb] = free;
+        if (!pa || !pb) return null;
+        connect(draft.links, dev, pa.name, dev, pb.name, 2);
+        (draft.links[draft.links.length - 1] as (typeof draft.links)[number]).addedBy = def.id;
         break;
       }
     }
@@ -221,28 +230,30 @@ function faultHistory(
     }
     return events;
   }
-  const cuts = def.effects.flatMap((e) => (e.type === "power-cut-weekly" ? [e] : []));
+  const cuts = def.effects.flatMap((e) => (e.type === "power-cut" ? [e] : []));
   if (cuts.length > 0) {
-    // Ovik sees what goes dark each week, one window at a time. Its collector going dark reads as
-    // the whole site.
-    const week = 7 * 1440;
-    const windows = [...new Set(cuts.map((e) => `${e.day} ${e.from} ${e.to}`))];
-    for (const w of windows) {
-      const [day = "0", from = "", to = ""] = w.split(" ");
-      for (let t = Math.floor(at / week) * week; t < playStart; t += week) {
-        const down = t + Number(day) * 1440 + parseClock(from);
-        const up = t + Number(day) * 1440 + parseClock(to);
-        if (down < at || down >= playStart) continue;
+    // Ovik sees what goes dark in each window. Its collector going dark reads as the whole site.
+    const windows = new Map(
+      cuts.map((e) => {
+        const w = { days: e.days, from: parseClock(e.from), to: parseClock(e.to) };
+        return [JSON.stringify(w), w] as const;
+      }),
+    );
+    for (const w of windows.values()) {
+      const len = (w.to - w.from + 1440) % 1440 || 1440;
+      for (let day = Math.floor(at / 1440); day * 1440 < playStart; day++) {
+        const down = day * 1440 + w.from;
+        if (!w.days.includes(((day % 7) + 7) % 7) || down < at || down >= playStart) continue;
         const dark = visibleMap(draft, down + 1);
         for (const d of draft.devices) {
           if (!before.get(d.id) || dark.get(d.id)) continue;
           events.push({ at: down, deviceId: d.id, state: "down", note: "Lost power" });
-          if (up < playStart)
-            events.push({ at: up, deviceId: d.id, state: "up", note: "Power back" });
+          if (down + len < playStart)
+            events.push({ at: down + len, deviceId: d.id, state: "up", note: "Power back" });
         }
       }
     }
-    return events.sort((a, b) => a.at - b.at);
+    return events.sort((x, y) => x.at - y.at);
   }
   const after = visibleMap(draft, at);
   for (const d of draft.devices) {
@@ -291,7 +302,15 @@ export function plantCase(
   const call: CaseInstance["call"] = c.call
     ? {
         facts: Object.fromEntries(Object.entries(c.call.facts).map(([k, v]) => [k, r(v)])),
-        fixes: c.call.fixes.map((f) => ({ ...f, label: r(f.label), roles: [...f.roles] })),
+        fixes: c.call.fixes.map((f) => ({
+          ...f,
+          label: r(f.label),
+          roles: [...f.roles],
+          // "power:<role>" names the device it hangs on, so the call engine can match it.
+          unlockedBy: f.unlockedBy.startsWith("power:")
+            ? `power:${bindings[f.unlockedBy.slice(6)]}`
+            : f.unlockedBy,
+        })),
         ...(c.call.testFixed ? { testFixed: r(c.call.testFixed) } : {}),
         ...(c.call.testBroken ? { testBroken: r(c.call.testBroken) } : {}),
       }

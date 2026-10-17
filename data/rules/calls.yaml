@@ -27,6 +27,7 @@ lines:
   lightsOk: "{name}: The lights are on and blinking."
   lightsLink: "{name}: It has power, but the light by the cable is off."
   lightsDark: "{name}: Nothing. No lights at all."
+  lightsStorm: "{name}: Every light on it is flashing like crazy, all at the same time."
   notFound: "{name}: I can't find {device}. Is it labeled?"
   poeOnly: "{name}: Just the network cable. Nothing else."
   wall: "{name}: The wall outlet."

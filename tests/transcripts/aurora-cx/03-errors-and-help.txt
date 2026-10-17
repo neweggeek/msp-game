@@ -18,8 +18,8 @@ lldp
 version
 > sh ver
 Aurora CX 6000 48G
-Version      : PL.10.13.1020
-Serial       : ACX600048G651948150
+Version      : PL.10.14.0010
+Serial       : ACX600048G117706200
 Uptime       : 6 days, 12 hours, 25 minutes
 > show bogus
 Invalid input: bogus

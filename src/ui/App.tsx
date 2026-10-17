@@ -164,13 +164,18 @@ function StatusBar() {
   const issues = diagCounts();
   const file = useRef<HTMLInputElement>(null);
   const [seed, setSeed] = useState(game.seed);
+  const [pick, setPick] = useState(
+    game.caseId ? `case:${game.caseId}` : (game.scenario ?? "slice"),
+  );
   const v = ovikView(game.world, game.clock.now);
   const last = game.events[game.events.length - 1];
   const next = game.calendar.filter((c) => c.at >= game.clock.now).sort((a, b) => a.at - b.at)[0];
   return (
     <footer className="statusbar">
       <span>
-        Ovik: {v.alerts.length} active alert{v.alerts.length === 1 ? "" : "s"}
+        {v.collector.online
+          ? `Ovik: ${v.alerts.length} active alert${v.alerts.length === 1 ? "" : "s"}`
+          : "Ovik: collector offline"}
       </span>
       {next && (
         <span>
@@ -194,9 +199,36 @@ function StatusBar() {
             !window.confirm(`Start a new shift? It replaces the save in slot ${slot}.`)
           )
             return;
-          start(seed);
+          start(seed, pick);
         }}
       >
+        <select
+          value={pick}
+          onChange={(e) => setPick(e.target.value)}
+          style={{ height: 22, fontSize: 11, padding: "0 4px" }}
+          aria-label="Scenario"
+          title="What the shift plants on the client"
+        >
+          {[...data.scenarios.values()].map((s) => (
+            <option key={s.id} value={s.id}>
+              {s.name}
+            </option>
+          ))}
+          <optgroup label="One case">
+            {/* A single case is built on the one-site quick client. */}
+            {[...data.cases.values()]
+              .filter((c) =>
+                c.requires.sites.every((s) =>
+                  (data.scenarios.get("quick")?.sites as string[]).includes(s),
+                ),
+              )
+              .map((c) => (
+                <option key={c.id} value={`case:${c.id}`}>
+                  {c.name}
+                </option>
+              ))}
+          </optgroup>
+        </select>
         <input
           value={seed}
           onChange={(e) => setSeed(e.target.value)}

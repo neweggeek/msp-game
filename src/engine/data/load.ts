@@ -162,7 +162,8 @@ export function loadData(files: RawFiles): GameData {
       if (!factAsks.includes(k))
         throw new DataError(`case ${c.id}: no fact ask ${k} in calls.yaml`);
     for (const f of c.call?.fixes ?? []) {
-      if (!factAsks.includes(f.unlockedBy))
+      const role = f.unlockedBy.startsWith("power:") ? f.unlockedBy.slice(6) : undefined;
+      if (role ? !c.roles[role] : !factAsks.includes(f.unlockedBy))
         throw new DataError(`case ${c.id}: fix ${f.id} hangs on unknown fact ${f.unlockedBy}`);
       for (const r of f.roles)
         if (!c.roles[r]) throw new DataError(`case ${c.id}: fix ${f.id} names unknown role ${r}`);

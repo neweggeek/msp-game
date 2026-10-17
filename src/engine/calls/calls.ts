@@ -1,7 +1,7 @@
 import { applyRunning } from "../cli/session";
 import type { GameData } from "../data";
 import type { CaseCall, CaseInstance, Contact, Device, World } from "../model/types";
-import { netState } from "../net/state";
+import { loopLinks, netState } from "../net/state";
 import { Rng } from "../rng/rng";
 import { caseFixed } from "../tickets/checks";
 import { fnv1a } from "../util/hash";
@@ -151,6 +151,7 @@ export function ask(
         const d = world.devices.find((x) => x.id === fix.c.bindings[role]);
         if (fix.f.effect === "end-power-cut" && d?.powerCut && d.powerCut.until === undefined)
           d.powerCut.until = now;
+        if (fix.f.effect === "unplug-loop" && d) unplugLoops(world, d);
       }
     }
     // They say done either way. Check their work.
@@ -169,8 +170,10 @@ export function ask(
     const found = !!dev;
     switch (def.kind) {
       case "fact": {
+        // Two cases can know the same fact. The ticket the call is about wins.
         const known = person.insider
-          ? world.cases.find((c) => c.call?.facts[def.id])?.call?.facts[def.id]
+          ? (opts.caseInst?.call?.facts[def.id] ??
+            world.cases.find((c) => c.call?.facts[def.id])?.call?.facts[def.id])
           : undefined;
         out.lines.push(`${person.name}: ${known ?? def.default ?? "I'm not sure."}`);
         if (known) out.fact = def.id;
@@ -183,9 +186,11 @@ export function ask(
         }
         const truth = !ns.powered.get(dev.id)
           ? "lightsDark"
-          : ns.online.get(dev.id)
-            ? "lightsOk"
-            : "lightsLink";
+          : ns.storm.get(dev.id)
+            ? "lightsStorm"
+            : ns.online.get(dev.id)
+              ? "lightsOk"
+              : "lightsLink";
         const keys = ["lightsOk", "lightsLink", "lightsDark"];
         const key = slip() ? rng.pick(keys.filter((k) => k !== truth)) : truth;
         out.lines.push(say(data, key, v));
@@ -201,11 +206,11 @@ export function ask(
           break;
         }
         const c = dev.powerCut;
-        if (c)
-          out.lines.push(
-            `${person.name}: ${c.until !== undefined && c.until <= now ? c.fixedSource : c.source}`,
-          );
-        else out.lines.push(say(data, dev.poe ? "poeOnly" : "wall", v));
+        const fixedNow = c?.until !== undefined && c.until <= now;
+        if (c) {
+          out.lines.push(`${person.name}: ${fixedNow ? c.fixedSource : c.source}`);
+          if (!fixedNow) out.fact = `power:${dev.id}`;
+        } else out.lines.push(say(data, dev.poe ? "poeOnly" : "wall", v));
         break;
       }
       case "power-cycle": {
@@ -252,6 +257,18 @@ export function ask(
     call.closed = true;
   }
   return out;
+}
+
+/** Pull one end of every cable that runs from the switch back into itself. */
+function unplugLoops(world: World, sw: Device): void {
+  const loops = loopLinks(world, sw.id);
+  for (const l of loops) {
+    for (const end of [l.a, l.b]) {
+      const port = sw.ports.find((p) => p.name === end.port);
+      if (port) port.link = undefined;
+    }
+  }
+  world.links = world.links.filter((l) => !loops.includes(l));
 }
 
 /** Off for a few minutes, then up on its saved config. Unsaved changes are gone. */

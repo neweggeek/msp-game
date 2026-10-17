@@ -18,8 +18,8 @@ traceroute
 Unknown action 0
 Command fail. Return code -1
 > g system status
-Version: FortressGate-60G v7.2.8,build3968 (GA)
-Serial-Number: FG60G633553216
+Version: FortressGate-60G v7.2.10,build6329 (GA)
+Serial-Number: FG60G261517811
 Hostname: FG-HPT01
 Operation Mode: NAT
 Current HA mode: standalone
