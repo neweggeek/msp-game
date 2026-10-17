@@ -330,18 +330,21 @@ function reopen(state: GameState, data: GameData, id: string): void {
 }
 
 /**
- * Devices at a site that were up at the start, are down now and are not just asleep. While a
- * scheduled power cut or a power-cycle has gear dark at the site, nothing there counts.
+ * Devices at a site that were up at the start, are down now and are not just asleep. Gear that
+ * is only down because of a scheduled power cut or a power-cycle does not count.
  */
 export function collateralDown(state: GameState, siteId?: string): string[] {
   const ns = netState(state.world, state.clock.now);
-  const dark = state.world.devices.some(
-    (d) => (!siteId || d.siteId === siteId) && ns.cut.get(d.id),
-  );
-  if (dark) return [];
+  const lit = netState(state.world, state.clock.now, { ignoreCuts: true });
   return (state.baselineUp ?? []).filter((id) => {
     const d = state.world.devices.find((x) => x.id === id);
-    return !!d && (!siteId || d.siteId === siteId) && !ns.online.get(id) && !ns.asleep.get(id);
+    return (
+      !!d &&
+      (!siteId || d.siteId === siteId) &&
+      !ns.online.get(id) &&
+      !ns.asleep.get(id) &&
+      !lit.online.get(id)
+    );
   });
 }
 
@@ -525,6 +528,13 @@ function run(state: GameState, data: GameData, a: Action): ActionResult {
       if (!s || s.kind !== "device") return { ok: false, error: `No session ${a.session}.` };
       const typedPassword = !!s.login;
       const dev = world.devices.find((d) => d.id === s.deviceId);
+      // The box lost power under you: the session is gone.
+      if (dev && netState(world, clock.now).cut.get(dev.id)) {
+        s.closed = true;
+        const line = `Connection to ${s.address ?? dev.hostname} closed by remote host.`;
+        s.transcript.push(line);
+        return { ok: true, output: [line] };
+      }
       const before = {
         running: structuredClone(dev?.running),
         startup: structuredClone(dev?.startup),
@@ -928,7 +938,7 @@ function run(state: GameState, data: GameData, a: Action): ActionResult {
         }
       }
       if (t) {
-        t.respondedAt ??= clock.now;
+        if (call.answered) t.respondedAt ??= clock.now;
         t.history.push({
           at: clock.now,
           by: "tech",
@@ -952,6 +962,7 @@ function run(state: GameState, data: GameData, a: Action): ActionResult {
         collateral: () => (c ? whereDown(state, collateralDown(state, caseSite(state, c))) : ""),
       });
       if ("error" in res) return { ok: false, error: res.error };
+      if (res.cycled) touchUserPc(state, data, res.cycled, "Had someone unplug");
       if (res.fact) {
         state.heard ??= [];
         if (!state.heard.includes(res.fact)) state.heard.push(res.fact);

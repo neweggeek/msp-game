@@ -117,7 +117,10 @@ export function DocsView({ full = false }: { full?: boolean }) {
                 <button
                   type="button"
                   className="btn small"
-                  onClick={() => setDialog({ kind: "phone" })}
+                  onClick={() => {
+                    const r = act({ t: "call", person: c.id });
+                    if (r.session) setDialog({ kind: "phone", call: r.session });
+                  }}
                 >
                   Call
                 </button>

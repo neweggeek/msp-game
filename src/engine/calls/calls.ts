@@ -1,3 +1,4 @@
+import { applyRunning } from "../cli/session";
 import type { GameData } from "../data";
 import type { CaseCall, CaseInstance, Contact, Device, World } from "../model/types";
 import { netState } from "../net/state";
@@ -115,6 +116,8 @@ export interface AskResult {
   fact?: string;
   /** The test answer, for the ticket. */
   test?: { fixed: boolean; ok: boolean };
+  /** The device that really got power-cycled, which may not be the one you named. */
+  cycled?: string;
 }
 
 /**
@@ -217,6 +220,7 @@ export function ask(
         const hit = slip() && near.length > 0 ? rng.pick(near) : dev;
         // Unplugged near the end of the ask, so it is still booting when they hang up.
         powerCycle(data, hit, now + def.minutes);
+        out.cycled = hit.id;
         out.lines.push(say(data, "cycled", v));
         break;
       }
@@ -253,5 +257,8 @@ export function ask(
 /** Off for a few minutes, then up on its saved config. Unsaved changes are gone. */
 export function powerCycle(data: GameData, dev: Device, now: number): void {
   dev.rebootUntil = now + data.calls.rebootMinutes;
-  if (dev.startup) dev.running = structuredClone(dev.startup);
+  if (dev.startup) {
+    dev.running = structuredClone(dev.startup);
+    applyRunning(dev);
+  }
 }

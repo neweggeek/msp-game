@@ -221,25 +221,28 @@ function faultHistory(
     }
     return events;
   }
-  const cuts = def.effects.filter((e) => e.type === "power-cut-weekly");
+  const cuts = def.effects.flatMap((e) => (e.type === "power-cut-weekly" ? [e] : []));
   if (cuts.length > 0) {
-    // Ovik sees what goes dark each week. Its collector going dark reads as the whole site.
+    // Ovik sees what goes dark each week, one window at a time. Its collector going dark reads as
+    // the whole site.
     const week = 7 * 1440;
-    const first = cuts[0];
-    if (!first || first.type !== "power-cut-weekly") return events;
-    for (let t = Math.floor(at / week) * week; t < playStart; t += week) {
-      const from = t + first.day * 1440 + parseClock(first.from);
-      const to = t + first.day * 1440 + parseClock(first.to);
-      if (from < at || from >= playStart) continue;
-      const dark = visibleMap(draft, from + 1);
-      for (const d of draft.devices) {
-        if (!before.get(d.id) || dark.get(d.id)) continue;
-        events.push({ at: from, deviceId: d.id, state: "down", note: "Lost power" });
-        if (to < playStart)
-          events.push({ at: to, deviceId: d.id, state: "up", note: "Power back" });
+    const windows = [...new Set(cuts.map((e) => `${e.day} ${e.from} ${e.to}`))];
+    for (const w of windows) {
+      const [day = "0", from = "", to = ""] = w.split(" ");
+      for (let t = Math.floor(at / week) * week; t < playStart; t += week) {
+        const down = t + Number(day) * 1440 + parseClock(from);
+        const up = t + Number(day) * 1440 + parseClock(to);
+        if (down < at || down >= playStart) continue;
+        const dark = visibleMap(draft, down + 1);
+        for (const d of draft.devices) {
+          if (!before.get(d.id) || dark.get(d.id)) continue;
+          events.push({ at: down, deviceId: d.id, state: "down", note: "Lost power" });
+          if (up < playStart)
+            events.push({ at: up, deviceId: d.id, state: "up", note: "Power back" });
+        }
       }
     }
-    return events;
+    return events.sort((a, b) => a.at - b.at);
   }
   const after = visibleMap(draft, at);
   for (const d of draft.devices) {

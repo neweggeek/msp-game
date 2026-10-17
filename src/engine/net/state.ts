@@ -73,7 +73,7 @@ export function poeFor(world: World, sw: Device): PoeSwitchState {
 }
 
 /** Derived state at a game minute: computed from config, faults and time, never stored. */
-export function netState(world: World, now: number): NetState {
+export function netState(world: World, now: number, opts: { ignoreCuts?: boolean } = {}): NetState {
   const poe = new Map<string, PoeSwitchState>();
   for (const sw of world.devices.filter((d) => d.kind === "switch"))
     poe.set(sw.id, poeFor(world, sw));
@@ -83,9 +83,14 @@ export function netState(world: World, now: number): NetState {
   const cut = new Map<string, boolean>();
   for (const d of world.devices) {
     asleep.set(d.id, d.sleep !== undefined && inDailyWindow(now, d.sleep));
-    const dark = powerCutActive(d, now) || (d.rebootUntil !== undefined && now < d.rebootUntil);
-    cut.set(d.id, dark);
-    if (dark) {
+    cut.set(
+      d.id,
+      !opts.ignoreCuts &&
+        (powerCutActive(d, now) || (d.rebootUntil !== undefined && now < d.rebootUntil)),
+    );
+  }
+  for (const d of world.devices) {
+    if (cut.get(d.id)) {
       powered.set(d.id, false);
       continue;
     }
@@ -97,7 +102,8 @@ export function netState(world: World, now: number): NetState {
     const sw = feed ? poe.get(feed.device) : undefined;
     const port = sw?.ports.find((p) => p.port === feed?.port);
     // Not fed by a managed PoE port means a local adapter or injector powers it.
-    powered.set(d.id, port ? port.state === "delivering" : true);
+    // A switch that is dark itself feeds nothing.
+    powered.set(d.id, port ? port.state === "delivering" && !cut.get(feed?.device ?? "") : true);
   }
 
   const online = new Map<string, boolean>();
@@ -135,6 +141,9 @@ export function bootTime(d: Device, now: number): number {
   if (c) {
     const end = lastWeeklyEnd(Math.min(now, c.until ?? now), c);
     if (end !== undefined && end >= c.since) t = Math.max(t, end);
+    // Fixed in the middle of a cut: power came back at the fix.
+    if (c.until !== undefined && c.until <= now && inWeeklyWindow(c.until, c) && c.until >= c.since)
+      t = Math.max(t, c.until);
   }
   if (d.rebootUntil !== undefined && d.rebootUntil <= now) t = Math.max(t, d.rebootUntil);
   return t;

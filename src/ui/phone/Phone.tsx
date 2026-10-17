@@ -83,6 +83,7 @@ export function PhoneDialog({
     );
 
   const fixes = unlockedFixes(game.world, game.heard ?? []);
+  const deviceName = docs.find((d) => d.deviceId === device)?.hostname ?? "it";
   const live = !c.closed;
   return (
     <Modal
@@ -121,19 +122,16 @@ export function PhoneDialog({
           <div className="call-asks">
             {data.calls.asks
               .filter((a) => !a.ticket || t)
-              .map((a) => {
-                const name = docs.find((d) => d.deviceId === device)?.hostname ?? "it";
-                return (
-                  <button
-                    key={a.id}
-                    type="button"
-                    className="btn small"
-                    onClick={() => ask(a.id, a.device)}
-                  >
-                    {a.label.replace("{device}", name)}
-                  </button>
-                );
-              })}
+              .map((a) => (
+                <button
+                  key={a.id}
+                  type="button"
+                  className="btn small"
+                  onClick={() => ask(a.id, a.device)}
+                >
+                  {a.label.replaceAll("{device}", deviceName)}
+                </button>
+              ))}
             {fixes.map((f) => (
               <button
                 key={f.id}

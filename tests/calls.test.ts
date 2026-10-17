@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
+import { powerCycle } from "../src/engine/calls/calls";
 import { gameData } from "../src/engine/data";
 import type { Device } from "../src/engine/model/types";
 import { bootTime, netState } from "../src/engine/net/state";
 import { type Action, applyAction, collateralDown, newGame } from "../src/engine/save/game";
+import { caseFixed } from "../src/engine/tickets/checks";
 
 // Phone calls and remote hands (ACC-04, ACC-06), and the weekly power cut they solve.
 const data = gameData();
@@ -157,5 +159,83 @@ describe("Tuesday 7 PM power cut", () => {
     openHours();
     const id = answered();
     expect(act({ t: "call-ask", call: id, ask: "closet-wall-outlet" }).ok).toBe(false);
+  });
+});
+
+describe("calls review fixes", () => {
+  it("a power-cycle wipes an unsaved PoE fix, so Camera Day breaks again", () => {
+    const { g, act } = setup("case-a");
+    const c = g.world.cases.find((x) => x.caseId === "camera-day");
+    if (!c) throw new Error("no camera day");
+    const sw = g.world.devices.find((d) => d.id === c.bindings.switch) as Device;
+    const s = act({ t: "cli-open", device: sw.id }).session as string;
+    const ports = sw.ports
+      .filter((p) =>
+        ["ap", "phone"].includes(g.world.devices.find((d) => d.id === p.link?.device)?.kind ?? ""),
+      )
+      .map((p) => p.name);
+    for (const line of [
+      "configure terminal",
+      ...ports.flatMap((p) => [`interface ${p}`, "power-over-ethernet priority high"]),
+      "end",
+    ])
+      act({ t: "cli", session: s, line });
+    expect(caseFixed(g.world, c, g.clock.now)).toBe(true);
+    powerCycle(data, sw, g.clock.now);
+    expect(act({ t: "cli", session: s, line: "show vlan" }).output?.[0]).toContain("closed");
+    act({ t: "advance", minutes: data.calls.rebootMinutes + 1 });
+    expect(caseFixed(g.world, c, g.clock.now)).toBe(false);
+  });
+
+  it("PoE gear behind a dark switch has no power", () => {
+    const { g, sw } = setup();
+    const ap = g.world.devices.find(
+      (d) =>
+        d.poe &&
+        sw.ports.some((p) => p.link?.device === d.id) &&
+        netState(g.world, g.clock.now).powered.get(d.id),
+    ) as Device;
+    powerCycle(data, sw, g.clock.now);
+    expect(netState(g.world, g.clock.now).powered.get(ap.id)).toBe(false);
+  });
+
+  it("a real outage still counts while something else is power-cycling", () => {
+    const { g, sw } = setup();
+    const victim = g.world.devices.find(
+      (d) => d.siteId === "hq" && d.kind === "ap" && g.baselineUp?.includes(d.id),
+    ) as Device;
+    const port = sw.ports.find((p) => p.link?.device === victim.id);
+    if (port) port.shutdown = true;
+    const other = g.world.devices.find((d) => d.siteId === "hq" && d.kind === "phone") as Device;
+    powerCycle(data, other, g.clock.now);
+    expect(collateralDown(g, "hq")).toContain(victim.id);
+    expect(collateralDown(g, "hq")).not.toContain(other.id);
+  });
+
+  it("fixed in the middle of a cut, uptime starts at the fix", () => {
+    const { g, fw, until } = setup();
+    until("19:15");
+    if (fw.powerCut) fw.powerCut.until = g.clock.now;
+    until("19:25");
+    expect(g.clock.now - bootTime(fw, g.clock.now)).toBe(10);
+  });
+
+  it("voicemail is not a response, and unplugging a user's PC needs their OK", () => {
+    const { g, act, openHours, answered } = setup();
+    const t = g.book.tickets[0] as (typeof g.book.tickets)[number];
+    act({ t: "advance", minutes: 14 * 60 });
+    act({ t: "call", person: "contact-1", ticket: t.id });
+    expect(t.respondedAt).toBeUndefined();
+    act({ t: "advance", minutes: 12 * 60 });
+    openHours();
+    const pc = g.world.devices.find(
+      (d) => d.user && d.siteId === "hq" && !d.tags?.includes("probe"),
+    ) as Device;
+    let id = answered();
+    for (let i = 0; i < 10 && pc.rebootUntil === undefined; i++) {
+      if (g.calls?.[id]?.closed) id = answered();
+      act({ t: "call-ask", call: id, ask: "power-cycle", device: pc.id });
+    }
+    expect(g.score.some((e) => e.reason.startsWith("Had someone unplug"))).toBe(true);
   });
 });

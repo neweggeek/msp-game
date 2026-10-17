@@ -246,6 +246,11 @@ function commit(model: string, staged: Fields | Record<string, Fields>, dev: Dev
   dev.startup = structuredClone(dev.running);
 }
 
+/** Make the device's live state match its running config, after a boot or a restore. */
+export function applyRunning(dev: Device): void {
+  afterChange(dev, "system");
+}
+
 function afterChange(dev: Device, model: string): void {
   if (model === "system") {
     const host = (dev.running?.system as Fields | undefined)?.hostname;
