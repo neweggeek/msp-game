@@ -19,3 +19,25 @@
       text: "powercfg on {probe.hostname} shows it sleeps after 30 minutes idle."
       surface: rmm
       requires: "rmm:probe"
+- id: closet-power-strip
+  name: Cleaning crew unplugs the closet power strip every Tuesday
+  layer: 1
+  device: firewall
+  startedAt: "-20d 19:02"
+  effects:
+    - { type: power-cut-weekly, target: firewall, day: 1, from: "19:02", to: "19:37", source: "A power strip on the floor by the closet door.", fixedSource: "The wall outlet behind the rack." }
+    - { type: power-cut-weekly, target: switch, day: 1, from: "19:02", to: "19:37", source: "A power strip on the floor by the closet door.", fixedSource: "The wall outlet behind the rack." }
+  proof: []
+  clues:
+    - id: tuesday-pattern
+      text: "Ovik history shows the whole site down from 19:02 to 19:37 on each of the last three Tuesdays, and nothing on other days."
+      surface: monitoring
+      requires: monitoring
+    - id: fw-uptime
+      text: "get system performance status on {firewall.hostname} shows uptime of about six and a half days: it came up last Tuesday at 19:37."
+      surface: cli
+      requires: "ssh:firewall"
+    - id: cleaners
+      text: "On a call, a contact says the cleaning crew comes Tuesdays around 7, and the closet gear plugs into a power strip by the door."
+      surface: call
+      requires: hands

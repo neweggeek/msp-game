@@ -37,3 +37,11 @@ export { readSlot, writeSlot, SLOTS } from "./save/storage";
 export * from "./model/types";
 export { docsDiff, type DocDiff } from "./gen/diff";
 export { assetTypes, assetTypeOf, connectCommand, type AssetType } from "./docs/assets";
+export {
+  people,
+  findPerson,
+  unlockedFixes,
+  type Person,
+  type PhoneCall,
+} from "./calls/calls";
+export { bootTime } from "./net/state";

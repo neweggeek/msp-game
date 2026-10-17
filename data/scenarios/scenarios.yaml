@@ -1,10 +1,10 @@
 - id: slice
-  name: "Vertical slice: one managed client, four cases"
+  name: "Vertical slice: one managed client, five cases"
   sites: [hq, branch]
   tier: mid
   switchBrand: aurora
   probe: true
-  cases: [camera-day, wrong-phonebook, nobody-home, branch-silence]
+  cases: [camera-day, wrong-phonebook, nobody-home, branch-silence, tuesday-seven]
   extraTickets: [edr-misroute, ap-alert-duplicate]
 
 - id: quick

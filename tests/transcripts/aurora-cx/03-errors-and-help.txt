@@ -20,7 +20,7 @@ version
 Aurora CX 6000 48G
 Version      : PL.10.13.1020
 Serial       : ACX600048G651948150
-Uptime       : 88 days, 9 hours, 0 minutes
+Uptime       : 6 days, 12 hours, 25 minutes
 > show bogus
 Invalid input: bogus
 > configure terminal

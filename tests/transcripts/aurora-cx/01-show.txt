@@ -5,7 +5,7 @@
 Aurora CX 6000 48G
 Version      : PL.10.13.1020
 Serial       : ACX600048G651948150
-Uptime       : 88 days, 8 hours, 58 minutes
+Uptime       : 6 days, 12 hours, 23 minutes
 > show power-over-ethernet
 System power budget  : 250.0 W
 Total power drawn    : 247.0 W

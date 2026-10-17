@@ -29,7 +29,7 @@ Negotiation failed. See diagnose vpn ike log.
 CPU states: 2% user 1% system 0% nice 97% idle
 Memory: 5009000k total, 2053690k used (41%)
 Average network usage: 2907 kbps in 1 minute
-Uptime: 62 days, 10 hours, 44 minutes
+Uptime: 6 days, 12 hours, 28 minutes
 > get router info routing-table all
 Codes: S - static, C - connected
 

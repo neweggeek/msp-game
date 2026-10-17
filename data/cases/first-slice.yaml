@@ -130,3 +130,47 @@
     nextSteps: "Ask the ISP for a static IP at the branch."
     wrongCause: "Phase 1 encryption proposal mismatch."
     wrongChange: "Rebooted {fw-branch.hostname}."
+
+- id: tuesday-seven
+  name: Tuesday, 7 PM
+  pick: first-slice
+  playbook: site-down
+  requires:
+    sites: [hq]
+    kinds: { firewall: 1, switch: 1 }
+  roles:
+    firewall: { kind: firewall, site: hq }
+    switch: { kind: switch, site: hq }
+  primary: firewall
+  ticket:
+    origin: client
+    priority: P3
+    title: "Internet drops every Tuesday evening"
+    body: "The whole office loses internet around 7 PM on Tuesdays. Three weeks in a row now. It comes back on its own after about half an hour. Evening staff lose whatever they were working on."
+  faults: [closet-power-strip]
+  fixed:
+    - { type: no-power-cut, role: firewall }
+    - { type: no-power-cut, role: switch }
+  call:
+    facts:
+      after-hours: "Just the cleaning crew. They come in Tuesday evenings around 7."
+      closet-power: "Everything in there plugs into a power strip on the floor by the door. I think the cleaners use that outlet too."
+    testBroken: "It only happens Tuesday nights, so I can't tell you yet. Nothing in the closet has changed that I know of."
+    testFixed: "Everything in the closet is on the wall outlet now and labeled. Go ahead and close it. We'll call if it drops next Tuesday."
+    fixes:
+      - id: closet-wall-outlet
+        label: "Plug the closet gear into the wall outlet behind the rack, and put a DO NOT UNPLUG label on it."
+        unlockedBy: closet-power
+        effect: end-power-cut
+        roles: [firewall, switch]
+  redHerring: "It looks like the ISP drops every Tuesday evening."
+  rootCause: "The cleaning crew unplugs the closet power strip to plug in a vacuum, which cuts power to {firewall.hostname} and {switch.hostname}."
+  fix: "Have a contact move the closet gear to the wall outlet behind the rack and label it, then confirm on a call."
+  note:
+    issue: "Whole site offline every Tuesday from about 19:02 to 19:37."
+    findings: "{firewall.hostname} ({firewall.ip}) uptime reset every Tuesday at 19:37. Ovik showed every device down at once. The closet gear was on a floor power strip the cleaning crew uses for a vacuum."
+    changes: "A contact moved {firewall.hostname} and {switch.hostname} ({switch.ip}) to the wall outlet behind the rack and labeled it."
+    rootCause: "The cleaning crew unplugs the closet power strip on Tuesday evenings."
+    nextSteps: "Sales: quote a small UPS for the closet."
+    wrongCause: "Weekly ISP outage."
+    wrongChange: "Opened a ticket with the ISP."

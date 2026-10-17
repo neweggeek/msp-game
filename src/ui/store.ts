@@ -24,6 +24,7 @@ export type Dialog =
   | { kind: "web"; from: string; address: string }
   | { kind: "diag" }
   | { kind: "score"; summary?: boolean }
+  | { kind: "phone"; ticket?: string; call?: string }
   | { kind: "bug" }
   | null;
 

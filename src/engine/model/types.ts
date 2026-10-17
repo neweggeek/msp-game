@@ -13,7 +13,7 @@ export type Priority = "P1" | "P2" | "P3" | "P4";
 export type PoePriority = "low" | "high" | "critical";
 export type Staleness = "fresh" | "partly" | "stale";
 export type Origin = "client" | "alert" | "tech";
-/** "docs", "monitoring", "rmm", or "ssh:<role>" / "rmm:<role>" for one bound device. */
+/** "docs", "monitoring", "rmm", "hands", or "ssh:<role>" / "rmm:<role>" for one bound device. */
 export type AccessToken = string;
 
 export interface Contact {
@@ -126,6 +126,13 @@ export interface Device {
   tags?: string[];
   /** Goes to sleep every night between these minutes of the day. */
   sleep?: { from: number; to: number };
+  /**
+   * Loses power once a week in this window (day 0 is Monday), from `since` until someone fixes
+   * the cause at `until`.
+   */
+  powerCut?: PowerCut;
+  /** Power-cycled by remote hands; dark until this minute, then boots from its startup config. */
+  rebootUntil?: number;
   bootAt: number;
   roomId: string;
   managed: boolean;
@@ -139,6 +146,17 @@ export interface Device {
   dialect?: string;
   running?: DeviceConfig;
   startup?: DeviceConfig;
+}
+
+export interface PowerCut {
+  day: number;
+  from: number;
+  to: number;
+  since: number;
+  until?: number;
+  /** What remote hands say it is plugged into, before and after the fix. */
+  source: string;
+  fixedSource: string;
 }
 
 export interface Link {
@@ -232,6 +250,19 @@ export interface CaseNote {
   wrongChange: string;
 }
 
+export interface CaseCall {
+  facts: Record<string, string>;
+  testFixed?: string;
+  testBroken?: string;
+  fixes: {
+    id: string;
+    label: string;
+    unlockedBy: string;
+    effect: "end-power-cut";
+    roles: string[];
+  }[];
+}
+
 export interface CaseInstance {
   caseId: string;
   name: string;
@@ -249,6 +280,8 @@ export interface CaseInstance {
   rootCause: string;
   fix: string;
   note: CaseNote;
+  /** What contacts say and do on a call for this case, with role names filled in. */
+  call?: CaseCall;
   faults: PlantedFault[];
 }
 

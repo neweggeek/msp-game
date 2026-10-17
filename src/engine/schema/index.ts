@@ -61,8 +61,10 @@ export const roomTemplateSchema = z.object({
   ),
 });
 
-/** "docs", "monitoring", "rmm", or "ssh:<role>" / "rmm:<role>" for one bound device. */
-export const accessTokenSchema = z.string().regex(/^(docs|rmm|monitoring|(ssh|rmm):[a-z-]+)$/);
+/** "docs", "monitoring", "rmm", "hands" (a phone call), or "ssh:<role>" / "rmm:<role>". */
+export const accessTokenSchema = z
+  .string()
+  .regex(/^(docs|rmm|monitoring|hands|(ssh|rmm):[a-z-]+)$/);
 /** "<day>d HH:MM", day 0 is the Monday epoch. Negative days are before it. */
 export const gameTimeSchema = z.string().regex(/^-?\d+d \d{2}:\d{2}$/);
 const clock = z.string().regex(/^\d{2}:\d{2}$/);
@@ -82,6 +84,17 @@ const effectSchema = z.discriminatedUnion("type", [
   }),
   z.object({ type: z.literal("set-dns"), target: z.string(), servers: z.array(z.string()).min(1) }),
   z.object({ type: z.literal("sleep-nightly"), target: z.string(), from: clock, to: clock }),
+  z.object({
+    type: z.literal("power-cut-weekly"),
+    target: z.string(),
+    /** 0 is Monday. */
+    day: z.number().int().min(0).max(6),
+    from: clock,
+    to: clock,
+    /** What remote hands say the device is plugged into, before and after the fix. */
+    source: z.string(),
+    fixedSource: z.string(),
+  }),
   z.object({ type: z.literal("change-wan-ip"), target: z.string() }),
   z.object({ type: z.literal("mangle-phase2"), target: z.string() }),
 ]);
@@ -96,6 +109,7 @@ export const checkSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("tunnel-up"), role: z.string() }),
   z.object({ type: z.literal("dns-internal"), role: z.string() }),
   z.object({ type: z.literal("no-sleep"), role: z.string() }),
+  z.object({ type: z.literal("no-power-cut"), role: z.string() }),
 ]);
 
 export const faultSchema = z.object({
@@ -111,7 +125,7 @@ export const faultSchema = z.object({
       z.object({
         id: z.string(),
         text: z.string(),
-        surface: z.enum(["monitoring", "cli", "docs", "rmm", "ticket"]),
+        surface: z.enum(["monitoring", "cli", "docs", "rmm", "ticket", "call"]),
         requires: accessTokenSchema,
       }),
     )
@@ -152,6 +166,28 @@ export const caseSchema = z.object({
   }),
   faults: z.array(z.string()).min(1),
   fixed: z.array(checkSchema).min(1),
+  /** What the client's contacts say and can do on a call for this case. */
+  call: z
+    .object({
+      /** Answers to "fact" asks in calls.yaml, by ask id. Contacts know these; other staff do not. */
+      facts: z.record(z.string()).default({}),
+      /** Override the test answers when the problem is weekly and nobody can test on the spot. */
+      testFixed: z.string().optional(),
+      testBroken: z.string().optional(),
+      /** Remote hands tasks that show up once the contact has given the fact they hang on. */
+      fixes: z
+        .array(
+          z.object({
+            id: z.string(),
+            label: z.string(),
+            unlockedBy: z.string(),
+            effect: z.enum(["end-power-cut"]),
+            roles: z.array(z.string()).min(1),
+          }),
+        )
+        .default([]),
+    })
+    .optional(),
   redHerring: z.string(),
   rootCause: z.string(),
   fix: z.string(),
@@ -225,6 +261,25 @@ export const handoffRulesSchema = z.object({
   }),
   summaries: z.record(z.string()),
   scoring: z.record(z.number()),
+});
+
+export const callRulesSchema = z.object({
+  dialMinutes: z.number().int().min(0),
+  answerChance: z.object({ usually: z.number(), sometimes: z.number(), rarely: z.number() }),
+  patience: z.object({ base: z.number().int(), perPoint: z.number() }),
+  rebootMinutes: z.number().int().min(1),
+  asks: z.array(
+    z.object({
+      id: z.string(),
+      kind: z.enum(["test", "lights", "power-source", "power-cycle", "fact"]),
+      minutes: z.number().int().min(0),
+      label: z.string(),
+      device: z.boolean().optional(),
+      ticket: z.boolean().optional(),
+      default: z.string().optional(),
+    }),
+  ),
+  lines: z.record(z.string()),
 });
 
 export const actionCostSchema = z.record(z.number().int().min(0));
@@ -430,6 +485,7 @@ export type ScenarioDef = z.infer<typeof scenarioSchema>;
 export type ScriptDef = z.infer<typeof scriptSchema>;
 export type KbEntry = z.infer<typeof kbSchema>;
 export type HandoffRules = z.infer<typeof handoffRulesSchema>;
+export type CallRules = z.infer<typeof callRulesSchema>;
 export type CheckDef = z.infer<typeof checkSchema>;
 export type DeviceTemplate = z.infer<typeof deviceTemplateSchema>;
 export type RoomTemplate = z.infer<typeof roomTemplateSchema>;

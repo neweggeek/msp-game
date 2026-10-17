@@ -35,7 +35,15 @@ When the spec and the interview disagree, the interview wins. When a feature ID 
 
 ## Current phase
 
-Phase 1 (vertical slice) is built: one managed client with a main office and a branch, four cases, one misroute and one duplicate. Next is Phase 2, after review.
+Phase 1 (vertical slice) is built: one managed client with a main office and a branch, four cases, one misroute and one duplicate. Phase 2 (access and people) is in progress: calls and remote hands are in, with Tuesday 7 PM as the fifth slice case. Plan and order: /mnt/project-files/msp-game-reviews/phase-2-proposal.md (project files, not the repo).
+
+Phase 2 notes:
+
+- Calls (data/rules/calls.yaml, src/engine/calls): call a docs contact or the user on a ticket. Answered only in hidden business hours, by availability. Patience sets how many asks a call takes. Asks: a test (sets the client OK on the spot, so no 2 hour Customer question wait), lights, power source, power-cycle, and fact questions. Low competence gives wrong answers and can cycle the wrong box in the same room.
+- Cases add a `call` block: fact answers only docs contacts know, test answers for weekly problems, and remote hands fixes that show up once their fact has been heard.
+- Power-cycle: dark for `rebootMinutes` after the ask, then boots from startup config, so unsaved changes are lost. Weekly power cuts (`power-cut-weekly`) end when a fix sets `until`. Uptime comes from `bootTime()`. Gear dark from a cut or a power-cycle does not count as collateral.
+- A client with contactPreference scheduled-only costs `callUnwanted` once per contact per day. The docs say so on the contacts list.
+- Access token `hands` (a call) is always available when the client has contacts.
 
 Phase 1 notes:
 

@@ -121,6 +121,16 @@ function applyFault(
       case "sleep-nightly":
         dev.sleep = { from: parseClock(e.from), to: parseClock(e.to) };
         break;
+      case "power-cut-weekly":
+        dev.powerCut = {
+          day: e.day,
+          from: parseClock(e.from),
+          to: parseClock(e.to),
+          since: parseGameTime(def.startedAt),
+          source: e.source,
+          fixedSource: e.fixedSource,
+        };
+        break;
       case "change-wan-ip": {
         const site = draft.sites.find((s) => s.id === dev.siteId);
         if (!site) return null;
@@ -211,6 +221,26 @@ function faultHistory(
     }
     return events;
   }
+  const cuts = def.effects.filter((e) => e.type === "power-cut-weekly");
+  if (cuts.length > 0) {
+    // Ovik sees what goes dark each week. Its collector going dark reads as the whole site.
+    const week = 7 * 1440;
+    const first = cuts[0];
+    if (!first || first.type !== "power-cut-weekly") return events;
+    for (let t = Math.floor(at / week) * week; t < playStart; t += week) {
+      const from = t + first.day * 1440 + parseClock(first.from);
+      const to = t + first.day * 1440 + parseClock(first.to);
+      if (from < at || from >= playStart) continue;
+      const dark = visibleMap(draft, from + 1);
+      for (const d of draft.devices) {
+        if (!before.get(d.id) || dark.get(d.id)) continue;
+        events.push({ at: from, deviceId: d.id, state: "down", note: "Lost power" });
+        if (to < playStart)
+          events.push({ at: to, deviceId: d.id, state: "up", note: "Power back" });
+      }
+    }
+    return events;
+  }
   const after = visibleMap(draft, at);
   for (const d of draft.devices) {
     if (before.get(d.id) && after.get(d.id) === false)
@@ -255,6 +285,14 @@ export function plantCase(
     }));
   }
   const n = c.note;
+  const call: CaseInstance["call"] = c.call
+    ? {
+        facts: Object.fromEntries(Object.entries(c.call.facts).map(([k, v]) => [k, r(v)])),
+        fixes: c.call.fixes.map((f) => ({ ...f, label: r(f.label), roles: [...f.roles] })),
+        ...(c.call.testFixed ? { testFixed: r(c.call.testFixed) } : {}),
+        ...(c.call.testBroken ? { testBroken: r(c.call.testBroken) } : {}),
+      }
+    : undefined;
   return {
     caseId: c.id,
     name: c.name,
@@ -283,6 +321,7 @@ export function plantCase(
       wrongCause: r(n.wrongCause),
       wrongChange: r(n.wrongChange),
     },
+    ...(call ? { call } : {}),
     faults: planted,
   };
 }

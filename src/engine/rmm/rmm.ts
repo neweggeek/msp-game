@@ -1,7 +1,7 @@
 import { uptimeText } from "../cli/views";
 import type { Device, DeviceKind, World } from "../model/types";
 import { canReach, dnsServers, resolveName } from "../net/reach";
-import { type NetState, netState } from "../net/state";
+import { type NetState, bootTime, netState } from "../net/state";
 import type { ScriptDef } from "../schema";
 import { fnv1a } from "../util/hash";
 import { isIp } from "../util/ip";
@@ -62,7 +62,7 @@ export function agents(world: World, now: number): AgentRow[] {
       publicIp: publicIp(world, d),
       online: agentOnline(world, d, ns),
       os: osOf(d),
-      uptime: uptimeText(now - d.bootAt),
+      uptime: uptimeText(now - bootTime(d, now)),
     }));
 }
 
@@ -347,7 +347,7 @@ function rmmExec(s: RmmSession, line: string, world: World, d: Device, now: numb
         `Host Name:                 ${d.hostname}`,
         `OS Name:                   Microsoft Windows ${osOf(d).replace("Windows ", "")}`,
         `System Model:              ${d.model}`,
-        `System Up Time:            ${uptimeText(now - d.bootAt)}`,
+        `System Up Time:            ${uptimeText(now - bootTime(d, now))}`,
         `Domain:                    ${world.client.domain}`,
       ]);
     case "net": {

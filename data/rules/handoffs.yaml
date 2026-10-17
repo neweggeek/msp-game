@@ -83,3 +83,4 @@ scoring:
   closedNotOurs: -15
   docFix: 5
   docAdd: 5
+  callUnwanted: -10

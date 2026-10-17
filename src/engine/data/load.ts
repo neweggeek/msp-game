@@ -4,6 +4,7 @@ import {
   type AssetRules,
   type Brand,
   type CalendarRules,
+  type CallRules,
   type CaseDef,
   type ClientRules,
   type DeviceTemplate,
@@ -22,6 +23,7 @@ import {
   assetRulesSchema,
   brandSchema,
   calendarSchema,
+  callRulesSchema,
   caseSchema,
   clientRulesSchema,
   deviceTemplateSchema,
@@ -57,6 +59,7 @@ export interface GameData {
   staleness: StalenessRules;
   clients: ClientRules;
   assets: AssetRules;
+  calls: CallRules;
 }
 
 /** Raw YAML text keyed by path, like "../../../data/devices/fortress.yaml". */
@@ -135,6 +138,7 @@ export function loadData(files: RawFiles): GameData {
     staleness: rule(files, "staleness", stalenessSchema),
     clients: rule(files, "clients", clientRulesSchema),
     assets: rule(files, "assets", assetRulesSchema),
+    calls: rule(files, "calls", callRulesSchema),
   };
   for (const t of data.devices.values()) {
     if (!data.brands.has(t.brand)) throw new DataError(`device ${t.id}: unknown brand ${t.brand}`);
@@ -151,6 +155,18 @@ export function loadData(files: RawFiles): GameData {
   for (const c of data.cases.values()) {
     for (const f of c.faults)
       if (!data.faults.has(f)) throw new DataError(`case ${c.id}: unknown fault ${f}`);
+  }
+  const factAsks = data.calls.asks.filter((a) => a.kind === "fact").map((a) => a.id);
+  for (const c of data.cases.values()) {
+    for (const k of Object.keys(c.call?.facts ?? {}))
+      if (!factAsks.includes(k))
+        throw new DataError(`case ${c.id}: no fact ask ${k} in calls.yaml`);
+    for (const f of c.call?.fixes ?? []) {
+      if (!factAsks.includes(f.unlockedBy))
+        throw new DataError(`case ${c.id}: fix ${f.id} hangs on unknown fact ${f.unlockedBy}`);
+      for (const r of f.roles)
+        if (!c.roles[r]) throw new DataError(`case ${c.id}: fix ${f.id} names unknown role ${r}`);
+    }
   }
   for (const ind of data.clients.industries) {
     if (!data.rooms.has(ind.rooms))

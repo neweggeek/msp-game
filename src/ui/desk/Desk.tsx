@@ -224,7 +224,16 @@ function TicketView() {
             <span>
               {contact?.name}, {contact?.role}
             </span>
-            <span className="dim">{contact?.phone} · ask through Customer question</span>
+            <span className="dim">{contact?.phone}</span>
+            <button
+              type="button"
+              className="btn small"
+              disabled={closed}
+              onClick={() => setDialog({ kind: "phone", ticket: t.id })}
+              title="A quick question, a quick test, or someone's hands at the site"
+            >
+              Call
+            </button>
           </div>
           <div className="card off">
             <span className="k">Console / truck roll</span>

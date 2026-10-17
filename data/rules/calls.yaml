@@ -1,0 +1,38 @@
+# Phone calls to the client: quick answers, quick tests and remote hands.
+# A call is answered only during the client's hidden business hours, more often by
+# contacts who are usually around. Every question costs minutes and some patience.
+# Low competence means wrong answers, and sometimes the wrong device.
+dialMinutes: 3
+answerChance: { usually: 0.9, sometimes: 0.6, rarely: 0.35 }
+# Questions before the contact has to get back to work: base + round(patience * perPoint).
+patience: { base: 2, perPoint: 4 }
+# Minutes a power-cycled device stays dark before it boots from its saved config.
+rebootMinutes: 6
+
+asks:
+  - { id: test, kind: test, minutes: 5, ticket: true, label: "Can you try it now and tell me if it works?" }
+  - { id: lights, kind: lights, minutes: 6, device: true, label: "Can you go look at {device}? Are its lights on?" }
+  - { id: power-source, kind: power-source, minutes: 6, device: true, label: "What is {device} plugged into for power?" }
+  - { id: power-cycle, kind: power-cycle, minutes: 8, device: true, label: "Unplug {device}, count to ten, and plug it back in." }
+  - { id: after-hours, kind: fact, minutes: 2, label: "Is anyone in the office after hours?", default: "Not really. We lock up when we leave." }
+  - { id: recent-changes, kind: fact, minutes: 2, label: "Did anything change around the office lately?", default: "Not that I know of." }
+  - { id: closet-power, kind: fact, minutes: 3, label: "What does the network closet plug into?", default: "The outlets on the wall, I think. I don't go in there much." }
+
+lines:
+  noAnswer: "No answer. You leave a voicemail for {name}."
+  closed: "Voicemail: {name} is out of the office right now."
+  hello: "{name}: Hi, this is {name}."
+  unwanted: "{name}: We asked for calls to go through your dispatcher. What is it?"
+  tired: "{name}: Sorry, I have to get back to work. Call back later if you need me."
+  lightsOk: "{name}: The lights are on and blinking."
+  lightsLink: "{name}: It has power, but the light by the cable is off."
+  lightsDark: "{name}: Nothing. No lights at all."
+  notFound: "{name}: I can't find {device}. Is it labeled?"
+  poeOnly: "{name}: Just the network cable. Nothing else."
+  wall: "{name}: The wall outlet."
+  unsure: "{name}: I can't really see behind it."
+  cycled: "{name}: OK, it's back in. The lights are coming on."
+  testFixed: "{name}: Yes, that works now. Go ahead and close it."
+  testBroken: "{name}: No, still not working."
+  testCollateral: "{name}: That part works now, but {down} stopped working."
+  fixDone: "{name}: Done."

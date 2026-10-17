@@ -1,14 +1,18 @@
 import { describe, expect, it } from "vitest";
+import { formatTime } from "../src/engine/clock/clock";
 import { gameData } from "../src/engine/data";
 import type { Device } from "../src/engine/model/types";
+import { ovikView } from "../src/engine/monitor/ovik";
 import { netState } from "../src/engine/net/state";
 import { tunnelStates } from "../src/engine/net/vpn";
 import { publicIp } from "../src/engine/rmm/rmm";
 import { type GameState, applyAction, newGame, totalScore } from "../src/engine/save/game";
 import { caseFixed } from "../src/engine/tickets/checks";
 import { handoffNotes, resolutionNotes } from "../src/engine/tickets/desk";
+import type { Ticket } from "../src/engine/tickets/tickets";
 
 const data = gameData();
+const fmt = (m: number) => formatTime(data.calendar, m);
 
 function setup(seed: string) {
   const g = newGame(seed, data);
@@ -42,6 +46,22 @@ function waitForClient(g: GameState, act: (a: Parameters<typeof applyAction>[2])
   const h = g.world.client.businessHours;
   const m = g.clock.now % 1440;
   if (m < h.start) act({ t: "advance", minutes: h.start - m + 5 });
+}
+
+/** Ring the client's contacts until one picks up. Returns the call id. */
+function dialUntilAnswered(
+  g: GameState,
+  act: (a: Parameters<typeof applyAction>[2]) => { session?: string },
+  ticket: string,
+): string {
+  for (let i = 0; i < 60; i++) {
+    for (const c of g.world.client.contacts) {
+      const id = act({ t: "call", person: c.id, ticket }).session as string;
+      if (g.calls?.[id]?.answered) return id;
+    }
+    act({ t: "advance", minutes: 20 });
+  }
+  throw new Error("nobody answered");
 }
 
 function close(
@@ -205,6 +225,48 @@ describe("first slice cases play end to end", () => {
       expect(g.score.some((e) => e.reason.includes("Fixed the docs"))).toBe(true);
       close(g, act, c.ticketTitle, s1);
       expect(totalScore(g)).toBeGreaterThan(0);
+    });
+  }
+
+  for (const seed of ["case-a", "case-b", "case-c"]) {
+    it(`${seed}: Tuesday 7 PM, fixed by remote hands on a call`, () => {
+      const { g, caseOf, dev, act, ssh, cli, server } = setup(seed);
+      const c = caseOf("tuesday-seven");
+      const fw = dev("tuesday-seven", "firewall");
+      const t = g.book.tickets.find((x) => x.caseId === "tuesday-seven") as Ticket;
+      const downs = ovikView(g.world, g.clock.now).history.filter((h) => h.state === "down");
+      expect(downs.some((h) => fmt(h.at).startsWith("Tue") && fmt(h.at).endsWith("19:02"))).toBe(
+        true,
+      );
+      const s1 = ssh(
+        server,
+        fw,
+        g.world.docs.devices.find((d) => d.deviceId === fw.id)?.ip as string,
+      );
+      const [status] = cli(s1, ["get system performance status"]);
+      expect(status?.join("\n")).toContain("Uptime: 6 days");
+      waitForClient(g, act);
+      const call = () => dialUntilAnswered(g, act, t.id);
+      let id = call();
+      const ask = (a: string, device?: string) => {
+        if (g.calls?.[id]?.closed) id = call();
+        return act({ t: "call-ask", call: id, ask: a, ...(device ? { device } : {}) });
+      };
+      expect(ask("closet-power").output?.join("\n")).toContain("power strip");
+      for (let i = 0; i < 20 && !caseFixed(g.world, c, g.clock.now); i++) {
+        ask("closet-wall-outlet");
+        ask("power-source", fw.id);
+      }
+      expect(caseFixed(g.world, c, g.clock.now)).toBe(true);
+      expect(ask("test").output?.join("\n")).toContain("wall outlet");
+      expect(t.clientConfirmed).toBe(true);
+      cli(s1, ["get system status"]);
+      act({ t: "attach-proof", ticket: t.id, source: s1 });
+      const best = resolutionNotes(g.world, t, c).findIndex((n) => n.parts.length === 6);
+      expect(act({ t: "resolve", ticket: t.id, note: best }).output).toEqual([]);
+      expect(
+        g.score.some((e) => e.ticketId === t.id && e.reason.includes("closed with proof")),
+      ).toBe(true);
     });
   }
 

@@ -1,5 +1,5 @@
 import type { Device, Fields, PoePriority, World } from "../model/types";
-import { inDailyWindow } from "../util/time";
+import { inDailyWindow, inWeeklyWindow, lastWeeklyEnd } from "../util/time";
 
 export interface PoePortState {
   port: string;
@@ -24,6 +24,8 @@ export interface NetState {
   online: Map<string, boolean>;
   powered: Map<string, boolean>;
   asleep: Map<string, boolean>;
+  /** Dark on a schedule or mid power-cycle. Not the player's outage. */
+  cut: Map<string, boolean>;
   poe: Map<string, PoeSwitchState>;
 }
 
@@ -78,8 +80,15 @@ export function netState(world: World, now: number): NetState {
 
   const powered = new Map<string, boolean>();
   const asleep = new Map<string, boolean>();
+  const cut = new Map<string, boolean>();
   for (const d of world.devices) {
     asleep.set(d.id, d.sleep !== undefined && inDailyWindow(now, d.sleep));
+    const dark = powerCutActive(d, now) || (d.rebootUntil !== undefined && now < d.rebootUntil);
+    cut.set(d.id, dark);
+    if (dark) {
+      powered.set(d.id, false);
+      continue;
+    }
     if (!d.poe) {
       powered.set(d.id, true);
       continue;
@@ -108,7 +117,27 @@ export function netState(world: World, now: number): NetState {
     }
     online.set(d.id, up);
   }
-  return { now, online, powered, asleep, poe };
+  return { now, online, powered, asleep, cut, poe };
+}
+
+/** Is a scheduled power cut taking this device down right now? */
+export function powerCutActive(d: Device, now: number): boolean {
+  const c = d.powerCut;
+  return (
+    !!c && now >= c.since && (c.until === undefined || now < c.until) && inWeeklyWindow(now, c)
+  );
+}
+
+/** When the device last came up: first boot, the end of a power cut, or a power-cycle. */
+export function bootTime(d: Device, now: number): number {
+  let t = d.bootAt;
+  const c = d.powerCut;
+  if (c) {
+    const end = lastWeeklyEnd(Math.min(now, c.until ?? now), c);
+    if (end !== undefined && end >= c.since) t = Math.max(t, end);
+  }
+  if (d.rebootUntil !== undefined && d.rebootUntil <= now) t = Math.max(t, d.rebootUntil);
+  return t;
 }
 
 export function firewallInterfaces(fw: Device): [string, Fields][] {
