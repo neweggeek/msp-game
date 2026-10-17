@@ -14,6 +14,7 @@
   type: defaults
   title: "Aurora CX PoE behavior"
   body:
+    - "Factory login: admin, password admin."
     - "Default PoE priority is low on every port."
     - "When the budget runs out, the switch denies power to the lowest priority ports first. Among equal priority, the highest port number loses."
     - "PoE class 4 devices like PTZ cameras draw up to 30 W each."

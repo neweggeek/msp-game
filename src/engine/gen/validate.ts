@@ -41,8 +41,12 @@ export function accessPaths(
     if (rmmHosts.some((h) => h.id === id)) access.push(`rmm:${role}`);
     if (!dev.credentials) continue;
     const cred = docs.credentials.find((x) => x.deviceId === id);
-    if (cred?.username !== dev.credentials.username || cred.password !== dev.credentials.password)
-      continue;
+    const docsWork =
+      cred?.username === dev.credentials.username &&
+      cred.password === dev.credentials.password &&
+      !dev.credentials.disabled;
+    // Otherwise the credential ladder: docs history, factory login, a coworker, or the client.
+    if (!docsWork && w.client.contacts.length === 0) continue;
     const docIp = docs.devices.find((x) => x.deviceId === id)?.ip;
     const via = rmmHosts.some((h) =>
       [docIp, h.gateway].some(

@@ -6,6 +6,7 @@ import {
   advance,
   dayOfWeek,
   formatTime,
+  isBusinessTime,
   minuteOfDay,
   newClock,
   schedule,
@@ -492,6 +493,7 @@ function callCtx(state: GameState, data: GameData, serial: number) {
     data,
     now: state.clock.now,
     open: clientAvailable(state, state.clock.now),
+    mspOpen: isBusinessTime(data.calendar, state.clock.now),
     serial,
     heard: state.heard ?? [],
   };
@@ -906,7 +908,7 @@ function run(state: GameState, data: GameData, a: Action): ActionResult {
       return { ok: true };
     }
     case "call": {
-      const person = findPerson(world, a.person);
+      const person = findPerson(world, a.person, data);
       if (!person) return { ok: false, error: "Nobody by that name." };
       const t = a.ticket ? find(book, a.ticket) : undefined;
       if (a.ticket && !t) return { ok: false, error: `No ticket ${a.ticket}.` };
@@ -940,7 +942,7 @@ function run(state: GameState, data: GameData, a: Action): ActionResult {
       }
       if (t) {
         // Only talking to the client counts as a response, not the ISP.
-        if (call.answered && !person.isp) t.respondedAt ??= clock.now;
+        if (call.answered && !person.isp && !person.team) t.respondedAt ??= clock.now;
         t.history.push({
           at: clock.now,
           by: "tech",
@@ -952,13 +954,14 @@ function run(state: GameState, data: GameData, a: Action): ActionResult {
     case "call-ask": {
       const call = state.calls?.[a.call];
       if (!call) return { ok: false, error: `No call ${a.call}.` };
-      const person = findPerson(world, call.person);
+      const person = findPerson(world, call.person, data);
       if (!person) return { ok: false, error: "Nobody on the line." };
       const t = call.ticket ? find(book, call.ticket) : undefined;
       const c = t ? world.cases.find((x) => x.caseId === t.caseId) : undefined;
       const def =
         data.calls.asks.find((x) => x.id === a.ask) ??
-        data.calls.isp.asks.find((x) => x.id === a.ask);
+        data.calls.isp.asks.find((x) => x.id === a.ask) ??
+        data.calls.team.asks.find((x) => x.id === a.ask);
       const before = call.transcript.length;
       const res = ask(callCtx(state, data, Number(call.id.slice(1))), call, person, a.ask, {
         ...(a.device ? { device: a.device } : {}),
@@ -984,12 +987,14 @@ function run(state: GameState, data: GameData, a: Action): ActionResult {
       if (t)
         t.history.push({
           at: clock.now,
-          by: person.isp ? "isp" : "client",
+          by: person.isp ? "isp" : person.team ? "tech" : "client",
           // Account numbers and PINs stay off the ticket, like passwords.
           text:
             def && "kind" in def && def.kind === "isp-bill"
               ? "Read the account numbers and PINs off the ISP bill."
-              : res.lines.slice(1).join(" "),
+              : def && "kind" in def && ["device-password", "vault-password"].includes(def.kind)
+                ? "Asked for a device password."
+                : res.lines.slice(1).join(" "),
         });
       spend(state, data, def?.minutes ?? 5);
       return { ok: true, output: call.transcript.slice(before) };

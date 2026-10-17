@@ -20,6 +20,8 @@ export interface Person {
   availability: Contact["availability"];
   /** An ISP support line: the site id it serves. */
   isp?: string;
+  /** One of your own coworkers. */
+  team?: boolean;
 }
 
 export interface PhoneCall {
@@ -63,6 +65,19 @@ export function people(world: World, ticketContact?: string): Person[] {
   return out;
 }
 
+/** Your coworkers. Their names match the docs history and access log. */
+export function teamLines(data: GameData): Person[] {
+  return data.calls.team.people.map((p) => ({
+    id: `team:${p.id}`,
+    name: `${p.name} (${p.role})`,
+    insider: false,
+    competence: 1,
+    patience: 0.5,
+    availability: "usually",
+    team: true,
+  }));
+}
+
 /** One support line per site, from the docs. The ISP is open all hours. */
 export function ispLines(world: World): Person[] {
   return world.docs.sites.map((s) => ({
@@ -76,7 +91,8 @@ export function ispLines(world: World): Person[] {
   }));
 }
 
-export function findPerson(world: World, id: string): Person | undefined {
+export function findPerson(world: World, id: string, data?: GameData): Person | undefined {
+  if (id.startsWith("team:")) return data ? teamLines(data).find((p) => p.id === id) : undefined;
   if (id.startsWith("isp:")) return ispLines(world).find((p) => p.id === id);
   const user = id.startsWith("user:") ? id.slice(5) : undefined;
   return people(world, user).find((p) => p.id === id);
@@ -88,6 +104,8 @@ export interface CallCtx {
   now: number;
   /** Client business hours right now. */
   open: boolean;
+  /** MSP hours right now, when coworkers pick up. */
+  mspOpen: boolean;
   /** Which call this is, for its own random stream. */
   serial: number;
   /** Facts already heard from anyone at this client, by ask id. */
@@ -96,6 +114,8 @@ export interface CallCtx {
 
 const say = (data: GameData, key: string, vars: Record<string, string>) =>
   fill(data.calls.lines[key] ?? key, (k) => vars[k] ?? "");
+const teamSay = (data: GameData, key: string, vars: Record<string, string>) =>
+  fill(data.calls.team.lines[key] ?? key, (k) => vars[k] ?? "");
 const ispSay = (data: GameData, key: string, vars: Record<string, string>) =>
   fill(data.calls.isp.lines[key] ?? key, (k) => vars[k] ?? "");
 
@@ -125,6 +145,14 @@ export function dial(ctx: CallCtx, id: string, person: Person, ticket?: string):
       ispSay(data, "hold", { hold: String(call.hold) }),
       ispSay(data, "hello", { name: call.agent, isp: site?.isp.name ?? "" }),
     );
+    return call;
+  }
+  if (person.team) {
+    const name = person.name.split(" (")[0] ?? person.name;
+    call.asksLeft = data.calls.patience.base;
+    call.answered = ctx.mspOpen;
+    call.closed = !ctx.mspOpen;
+    call.transcript.push(teamSay(data, ctx.mspOpen ? "hello" : "closed", { name }));
     return call;
   }
   const v = { name: person.name };
@@ -172,6 +200,7 @@ export function ask(
   const { world, data, now } = ctx;
   if (call.closed) return { error: "The call has ended." };
   if (person.isp) return ispAsk(ctx, call, person.isp, askId);
+  if (person.team) return teamAsk(ctx, call, person, askId, opts.device);
   const fix = ctx.world.cases
     .flatMap((c) => (c.call?.fixes ?? []).map((f) => ({ f, c })))
     .find((x) => x.f.id === askId && ctx.heard.includes(x.f.unlockedBy));
@@ -230,6 +259,35 @@ export function ask(
             i === miss ? s.isp.pin.replace(/\d$/, (d) => String((Number(d) + 1) % 10)) : s.isp.pin;
           out.lines.push(say(data, "ispBill", { ...v, site: s.name, account: s.isp.account, pin }));
         });
+        break;
+      }
+      case "device-password":
+      case "enable-account": {
+        // The main contact keeps the client's own admin logins. Nobody else has them.
+        const main = world.client.contacts[0];
+        const vars = { ...v, main: main?.name ?? "the owner" };
+        if (!dev?.credentials) {
+          out.lines.push(say(data, "notFound", v));
+          break;
+        }
+        if (person.id !== main?.id) {
+          out.lines.push(
+            say(
+              data,
+              def.kind === "device-password" ? "devicePasswordNone" : "accountNotMine",
+              vars,
+            ),
+          );
+          break;
+        }
+        if (def.kind === "device-password") {
+          const pw = dev.credentials.password;
+          const read = slip() && pw ? `${pw.slice(0, -1)}${pw.endsWith("1") ? "l" : "1"}` : pw;
+          out.lines.push(say(data, "devicePassword", { ...vars, password: read || "(blank)" }));
+        } else {
+          if (!slip()) dev.credentials.disabled = false;
+          out.lines.push(say(data, "accountEnabled", vars));
+        }
         break;
       }
       case "lights": {
@@ -386,6 +444,46 @@ function ispAsk(
   call.asksLeft--;
   if (call.asksLeft <= 0) {
     call.transcript.push(ispSay(data, "tired", v));
+    call.closed = true;
+  }
+  return out;
+}
+
+/** A coworker. They know what they did to the vault, and nothing else. */
+function teamAsk(
+  ctx: CallCtx,
+  call: PhoneCall,
+  person: Person,
+  askId: string,
+  deviceId?: string,
+): AskResult | { error: string } {
+  const { world, data } = ctx;
+  const def = data.calls.team.asks.find((a) => a.id === askId);
+  if (!def) return { error: "Pick something to ask." };
+  if (!deviceId) return { error: "Pick a device." };
+  const dev = world.devices.find((d) => d.id === deviceId);
+  const docName = world.docs.devices.find((d) => d.deviceId === deviceId)?.hostname;
+  const v: Record<string, string> = {
+    name: person.name.split(" (")[0] ?? person.name,
+    device: docName ?? dev?.hostname ?? "it",
+  };
+  const out: AskResult = { lines: [`You: ${fill(def.label, (k) => v[k] ?? "")}`] };
+  const unsaved = world.docs.unsaved.find((u) => u.deviceId === deviceId && u.who === person.name);
+  const typo = world.docs.history.some(
+    (h) => h.entry === `vault:${deviceId}` && h.field === "password" && h.by === person.name,
+  );
+  if (unsaved && dev?.credentials) {
+    out.lines.push(teamSay(data, "unsaved", { ...v, password: dev.credentials.password }));
+    // They fix the vault entry while you wait.
+    const cred = world.docs.credentials.find((c) => c.deviceId === deviceId);
+    if (cred) cred.password = dev.credentials.password;
+    world.docs.unsaved = world.docs.unsaved.filter((u) => u !== unsaved);
+  } else if (typo) out.lines.push(teamSay(data, "typo", v));
+  else out.lines.push(teamSay(data, "notMe", v));
+  call.transcript.push(...out.lines);
+  call.asksLeft--;
+  if (call.asksLeft <= 0) {
+    call.transcript.push(teamSay(data, "tired", v));
     call.closed = true;
   }
   return out;

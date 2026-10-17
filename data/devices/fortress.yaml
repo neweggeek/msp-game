@@ -5,7 +5,7 @@
   dialect: fortress
   tiers: [low, mid]
   firmware: ["7.2.8", "7.2.10", "7.4.3"]
-  credentials: { username: admin }
+  credentials: { username: admin, default: "" }
   ports:
     - { pattern: "wan{n}", from: 1, to: 2, role: wan }
     - { pattern: "internal{n}", from: 1, to: 5, role: lan }
@@ -17,7 +17,7 @@
   dialect: fortress
   tiers: [mid, high]
   firmware: ["7.2.10", "7.4.3", "7.4.5"]
-  credentials: { username: admin }
+  credentials: { username: admin, default: "" }
   ports:
     - { pattern: "wan{n}", from: 1, to: 2, role: wan }
     - { pattern: "port{n}", from: 1, to: 16, role: lan }

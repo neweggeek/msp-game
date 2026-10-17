@@ -28,7 +28,8 @@ export const deviceTemplateSchema = z.object({
   dialect: z.string().optional(),
   tiers: z.array(tierSchema).min(1),
   firmware: z.array(z.string()).min(1),
-  credentials: z.object({ username: z.string() }).optional(),
+  /** default: the factory password, listed in the vendor KB. */
+  credentials: z.object({ username: z.string(), default: z.string().optional() }).optional(),
   poeBudgetW: z.number().optional(),
   poe: z.object({ class: z.number().int().min(0).max(8), drawW: z.number() }).optional(),
   rmmAgent: z.boolean().optional(),
@@ -285,7 +286,16 @@ export const callRulesSchema = z.object({
   asks: z.array(
     z.object({
       id: z.string(),
-      kind: z.enum(["test", "lights", "power-source", "power-cycle", "fact", "isp-bill"]),
+      kind: z.enum([
+        "test",
+        "lights",
+        "power-source",
+        "power-cycle",
+        "fact",
+        "isp-bill",
+        "device-password",
+        "enable-account",
+      ]),
       minutes: z.number().int().min(0),
       label: z.string(),
       device: z.boolean().optional(),
@@ -294,6 +304,19 @@ export const callRulesSchema = z.object({
     }),
   ),
   lines: z.record(z.string()),
+  /** The MSP's own techs. They pick up during MSP hours and know what they did. */
+  team: z.object({
+    people: z.array(z.object({ id: z.string(), name: z.string(), role: z.string() })).min(1),
+    asks: z.array(
+      z.object({
+        id: z.string(),
+        kind: z.enum(["vault-password"]),
+        minutes: z.number().int().min(0),
+        label: z.string(),
+      }),
+    ),
+    lines: z.record(z.string()),
+  }),
   /** The ISP's business support line: open all hours, on hold first, account and PIN before anything. */
   isp: z.object({
     holdMinutes: z.tuple([z.number().int().min(0), z.number().int().min(0)]),
@@ -475,6 +498,10 @@ const stalenessLevel = z.object({
   missingDevice: z.number(),
   missingCredential: z.number(),
   wrongFirmware: z.number(),
+  /** The vault password is wrong. Half the time the docs history still has the right one. */
+  wrongCredential: z.number(),
+  /** A device nobody ever changed off its factory password, and so never saved in the vault. */
+  defaultPassword: z.number(),
 });
 export const stalenessSchema = z.object({
   levels: z.object({ fresh: stalenessLevel, partly: stalenessLevel, stale: stalenessLevel }),
@@ -497,6 +524,8 @@ export const clientRulesSchema = z.object({
   afterHoursWindows: z.array(window.extend({ label: z.string() })).min(1),
   businessHours: z.array(window).min(1),
   contactPreference: z.record(z.enum(["quick-call-ok", "scheduled-only"]), z.number()),
+  /** Chance the client turns the MSP's admin accounts off between tickets. */
+  disablesMspAccounts: z.number().min(0).max(1),
   lan: z.object({
     vlans: z.array(
       z.object({

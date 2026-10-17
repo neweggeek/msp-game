@@ -28,6 +28,7 @@
   body:
     - "Admin access per interface is set by allowaccess. SSH is off on new LAN interfaces."
     - "Config changes save on end. There is no separate save command."
+    - "Factory login: admin with a blank password."
 - id: fortress-7.4-notes
   brand: fortress
   type: release-notes

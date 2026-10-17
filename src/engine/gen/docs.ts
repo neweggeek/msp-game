@@ -4,7 +4,6 @@ import type { Rng } from "../rng/rng";
 import type { Draft } from "./faults";
 
 const DAY = 1440;
-const coworkers = ["Kyle (tier 2)", "Maria (tier 1)", "Dev (senior)"];
 
 /**
  * Write what the MSP knows. Docs come from the network as it was before the
@@ -18,6 +17,8 @@ export function genDocs(
   playStart: number,
 ): Docs {
   const level = data.staleness.levels[snapshot.client.staleness];
+  const coworkers = data.calls.team.people.map((p) => `${p.name} (${p.role})`);
+  const unsaved: Docs["unsaved"] = [];
   const devices: Docs["devices"] = [];
   const credentials: Docs["credentials"] = [];
   const history: DocHistoryEntry[] = [];
@@ -60,8 +61,32 @@ export function genDocs(
     if (d.user) entry.notes = `Assigned to ${d.user}.`;
     if (d.tags?.includes("probe")) entry.notes = "Ovik collector. Leave on.";
     devices.push(entry);
-    if (d.credentials && !rng.chance(level.missingCredential)) {
-      credentials.push({ deviceId: d.id, hostname: d.hostname, ...d.credentials });
+    const factory = data.devices.get(d.templateId)?.credentials?.default;
+    // Still on the factory password: nobody ever made a vault entry.
+    const onFactory = factory !== undefined && d.credentials?.password === factory;
+    if (d.credentials && !onFactory && !rng.chance(level.missingCredential)) {
+      const { username, password } = d.credentials;
+      if (rng.chance(level.wrongCredential)) {
+        const wrong = `${rng.pick(["Blue", "Iron", "Delta", "Quartz", "Maple"])}-${rng.hex(6)}!`;
+        const who = rng.pick(coworkers);
+        const at = playStart - rng.int(3, 60) * DAY;
+        credentials.push({ deviceId: d.id, hostname: d.hostname, username, password: wrong });
+        if (rng.chance(0.5)) {
+          // Saved over the good one with a typo. The history still has it.
+          history.push({
+            at,
+            by: who,
+            entry: `vault:${d.id}`,
+            field: "password",
+            from: password,
+            to: wrong,
+          });
+        } else {
+          // Changed it on the device and never saved it. Only they know.
+          unsaved.push({ deviceId: d.id, who });
+          accessLog.push({ at, who, entry: `vault:${d.id}` });
+        }
+      } else credentials.push({ deviceId: d.id, hostname: d.hostname, username, password });
     }
   }
 
@@ -104,6 +129,13 @@ export function genDocs(
         `${site.name}: no server. SSH to ${fw.hostname} from a PC at the site, or over the tunnel from ${server?.hostname ?? "the main office"}.`,
       );
     }
+  }
+
+  if (snapshot.client.disablesMspAccounts) {
+    const main = snapshot.client.contacts[0]?.name ?? "the client";
+    accessNotes.push(
+      `${snapshot.client.name} turns our admin accounts off when no ticket is open. Ask ${main} to turn them back on.`,
+    );
   }
 
   const floorPlan = rng.chance(0.15);
@@ -152,5 +184,6 @@ export function genDocs(
     accessNotes,
     history,
     accessLog,
+    unsaved,
   };
 }

@@ -64,5 +64,6 @@ export function genProfile(rng: Rng, data: GameData, forceTier?: Tier): ClientPr
     staleness,
     contacts,
     staff: staff.slice(contacts.length),
+    disablesMspAccounts: rng.chance(rules.disablesMspAccounts),
   };
 }

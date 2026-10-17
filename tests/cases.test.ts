@@ -27,13 +27,15 @@ function setup(seed: string, caseId?: string) {
     const r = act({ t: "rmm-open", device: from.id });
     expect(r.ok, r.error).toBe(true);
     const cred = g.world.docs.credentials.find((c) => c.deviceId === target.id);
+    // No vault entry: the factory login from the vendor KB, the second rung of the ladder.
+    const factory = data.devices.get(target.templateId)?.credentials;
     const s = act({
       t: "rmm",
       session: r.session as string,
-      line: `ssh ${cred?.username}@${address}`,
+      line: `ssh ${cred?.username ?? factory?.username}@${address}`,
     });
     expect(s.session, s.output?.join("\n")).toBeTruthy();
-    act({ t: "cli", session: s.session as string, line: cred?.password ?? "" });
+    act({ t: "cli", session: s.session as string, line: cred?.password ?? factory?.default ?? "" });
     return s.session as string;
   };
   const cli = (session: string, lines: string[]) =>
