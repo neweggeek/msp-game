@@ -50,6 +50,9 @@ Phase 2 notes:
 - ISP outages (effect `isp-outage`, check `isp-up`): the site loses internet and tunnels while the firewall stays up. Ovik needs internet to report, so its collector reads offline. Overnight Update is the quick-play case for it.
 - Credential ladder: a vault password can be wrong (`wrongCredential`). Half the time the docs history still has the good one; otherwise a coworker changed it on the device and never saved it (hidden `docs.unsaved`), and only they know it. They show up in the access log. Devices still on the factory login (`defaultPassword`, defaults in device templates and the vendor KB) have no vault entry. The client's main contact can read device passwords. Coworkers are in the phone dialog under "Your team" and pick up during MSP hours.
 - Disabled MSP accounts: a client with `disablesMspAccounts` has the firewall admin account switched off. Login fails like a wrong password. The docs access notes say so, and only the main contact can turn it back on (`enable-account` ask).
+- ScreenLink (src/ui/screenlink, actions `sl-new` and `sl-open`): make a join code, then call someone and use the `screenlink-join` ask. A contact joins from their desk PC (`personPc`), a ticket user from their own PC. Low competence mistypes the code. The shell needs no agent and no consent, and closes when they leave (patience sets how long). Access token `screen`; it also grants `rmm:<role>` and `ssh:<role>` from that PC.
+- Shells (RMM or ScreenLink) can now fix two things by hand: `Set-DnsClientServerAddress -InterfaceAlias Ethernet -ResetServerAddresses` and `powercfg /change standby-timeout-ac 0`.
+- Scenario "breakfix": a one-site client with `managed: false`. No RMM agents and no Ovik, so ScreenLink, calls and docs are the only ways in.
 - The status bar picks what a new shift plants: a scenario, or one case on the one-site quick client. Saves keep the pick.
 
 Phase 1 notes:
@@ -64,7 +67,7 @@ Phase 1 notes:
 - Consent: opening a shell or running a script on a PC with a signed-in user, without asking first, costs points. Users answer only during the client's hidden business hours.
 - Every action costs game minutes (data/rules/actions.yaml). Scoring values live in data/rules/handoffs.yaml.
 - Camera Day needs a switch with its own CLI, so it only lands on Aurora CX switches. FortressSwitch is still read-only from the gate.
-- Out of scope for now: ScreenLink sessions, VPN clients, console, truck rolls, editing in the device web GUI.
+- Out of scope for now: VPN clients, console, truck rolls, editing in the device web GUI.
 - Generator rerolls: a case that does not fit rerolls the client, fault placement rerolls up to 8 times, unsolvable docs reroll up to 8 times.
 - Asset types (data/rules/assets.yaml) group gear in Hoodoo Docs, Ovik and Shinobi RMM, IT Glue and Hudu style. Passwords sit as child rows under their asset. Devices with a CLI dialect get a copy button for `ssh {user}@{ip}` built from the docs, so stale docs give a stale command. Wi-Fi networks are docs only for now (no AP config behind them); their passphrases are vault entries keyed `wifi-<site>-<n>`.
 - Terminal pacing (src/ui/terminal/pace.ts) is UI only: ping replies 1s apart, Windows timeouts 4s each, Unix ping fail 5s, Ctrl+C or Esc skips. The engine still answers at once, so game time and tests do not change.

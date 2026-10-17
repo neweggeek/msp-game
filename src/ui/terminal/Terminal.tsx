@@ -29,7 +29,7 @@ export function Terminal() {
     const x = game.sessions[id];
     const dev = game.world.devices.find((d) => d.id === x?.deviceId);
     return x?.kind === "rmm"
-      ? `${dev?.hostname} (agent)`
+      ? `${dev?.hostname} (${x.via ? "ScreenLink" : "agent"})`
       : `SSH ${dev?.hostname} ${x && "address" in x && x.address ? x.address : (dev?.ip ?? "")}`;
   };
   const password = s?.kind === "device" && !!s.login;

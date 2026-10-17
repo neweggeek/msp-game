@@ -95,7 +95,7 @@ export function makeDevice(
     bootAt: (fields.now ?? 0) - rng.int(lo * DAY, hi * DAY + 600),
     roomId: fields.roomId,
     managed: fields.managed,
-    rmmAgent: t.rmmAgent === true,
+    rmmAgent: t.rmmAgent === true && fields.managed,
     ports: portsFromTemplate(t),
   };
   if (t.poeBudgetW !== undefined) dev.poeBudgetW = t.poeBudgetW;

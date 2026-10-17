@@ -17,6 +17,8 @@ export interface CliSession {
   fromId?: string;
   /** The address typed after ssh. */
   address?: string;
+  /** The RMM or ScreenLink shell this SSH session was typed in. */
+  parent?: string;
   dialect: string;
   mode: CliMode;
   section?: string; // dialect path, like "system interface"
@@ -140,6 +142,7 @@ export interface OpenOptions {
   username?: string;
   fromId?: string;
   address?: string;
+  parent?: string;
 }
 
 export function openSession(
@@ -161,6 +164,7 @@ export function openSession(
   };
   if (opts.fromId) s.fromId = opts.fromId;
   if (opts.address) s.address = opts.address;
+  if (opts.parent) s.parent = opts.parent;
   if (opts.username) s.login = { username: opts.username, tries: 0 };
   else s.transcript.push(...banner(world, dialect, dev, opts.address));
   s.transcript.push(prompt(s, ctx));

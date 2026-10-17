@@ -12,6 +12,9 @@ export interface RmmSession {
   kind: "rmm";
   deviceId: string;
   closed: boolean;
+  /** A ScreenLink session: who let you in, and when they leave. */
+  via?: string;
+  until?: number;
   transcript: string[];
   last?: { line: string; output: string[] };
   /** Recent commands that printed something, oldest first, so earlier output can be attached. */
@@ -47,6 +50,15 @@ export function agentOnline(world: World, d: Device, ns: NetState): boolean {
   return d.rmmAgent && ns.online.get(d.id) === true && canReach(world, d.id, AGENT_PROBE, ns);
 }
 
+/** Is the shell's way in still there? ScreenLink needs no agent, just the PC on the internet. */
+export function shellUp(world: World, s: RmmSession, ns: NetState): boolean {
+  const d = world.devices.find((x) => x.id === s.deviceId);
+  if (!d) return false;
+  return s.via
+    ? ns.online.get(d.id) === true && canReach(world, d.id, AGENT_PROBE, ns)
+    : agentOnline(world, d, ns);
+}
+
 export function agents(world: World, now: number): AgentRow[] {
   const ns = netState(world, now);
   return world.devices
@@ -66,11 +78,22 @@ export function agents(world: World, now: number): AgentRow[] {
     }));
 }
 
-export function openRmm(id: string, world: World, deviceId: string): RmmSession {
+export function openRmm(
+  id: string,
+  world: World,
+  deviceId: string,
+  screen?: { via: string; until: number },
+): RmmSession {
   const s: RmmSession = { id, kind: "rmm", deviceId, closed: false, transcript: [] };
   const d = world.devices.find((x) => x.id === deviceId);
+  if (screen) {
+    s.via = screen.via;
+    s.until = screen.until;
+  }
   s.transcript.push(
-    `Shinobi RMM background shell on ${d?.hostname ?? deviceId}. Runs as SYSTEM.`,
+    screen
+      ? `ScreenLink session on ${d?.hostname ?? deviceId}, shared by ${screen.via}. PowerShell as ${screen.via}.`
+      : `Shinobi RMM background shell on ${d?.hostname ?? deviceId}. Runs as SYSTEM.`,
     "",
     rmmPrompt(),
   );
@@ -213,7 +236,9 @@ function nslookup(world: World, d: Device, name: string, ns: NetState): string[]
 
 const help = [
   "Commands: hostname, whoami, ipconfig [/all], ping <host>, nslookup <name>, tracert <host>,",
-  "Get-NetAdapter, powercfg /query, powercfg /lastwake, systeminfo, net use, ssh <user>@<ip>, exit",
+  "Get-NetAdapter, powercfg /query, powercfg /lastwake, powercfg /change standby-timeout-ac 0,",
+  "Set-DnsClientServerAddress -InterfaceAlias Ethernet -ResetServerAddresses,",
+  "systeminfo, net use, ssh <user>@<ip>, exit",
 ];
 
 /** Run one line in the background shell. Read only, apart from ssh which opens a device session. */
@@ -229,9 +254,15 @@ export function runRmmLine(s: RmmSession, line: string, world: World, now: numbe
 
 function rmmExec(s: RmmSession, line: string, world: World, d: Device, now: number): RmmLineResult {
   const ns = netState(world, now);
-  if (!agentOnline(world, d, ns)) {
+  if (!shellUp(world, s, ns)) {
     s.closed = true;
-    return { output: ["Agent went offline. Session closed."] };
+    return {
+      output: [
+        s.via
+          ? "ScreenLink lost the connection. Session closed."
+          : "Agent went offline. Session closed.",
+      ],
+    };
   }
   const words = line.trim().split(/\s+/).filter(Boolean);
   const cmd = (words[0] ?? "").toLowerCase();
@@ -251,7 +282,18 @@ function rmmExec(s: RmmSession, line: string, world: World, d: Device, now: numb
     case "hostname":
       return out([d.hostname]);
     case "whoami":
-      return out(["nt authority\\system"]);
+      return out([
+        s.via
+          ? `${world.client.code.toLowerCase()}\\${s.via.split(" ")[0]?.toLowerCase()}`
+          : "nt authority\\system",
+      ]);
+    case "set-dnsclientserveraddress":
+      if (!/-resetserveraddresses/i.test(arg))
+        return out([
+          "Set-DnsClientServerAddress: use -InterfaceAlias Ethernet -ResetServerAddresses",
+        ]);
+      d.dns = undefined;
+      return out([]);
     case "ipconfig":
       if (arg.toLowerCase() === "/flushdns")
         return out([
@@ -339,7 +381,12 @@ function rmmExec(s: RmmSession, line: string, world: World, d: Device, now: numb
           "      Current AC Power Setting Index: 0x00000000  (Never)",
         ]);
       }
-      return out(["Usage: powercfg /query | /lastwake"]);
+      const off = a.match(/^\/change\s+(standby|hibernate)-timeout-ac\s+0$/);
+      if (off) {
+        if (off[1] === "standby") d.sleep = undefined;
+        return out([]);
+      }
+      return out(["Usage: powercfg /query | /lastwake | /change standby-timeout-ac 0"]);
     }
     case "systeminfo":
       return out([

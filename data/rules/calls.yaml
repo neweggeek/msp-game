@@ -20,6 +20,7 @@ asks:
   - { id: modem-lights, kind: fact, minutes: 4, label: "Can you look at the internet provider's modem? What lights are on?", default: "All the lights are green, I think." }
   - { id: device-password, kind: device-password, minutes: 3, device: true, label: "Do you have the admin password for {device}?" }
   - { id: enable-account, kind: enable-account, minutes: 6, device: true, label: "Can you turn our admin account on {device} back on?" }
+  - { id: screenlink-join, kind: screenlink-join, minutes: 8, label: "Can you go to the ScreenLink support page, type in a code, and click Allow?" }
   - { id: closet-power, kind: fact, minutes: 3, label: "What does the network closet plug into?", default: "The outlets on the wall, I think. I don't go in there much." }
 
 lines:
@@ -46,6 +47,10 @@ lines:
   devicePasswordNone: "{name}: I don't have that. {main} keeps the passwords."
   devicePasswordBlank: "{name}: There's no password on it. Just press Enter."
   accountAlreadyOn: "{name}: I looked, and your account is already on. I didn't change anything."
+  screenJoined: "{name}: OK, I typed {code} and clicked Allow. It says you're connected to {device}."
+  screenBadCode: "{name}: It says the code isn't valid. I typed {code}."
+  screenNoInternet: "{name}: The page won't load. Our internet is down, that's why I called you."
+  screenNoPc: "{name}: I'm not at a computer right now. Can it wait?"
   accountEnabled: "{name}: OK, I logged in and turned it back on."
   accountNotMine: "{name}: I can't do that. {main} is the only one with the login."
   ispBillNone: "{name}: I don't have the bill here. Our office manager keeps those."

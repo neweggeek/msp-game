@@ -2,6 +2,7 @@ import { applyRunning } from "../cli/session";
 import { formatTime } from "../clock/clock";
 import type { GameData } from "../data";
 import type { CaseCall, CaseInstance, Contact, Device, World } from "../model/types";
+import { canReach } from "../net/reach";
 import { loopLinks, netState, siteFirewall } from "../net/state";
 import { wanIp } from "../net/vpn";
 import { Rng } from "../rng/rng";
@@ -63,6 +64,11 @@ export function people(world: World, ticketContact?: string): Person[] {
     });
   }
   return out;
+}
+
+/** The PC a person sits at: the one signed in under their name. */
+export function personPc(world: World, person: { name: string }): Device | undefined {
+  return world.devices.find((d) => d.kind === "pc" && d.user === person.name);
 }
 
 /** Your coworkers. Their names match the docs history and access log. */
@@ -184,6 +190,8 @@ export interface AskResult {
   test?: { fixed: boolean; ok: boolean };
   /** The device that really got power-cycled, which may not be the one you named. */
   cycled?: string;
+  /** They joined the ScreenLink session from this PC, until this minute. */
+  joined?: { deviceId: string; until: number };
 }
 
 /**
@@ -195,7 +203,13 @@ export function ask(
   call: PhoneCall,
   person: Person,
   askId: string,
-  opts: { device?: string; caseInst?: CaseInstance; collateral?: () => string },
+  opts: {
+    device?: string;
+    caseInst?: CaseInstance;
+    collateral?: () => string;
+    /** The ScreenLink join code waiting for someone. */
+    screenCode?: string;
+  },
 ): AskResult | { error: string } {
   const { world, data, now } = ctx;
   if (call.closed) return { error: "The call has ended." };
@@ -259,6 +273,35 @@ export function ask(
             i === miss ? s.isp.pin.replace(/\d$/, (d) => String((Number(d) + 1) % 10)) : s.isp.pin;
           out.lines.push(say(data, "ispBill", { ...v, site: s.name, account: s.isp.account, pin }));
         });
+        break;
+      }
+      case "screenlink-join": {
+        if (!opts.screenCode) return { error: "Start a support session in ScreenLink first." };
+        const pc = personPc(world, person);
+        const vars = { ...v, code: opts.screenCode };
+        if (!pc || !ns.online.get(pc.id)) {
+          out.lines.push(say(data, "screenNoPc", vars));
+          break;
+        }
+        if (!canReach(world, pc.id, "1.1.1.1", ns)) {
+          out.lines.push(say(data, "screenNoInternet", vars));
+          break;
+        }
+        // Low competence: a digit typed wrong.
+        if (slip()) {
+          const wrong = opts.screenCode.replace(
+            /^(\d{2})(\d)/,
+            (_, a, d) => `${a}${(Number(d) + 3) % 10}`,
+          );
+          out.lines.push(say(data, "screenBadCode", { ...vars, code: wrong }));
+          break;
+        }
+        out.lines.push(say(data, "screenJoined", { ...vars, device: pc.hostname }));
+        // They stay as long as their patience lasts, then have to get back to work.
+        out.joined = {
+          deviceId: pc.id,
+          until: now + def.minutes + 30 + Math.round(person.patience * 90),
+        };
         break;
       }
       case "device-password":

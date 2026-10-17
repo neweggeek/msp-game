@@ -9,6 +9,7 @@ import { KbView } from "./kb/Kb";
 import { OvikPage } from "./ovik/Ovik";
 import { RmmPage } from "./rmm/Rmm";
 import { ScoreToast } from "./score/Score";
+import { ScreenLinkPage } from "./screenlink/ScreenLink";
 import { type Tab, data, openCount, useGame, useUi } from "./store";
 import { Terminal } from "./terminal/Terminal";
 
@@ -33,6 +34,7 @@ export function App() {
       <TopBar />
       {tab === "desk" && <Desk />}
       {tab === "rmm" && <RmmPage />}
+      {tab === "screenlink" && <ScreenLinkPage />}
       {tab === "ovik" && <OvikPage />}
       {tab === "docs" && (
         <main className="main single">
@@ -62,7 +64,7 @@ export function App() {
 const tabs: { id: Tab | null; label: string; group?: string }[] = [
   { id: "desk", label: "LinkWise Desk", group: "ATRIUM" },
   { id: "rmm", label: "Shinobi RMM" },
-  { id: null, label: "ScreenLink" },
+  { id: "screenlink", label: "ScreenLink" },
   { id: "ovik", label: "Ovik" },
   { id: "docs", label: "Hoodoo Docs", group: "|" },
   { id: null, label: "VPN clients" },
@@ -175,7 +177,9 @@ function StatusBar() {
       <span>
         {v.collector.online
           ? `Ovik: ${v.alerts.length} active alert${v.alerts.length === 1 ? "" : "s"}`
-          : "Ovik: collector offline"}
+          : v.collector.hostname
+            ? "Ovik: collector offline"
+            : "Ovik: not set up for this client"}
       </span>
       {next && (
         <span>
