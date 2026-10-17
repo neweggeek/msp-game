@@ -1,12 +1,7 @@
 {
   "$schema": "https://biomejs.dev/schemas/1.9.4/schema.json",
   "files": {
-    "ignore": [
-      "dist",
-      "node_modules",
-      "mockups",
-      "tests/golden"
-    ]
+    "ignore": ["dist", "node_modules", "mockups", "tests/golden"]
   },
   "formatter": {
     "indentStyle": "space",
@@ -24,9 +19,7 @@
   },
   "overrides": [
     {
-      "include": [
-        "src/ui/**"
-      ],
+      "include": ["src/ui/**"],
       "linter": {
         "rules": {
           "correctness": {
