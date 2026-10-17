@@ -178,6 +178,12 @@ function StatusBar() {
         className="actions"
         onSubmit={(e) => {
           e.preventDefault();
+          // A new shift replaces the save in this slot. Ask before throwing work away.
+          if (
+            game.log.length > 0 &&
+            !window.confirm(`Start a new shift? It replaces the save in slot ${slot}.`)
+          )
+            return;
           start(seed);
         }}
       >

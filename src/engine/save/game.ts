@@ -309,8 +309,11 @@ function run(state: GameState, data: GameData, a: Action): ActionResult {
     case "cli": {
       const s = state.sessions[a.session];
       if (!s || s.kind !== "device") return { ok: false, error: `No session ${a.session}.` };
+      const typedPassword = !!s.login;
       const output = runLine(s, a.line, cliContext(state, data, s));
-      s.last = { line: a.line, output };
+      // Keep the last command that printed something, so there is real output to attach.
+      // A password line never counts: it would show the password on the ticket.
+      if (output.length > 0 && !typedPassword) s.last = { line: a.line, output };
       spend(state, data, cost(data, "cli"));
       return { ok: true, output };
     }
@@ -328,7 +331,7 @@ function run(state: GameState, data: GameData, a: Action): ActionResult {
       const s = state.sessions[a.session];
       if (!s || s.kind !== "rmm") return { ok: false, error: `No session ${a.session}.` };
       const res = runRmmLine(s, a.line, world, clock.now);
-      s.last = { line: a.line, output: res.output };
+      if (res.output.length > 0) s.last = { line: a.line, output: res.output };
       spend(state, data, cost(data, "rmm-command"));
       if (!res.ssh) return { ok: true, output: res.output };
       // SSH from the agent: the target must answer on 22 from here.
@@ -389,9 +392,13 @@ function run(state: GameState, data: GameData, a: Action): ActionResult {
       return setPriority(book, clock, data, a.ticket, a.priority, "tech");
     case "ticket-flag-p1":
       return flagP1(book, clock, a.ticket, a.reason);
-    case "ticket-note":
+    case "ticket-note": {
       spend(state, data, cost(data, "ticket-note"));
+      const t = find(book, a.ticket);
+      // A tech note is a response to the client, so it stops the response clock.
+      if (t && t.closedAt === undefined) t.respondedAt ??= clock.now;
       return addNote(book, clock, a.ticket, a.text);
+    }
     case "handoff": {
       const t = find(book, a.ticket);
       const def = data.handoffs.handoffs.find((h) => h.id === a.handoff);
@@ -482,12 +489,14 @@ function run(state: GameState, data: GameData, a: Action): ActionResult {
       const blockers = closeBlockers(t);
       const fixed = caseFixed(world, c, clock.now);
       const s = data.handoffs.scoring;
-      state.score.push({
-        at: clock.now,
-        points: note.parts.length * (s.resolutionPart ?? 0),
-        reason: `Resolution note covered ${note.parts.length} of 6 parts.`,
-        ticketId: t.id,
-      });
+      // A close that will reopen earns nothing for its note, or close and reopen would farm points.
+      if (fixed)
+        state.score.push({
+          at: clock.now,
+          points: note.parts.length * (s.resolutionPart ?? 0),
+          reason: `Resolution note covered ${note.parts.length} of 6 parts.`,
+          ticketId: t.id,
+        });
       if (note.wrongCause)
         points(state, data, "wrongRootCause", "Resolution note named the wrong root cause.", t.id);
       setStatus(book, clock, data, t.id, "closed", note.lines.join("\n"));
@@ -575,7 +584,11 @@ function run(state: GameState, data: GameData, a: Action): ActionResult {
         to: a.value,
       });
       const key = `${a.target}:${a.field}`;
-      if (before !== truth && a.value === truth && !state.docFixes.includes(key)) {
+      // Judge against the value before your first edit, so breaking a right entry and fixing it pays nothing.
+      const original =
+        docs.history.find((h) => h.by === "You" && h.entry === a.target && h.field === a.field)
+          ?.from ?? before;
+      if (original !== truth && a.value === truth && !state.docFixes.includes(key)) {
         state.docFixes.push(key);
         points(state, data, "docFix", `Fixed the docs: ${a.field} on ${a.target}.`);
       }

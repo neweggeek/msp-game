@@ -156,6 +156,34 @@ function inLan(world: World, d: Device, ip: string): boolean {
 
 function nslookup(world: World, d: Device, name: string, ns: NetState): string[] {
   const server = dnsServers(world, d)[0] ?? "";
+  if (isIp(name)) {
+    // Reverse lookup: only the client's own DNS knows its hosts.
+    const serverName =
+      world.devices.find((x) => x.ip === server)?.hostname ??
+      (server.startsWith("8.8.") ? "dns.google" : "UnKnown");
+    const internal = world.devices.some((x) => x.ip === server && x.kind === "server");
+    const hit = world.devices.find((x) => x.ip === name && x.kind !== "camera");
+    if (!canReach(world, d.id, server, ns))
+      return [
+        "DNS request timed out.",
+        "    timeout was 2 seconds.",
+        `*** Request to ${server} timed-out`,
+      ];
+    return internal && hit
+      ? [
+          `Server:  ${serverName}`,
+          `Address:  ${server}`,
+          "",
+          `Name:    ${hit.hostname}.${world.client.domain}`,
+          `Address:  ${name}`,
+        ]
+      : [
+          `Server:  ${serverName}`,
+          `Address:  ${server}`,
+          "",
+          `*** ${serverName} can't find ${name}: Non-existent domain`,
+        ];
+  }
   const r = resolveName(world, d, name, ns);
   const serverName =
     world.devices.find((x) => x.ip === server)?.hostname ??
@@ -204,6 +232,11 @@ function rmmExec(s: RmmSession, line: string, world: World, d: Device, now: numb
   const words = line.trim().split(/\s+/).filter(Boolean);
   const cmd = (words[0] ?? "").toLowerCase();
   const arg = words.slice(1).join(" ");
+  // The host for ping, nslookup and tracert: the last word that is not a switch or its count.
+  const host = words
+    .slice(1)
+    .filter((w, i, all) => !/^[-/]/.test(w) && !/^[-/][nlwih]$/i.test(all[i - 1] ?? ""))
+    .pop();
   const out = (output: string[]): RmmLineResult => ({ output });
   switch (cmd) {
     case "":
@@ -216,15 +249,24 @@ function rmmExec(s: RmmSession, line: string, world: World, d: Device, now: numb
     case "whoami":
       return out(["nt authority\\system"]);
     case "ipconfig":
+      if (arg.toLowerCase() === "/flushdns")
+        return out([
+          "",
+          "Windows IP Configuration",
+          "",
+          "Successfully flushed the DNS Resolver Cache.",
+        ]);
       return out(adapterLines(world, d, arg.toLowerCase() === "/all"));
+    case "cls":
+    case "clear":
+      s.transcript.length = 0;
+      return out([]);
     case "ping":
-      return arg ? out(ping(world, d, words[1] as string, ns)) : out(["Usage: ping <host>"]);
+      return host ? out(ping(world, d, host, ns)) : out(["Usage: ping <host>"]);
     case "nslookup":
-      return arg
-        ? out(nslookup(world, d, words[1] as string, ns))
-        : out(["Usage: nslookup <name>"]);
+      return host ? out(nslookup(world, d, host, ns)) : out(["Usage: nslookup <name>"]);
     case "tracert": {
-      const target = words[1] ?? "";
+      const target = host ?? "";
       if (!target) return out(["Usage: tracert <host>"]);
       let ip = target;
       if (!isIp(target)) {
@@ -318,9 +360,16 @@ function rmmExec(s: RmmSession, line: string, world: World, d: Device, now: numb
       ]);
     }
     case "ssh": {
-      const m = arg.match(/^([\w.-]+)@([\d.]+)$/);
+      const m = arg.match(/^([\w.-]+)@([\w.-]+)$/);
       if (!m) return out(["usage: ssh user@host"]);
-      return { output: [], ssh: { username: m[1] as string, address: m[2] as string } };
+      let address = m[2] as string;
+      if (!isIp(address)) {
+        const r = resolveName(world, d, address, ns);
+        if (!r.ok)
+          return out([`ssh: Could not resolve hostname ${address}: No such host is known.`]);
+        address = r.ip;
+      }
+      return { output: [], ssh: { username: m[1] as string, address } };
     }
     case "exit":
       s.closed = true;
