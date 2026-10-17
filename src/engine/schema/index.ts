@@ -68,10 +68,10 @@ export const roomTemplateSchema = z.object({
   ),
 });
 
-/** "docs", "monitoring", "rmm", "hands" (a phone call), or "ssh:<role>" / "rmm:<role>". */
+/** "docs", "monitoring", "rmm", "hands" (a phone call), "isp" (its support line), or "ssh:<role>" / "rmm:<role>". */
 export const accessTokenSchema = z
   .string()
-  .regex(/^(docs|rmm|monitoring|hands|(ssh|rmm):[a-z-]+)$/);
+  .regex(/^(docs|rmm|monitoring|hands|isp|(ssh|rmm):[a-z-]+)$/);
 /** "<day>d HH:MM", day 0 is the Monday epoch. Negative days are before it. */
 export const gameTimeSchema = z.string().regex(/^-?\d+d \d{2}:\d{2}$/);
 const clock = z.string().regex(/^\d{2}:\d{2}$/);
@@ -106,6 +106,8 @@ const effectSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("mangle-phase2"), target: z.string() }),
   /** A patch cable with both ends in wall jacks on the same switch. No loop protection, so a storm. */
   z.object({ type: z.literal("loop-cable"), target: z.string() }),
+  /** The ISP's side of the site goes down until they fix it. Target is the site's firewall. */
+  z.object({ type: z.literal("isp-outage"), target: z.string() }),
 ]);
 
 const proofSchema = z.discriminatedUnion("type", [
@@ -120,6 +122,7 @@ export const checkSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("no-sleep"), role: z.string() }),
   z.object({ type: z.literal("no-power-cut"), role: z.string() }),
   z.object({ type: z.literal("no-loop"), role: z.string() }),
+  z.object({ type: z.literal("isp-up"), role: z.string() }),
 ]);
 
 export const faultSchema = z.object({
@@ -282,7 +285,7 @@ export const callRulesSchema = z.object({
   asks: z.array(
     z.object({
       id: z.string(),
-      kind: z.enum(["test", "lights", "power-source", "power-cycle", "fact"]),
+      kind: z.enum(["test", "lights", "power-source", "power-cycle", "fact", "isp-bill"]),
       minutes: z.number().int().min(0),
       label: z.string(),
       device: z.boolean().optional(),
@@ -291,6 +294,22 @@ export const callRulesSchema = z.object({
     }),
   ),
   lines: z.record(z.string()),
+  /** The ISP's business support line: open all hours, on hold first, account and PIN before anything. */
+  isp: z.object({
+    holdMinutes: z.tuple([z.number().int().min(0), z.number().int().min(0)]),
+    patience: z.number().int().min(1),
+    rebootMinutes: z.number().int().min(1),
+    agents: z.array(z.string()).min(1),
+    asks: z.array(
+      z.object({
+        id: z.string(),
+        kind: z.enum(["isp-verify", "isp-status", "isp-reboot"]),
+        minutes: z.number().int().min(0),
+        label: z.string(),
+      }),
+    ),
+    lines: z.record(z.string()),
+  }),
 });
 
 export const actionCostSchema = z.record(z.number().int().min(0));

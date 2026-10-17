@@ -33,8 +33,9 @@ export function resolveTarget(world: World, ip: string, ns: NetState): Target {
     : { kind: "internet" };
 }
 
-function wanUp(fw: Device): boolean {
-  return wanIp(fw) !== undefined;
+/** The firewall has a WAN address and the ISP behind it is passing traffic. */
+function wanUp(fw: Device, ns: NetState): boolean {
+  return wanIp(fw) !== undefined && !ns.ispDown.get(fw.siteId);
 }
 
 function ownsSubnet(fw: Device, ip: string): boolean {
@@ -50,10 +51,10 @@ function fromFirewall(world: World, fw: Device, target: Target, ip: string, ns: 
     if (target.device.id === fw.id) return true;
     // Another site's firewall: its WAN over the internet, its LAN over the tunnel.
     const iface = firewallInterfaces(target.device).find(([n]) => n === target.iface)?.[1];
-    if (iface?.role === "wan") return wanUp(fw);
+    if (iface?.role === "wan") return wanUp(fw, ns) && !ns.ispDown.get(target.device.siteId);
     return sitesLinked(world, ns, fw, target.device);
   }
-  if (target.kind === "internet" || target.kind === "isp-gateway") return wanUp(fw);
+  if (target.kind === "internet" || target.kind === "isp-gateway") return wanUp(fw, ns);
   if (ownsSubnet(fw, ip)) return true;
   const remote = world.devices.find(
     (d) => d.kind === "firewall" && d.id !== fw.id && ownsSubnet(d, ip),

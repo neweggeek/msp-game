@@ -44,7 +44,8 @@ export function tunnelStates(world: World, ns: NetState): TunnelState[] {
       }
       const myWan = wanIp(fw);
       const peer = fws.find((x) => x.id !== fw.id && wanIp(x) === remoteGw);
-      if (peer && myWan && ns.online.get(fw.id) && ns.online.get(peer.id)) {
+      const ispUp = !ns.ispDown.get(fw.siteId) && !!peer && !ns.ispDown.get(peer.siteId);
+      if (peer && myWan && ispUp && ns.online.get(fw.id) && ns.online.get(peer.id)) {
         st.peerId = peer.id;
         const back = Object.entries(table(peer, "phase1")).find(([, x]) => x.remoteGw === myWan);
         if (back) {

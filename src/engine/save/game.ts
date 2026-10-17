@@ -449,12 +449,13 @@ function editField(world: World, target: string, field: string): EditField | und
   if (kind === "site") {
     const doc = world.docs.sites.find((s) => s.siteId === id);
     const site = world.sites.find((s) => s.id === id);
-    const f = field as "wanIp" | "wanCidr" | "gateway";
-    if (!doc || !site || !["wanIp", "wanCidr", "gateway"].includes(field)) return undefined;
+    const f = field as "wanIp" | "wanCidr" | "gateway" | "account" | "pin";
+    if (!doc || !site || !["wanIp", "wanCidr", "gateway", "account", "pin"].includes(field))
+      return undefined;
     return {
       name: doc.name,
       truth: site.isp[f],
-      format: f === "wanCidr" ? "cidr" : "ip",
+      format: f === "wanCidr" ? "cidr" : f === "account" || f === "pin" ? "text" : "ip",
       get: () => doc.isp[f],
       set: (v) => {
         doc.isp[f] = v;
@@ -918,7 +919,7 @@ function run(state: GameState, data: GameData, a: Action): ActionResult {
         a.ticket,
       );
       state.calls[id] = call;
-      spend(state, data, data.calls.dialMinutes);
+      spend(state, data, data.calls.dialMinutes + (call.hold ?? 0));
       if (call.answered && person.insider && world.client.contactPreference === "scheduled-only") {
         // They take the call, but they asked for scheduled contact only.
         call.transcript.push(
@@ -938,7 +939,8 @@ function run(state: GameState, data: GameData, a: Action): ActionResult {
         }
       }
       if (t) {
-        if (call.answered) t.respondedAt ??= clock.now;
+        // Only talking to the client counts as a response, not the ISP.
+        if (call.answered && !person.isp) t.respondedAt ??= clock.now;
         t.history.push({
           at: clock.now,
           by: "tech",
@@ -954,7 +956,9 @@ function run(state: GameState, data: GameData, a: Action): ActionResult {
       if (!person) return { ok: false, error: "Nobody on the line." };
       const t = call.ticket ? find(book, call.ticket) : undefined;
       const c = t ? world.cases.find((x) => x.caseId === t.caseId) : undefined;
-      const def = data.calls.asks.find((x) => x.id === a.ask);
+      const def =
+        data.calls.asks.find((x) => x.id === a.ask) ??
+        data.calls.isp.asks.find((x) => x.id === a.ask);
       const before = call.transcript.length;
       const res = ask(callCtx(state, data, Number(call.id.slice(1))), call, person, a.ask, {
         ...(a.device ? { device: a.device } : {}),
@@ -977,7 +981,16 @@ function run(state: GameState, data: GameData, a: Action): ActionResult {
           provesFixed: res.test.fixed,
         });
       }
-      if (t) t.history.push({ at: clock.now, by: "client", text: res.lines.slice(1).join(" ") });
+      if (t)
+        t.history.push({
+          at: clock.now,
+          by: person.isp ? "isp" : "client",
+          // Account numbers and PINs stay off the ticket, like passwords.
+          text:
+            def && "kind" in def && def.kind === "isp-bill"
+              ? "Read the account numbers and PINs off the ISP bill."
+              : res.lines.slice(1).join(" "),
+        });
       spend(state, data, def?.minutes ?? 5);
       return { ok: true, output: call.transcript.slice(before) };
     }

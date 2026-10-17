@@ -33,7 +33,9 @@ export interface OvikView {
 export function ovikView(world: World, now: number): OvikView {
   const ns = netState(world, now);
   const col = world.devices.find((d) => d.id === world.monitoring.collectorId);
-  const colOnline = !!col && ns.online.get(col.id) === true;
+  // The collector reports to the Ovik cloud, so it needs the internet too.
+  const colOnline =
+    !!col && ns.online.get(col.id) === true && canReach(world, col.id, "1.1.1.1", ns);
   const inventory: OvikRow[] = world.monitoring.inventory.map((o) => {
     const dev = world.devices.find((d) => d.id === o.deviceId);
     let status: OvikRow["status"] = "unknown";

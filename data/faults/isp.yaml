@@ -1,0 +1,22 @@
+# Faults on the ISP's side of the demarc.
+- id: modem-provisioning
+  name: ISP firmware push leaves the modem stuck
+  layer: 1
+  device: firewall
+  startedAt: "1d 02:14"
+  effects:
+    - { type: isp-outage, target: firewall }
+  proof: []
+  clues:
+    - id: all-offline
+      text: "Ovik history shows the whole site down at 02:14, and Shinobi RMM shows every agent offline."
+      surface: monitoring
+      requires: docs
+    - id: modem-lights
+      text: "On a call, a contact says the Online light on the internet modem is blinking orange."
+      surface: call
+      requires: hands
+    - id: isp-sees-it
+      text: "The ISP's support line says the modem stopped checking in at 02:14, right after a firmware push."
+      surface: call
+      requires: isp

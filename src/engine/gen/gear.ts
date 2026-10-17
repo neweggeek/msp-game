@@ -302,6 +302,8 @@ export function genSiteGear(
     gateway: intToIp(block + 1),
     wanIp: intToIp(block + 2),
     phone: `1-800-555-0${rng.digits(3)}`,
+    account: `${rng.digits(4)} ${rng.digits(4)} ${rng.digits(4)}`,
+    pin: rng.digits(4),
   };
   // A branch has no server, so its data VLAN always allows ssh as the way in.
   fw.running = firewallConfig(rng, fw, fwLan.name, vlans, isp, opts.role === "branch");

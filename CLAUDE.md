@@ -46,6 +46,8 @@ Phase 2 notes:
 - Access token `hands` (a call) is always available when the client has contacts.
 - Loops (effect `loop-cable`): a cable with both ends on one switch. While both ports are up, `netState` marks the switch as in a storm and everything on it is offline. A power-cycle does not help. The `unplug-loop` hands fix removes the cable.
 - Rooms can place fixed gear (`gear` in data/rooms), like the clinic NVR.
+- ISP calls: every docs site has an ISP support line in the phone dialog. It answers all hours after a hold (minutes from `isp.holdMinutes`), then wants the account number and PIN from the docs. Some docs have no PIN; a contact can read it off the bill (`isp-bill` ask, and low competence misreads a digit), and the player fixes the docs PIN by hand. Verified, the agent reports the line (outage, nothing answering behind the modem, or clean) and can reboot the modem. Access token `isp`.
+- ISP outages (effect `isp-outage`, check `isp-up`): the site loses internet and tunnels while the firewall stays up. Ovik needs internet to report, so its collector reads offline. Overnight Update is the quick-play case for it.
 - The status bar picks what a new shift plants: a scenario, or one case on the one-site quick client. Saves keep the pick.
 
 Phase 1 notes:

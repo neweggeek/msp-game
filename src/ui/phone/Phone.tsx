@@ -1,5 +1,5 @@
 import { type ReactNode, useEffect, useRef, useState } from "react";
-import { people, unlockedFixes } from "../../engine";
+import { ispLines, people, unlockedFixes } from "../../engine";
 import { data, useGame, useUi } from "../store";
 
 type ModalProps = { title: string; children: ReactNode; footer: ReactNode };
@@ -20,7 +20,7 @@ export function PhoneDialog({
   const game = useGame();
   const { act, setDialog } = useUi();
   const t = ticket ? game.book.tickets.find((x) => x.id === ticket) : undefined;
-  const who = people(game.world, t?.contact);
+  const who = [...people(game.world, t?.contact), ...ispLines(game.world)];
   const c = call ? game.calls?.[call] : undefined;
   const person = c ? who.find((p) => p.id === c.person) : undefined;
   const docs = [...game.world.docs.devices].sort((a, b) => a.hostname.localeCompare(b.hostname));
@@ -56,7 +56,8 @@ export function PhoneDialog({
       >
         <p className="dim" style={{ marginTop: 0 }}>
           A quick call can settle a question, test a fix with the client, or put someone's hands on
-          the gear. Calls only get answered during the client's business hours.
+          the gear. Calls only get answered during the client's business hours. The ISP support
+          lines answer all hours, after a wait on hold, and want the account number and PIN.
           {game.world.client.contactPreference === "scheduled-only" &&
             " This client asked for calls to be scheduled through dispatch."}
         </p>
@@ -64,11 +65,14 @@ export function PhoneDialog({
           <tbody>
             {who.map((p) => {
               const contact = game.world.client.contacts.find((x) => x.id === p.id);
+              const isp = game.world.docs.sites.find((s) => s.siteId === p.isp);
               return (
                 <tr key={p.id}>
                   <td>{p.name}</td>
-                  <td className="dim">{contact ? contact.role : `On ${t?.id}`}</td>
-                  <td className="mono dim">{contact?.phone ?? ""}</td>
+                  <td className="dim">
+                    {contact ? contact.role : isp ? `ISP for ${isp.name}` : `On ${t?.id}`}
+                  </td>
+                  <td className="mono dim">{contact?.phone ?? isp?.isp.phone ?? ""}</td>
                   <td>
                     <button type="button" className="btn small" onClick={() => dial(p.id)}>
                       Call
@@ -82,7 +86,8 @@ export function PhoneDialog({
       </Modal>
     );
 
-  const fixes = unlockedFixes(game.world, game.heard ?? []);
+  const fixes = person?.isp ? [] : unlockedFixes(game.world, game.heard ?? []);
+  const ispSite = game.world.docs.sites.find((s) => s.siteId === person?.isp);
   const deviceName = docs.find((d) => d.deviceId === device)?.hostname ?? "it";
   const live = !c.closed;
   return (
@@ -104,34 +109,43 @@ export function PhoneDialog({
       </div>
       {live && (
         <>
-          <div className="actions" style={{ margin: "10px 0 6px" }}>
-            <span className="dim">Device:</span>
-            <select
-              value={device}
-              onChange={(e) => setDevice(e.target.value)}
-              aria-label="Device to ask about"
-            >
-              {docs.map((d) => (
-                <option key={d.deviceId} value={d.deviceId}>
-                  {d.hostname}
-                  {d.ip ? ` (${d.ip})` : ""}
-                </option>
-              ))}
-            </select>
-          </div>
+          {!ispSite && (
+            <div className="actions" style={{ margin: "10px 0 6px" }}>
+              <span className="dim">Device:</span>
+              <select
+                value={device}
+                onChange={(e) => setDevice(e.target.value)}
+                aria-label="Device to ask about"
+              >
+                {docs.map((d) => (
+                  <option key={d.deviceId} value={d.deviceId}>
+                    {d.hostname}
+                    {d.ip ? ` (${d.ip})` : ""}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
           <div className="call-asks">
-            {data.calls.asks
-              .filter((a) => !a.ticket || t)
-              .map((a) => (
-                <button
-                  key={a.id}
-                  type="button"
-                  className="btn small"
-                  onClick={() => ask(a.id, a.device)}
-                >
-                  {a.label.replaceAll("{device}", deviceName)}
+            {ispSite &&
+              data.calls.isp.asks.map((a) => (
+                <button key={a.id} type="button" className="btn small" onClick={() => ask(a.id)}>
+                  {a.label.replaceAll("{site}", ispSite.name)}
                 </button>
               ))}
+            {!ispSite &&
+              data.calls.asks
+                .filter((a) => !a.ticket || t)
+                .map((a) => (
+                  <button
+                    key={a.id}
+                    type="button"
+                    className="btn small"
+                    onClick={() => ask(a.id, a.device)}
+                  >
+                    {a.label.replaceAll("{device}", deviceName)}
+                  </button>
+                ))}
             {fixes.map((f) => (
               <button
                 key={f.id}

@@ -348,6 +348,75 @@ describe("first slice cases play end to end", () => {
     });
   }
 
+  for (const seed of ["isp-1", "isp-2", "isp-3"]) {
+    it(`${seed}: Overnight Update, the ISP reboots a stuck modem`, () => {
+      const { g, caseOf, act, server } = setup(seed, "stuck-modem");
+      const c = caseOf("stuck-modem");
+      const site = g.world.sites[0] as (typeof g.world.sites)[number];
+      const doc = g.world.docs.sites[0] as (typeof g.world.docs.sites)[number];
+      const t = g.book.tickets.find((x) => x.caseId === "stuck-modem") as Ticket;
+      expect(netState(g.world, g.clock.now).ispDown.get("hq")).toBe(true);
+      expect(
+        ovikView(g.world, g.clock.now).history.some(
+          (h) => h.state === "down" && fmt(h.at).endsWith("02:14"),
+        ),
+      ).toBe(true);
+      expect(act({ t: "rmm-open", device: server.id }).ok).toBe(false);
+      // A wrong PIN gets nothing.
+      doc.isp.pin = "0000" === site.isp.pin ? "1111" : "0000";
+      const before = g.clock.now;
+      let id = act({ t: "call", person: "isp:hq", ticket: t.id }).session as string;
+      expect(g.clock.now - before).toBeGreaterThanOrEqual(g.calls?.[id]?.hold ?? 0);
+      act({ t: "call-ask", call: id, ask: "isp-verify" });
+      expect(act({ t: "call-ask", call: id, ask: "isp-status" }).output?.join(" ")).toContain(
+        "verify",
+      );
+      // The contact reads the PIN off the bill. The player fixes the docs with it.
+      waitForClient(g, act);
+      let cid = dialUntilAnswered(g, act, t.id);
+      for (let i = 0; i < 10; i++) {
+        if (g.calls?.[cid]?.closed) cid = dialUntilAnswered(g, act, t.id);
+        const out = act({ t: "call-ask", call: cid, ask: "isp-bill" }).output?.join(" ") ?? "";
+        const m = out.match(/PIN (\d{4})/);
+        if (m?.[1] === site.isp.pin) break;
+      }
+      expect(act({ t: "doc-edit", target: "site:hq", field: "pin", value: site.isp.pin }).ok).toBe(
+        true,
+      );
+      id = act({ t: "call", person: "isp:hq", ticket: t.id }).session as string;
+      act({ t: "call-ask", call: id, ask: "isp-verify" });
+      expect(g.calls?.[id]?.verified).toBe(true);
+      expect(act({ t: "call-ask", call: id, ask: "isp-status" }).output?.join(" ")).toContain(
+        "02:14",
+      );
+      act({ t: "call-ask", call: id, ask: "isp-reboot" });
+      act({ t: "call-end", call: id });
+      act({ t: "advance", minutes: 10 });
+      expect(caseFixed(g.world, c, g.clock.now)).toBe(true);
+      const shell = act({ t: "rmm-open", device: server.id }).session as string;
+      act({ t: "rmm", session: shell, line: "ping 1.1.1.1" });
+      act({ t: "attach-proof", ticket: t.id, source: shell });
+      cid = dialUntilAnswered(g, act, t.id);
+      act({ t: "call-ask", call: cid, ask: "test" });
+      const best = resolutionNotes(g.world, t, c).findIndex((n) => n.parts.length === 6);
+      expect(act({ t: "resolve", ticket: t.id, note: best }).output).toEqual([]);
+      act({ t: "advance", minutes: 120 });
+      expect(t.closedAt).toBeDefined();
+    });
+  }
+
+  it("the ISP says the line is clean when the problem is inside", () => {
+    const { g, act } = setup("case-a");
+    const id = act({ t: "call", person: "isp:hq" }).session as string;
+    const doc = g.world.docs.sites.find((s) => s.siteId === "hq");
+    const real = g.world.sites.find((s) => s.id === "hq");
+    if (doc && real) doc.isp.pin = real.isp.pin;
+    act({ t: "call-ask", call: id, ask: "isp-verify" });
+    expect(act({ t: "call-ask", call: id, ask: "isp-status" }).output?.join(" ")).toContain(
+      "line is clean",
+    );
+  });
+
   it("misroute and duplicate go back to dispatch", () => {
     const { g, act } = setup("case-a");
     const edr = g.book.tickets.find((t) => t.extraId === "edr-misroute");

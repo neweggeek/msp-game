@@ -1,7 +1,9 @@
 import { applyRunning } from "../cli/session";
+import { formatTime } from "../clock/clock";
 import type { GameData } from "../data";
 import type { CaseCall, CaseInstance, Contact, Device, World } from "../model/types";
-import { loopLinks, netState } from "../net/state";
+import { loopLinks, netState, siteFirewall } from "../net/state";
+import { wanIp } from "../net/vpn";
 import { Rng } from "../rng/rng";
 import { caseFixed } from "../tickets/checks";
 import { fnv1a } from "../util/hash";
@@ -16,6 +18,8 @@ export interface Person {
   competence: number;
   patience: number;
   availability: Contact["availability"];
+  /** An ISP support line: the site id it serves. */
+  isp?: string;
 }
 
 export interface PhoneCall {
@@ -28,6 +32,10 @@ export interface PhoneCall {
   transcript: string[];
   closed: boolean;
   answered: boolean;
+  /** ISP calls: minutes on hold, and whether the account and PIN checked out. */
+  hold?: number;
+  verified?: boolean;
+  agent?: string;
 }
 
 /** The docs contacts, plus the user on a ticket when they are not one of them. */
@@ -55,7 +63,21 @@ export function people(world: World, ticketContact?: string): Person[] {
   return out;
 }
 
+/** One support line per site, from the docs. The ISP is open all hours. */
+export function ispLines(world: World): Person[] {
+  return world.docs.sites.map((s) => ({
+    id: `isp:${s.siteId}`,
+    name: `${s.isp.name} support`,
+    insider: false,
+    competence: 0.9,
+    patience: 1,
+    availability: "usually",
+    isp: s.siteId,
+  }));
+}
+
 export function findPerson(world: World, id: string): Person | undefined {
+  if (id.startsWith("isp:")) return ispLines(world).find((p) => p.id === id);
   const user = id.startsWith("user:") ? id.slice(5) : undefined;
   return people(world, user).find((p) => p.id === id);
 }
@@ -74,6 +96,8 @@ export interface CallCtx {
 
 const say = (data: GameData, key: string, vars: Record<string, string>) =>
   fill(data.calls.lines[key] ?? key, (k) => vars[k] ?? "");
+const ispSay = (data: GameData, key: string, vars: Record<string, string>) =>
+  fill(data.calls.isp.lines[key] ?? key, (k) => vars[k] ?? "");
 
 /** Dial. Returns the call, answered or not. */
 export function dial(ctx: CallCtx, id: string, person: Person, ticket?: string): PhoneCall {
@@ -89,6 +113,20 @@ export function dial(ctx: CallCtx, id: string, person: Person, ticket?: string):
     answered: false,
   };
   if (ticket) call.ticket = ticket;
+  if (person.isp) {
+    // Agents answer whatever the hour, after the hold music.
+    const isp = data.calls.isp;
+    const site = ctx.world.sites.find((s) => s.id === person.isp);
+    call.hold = rng.int(isp.holdMinutes[0], isp.holdMinutes[1]);
+    call.asksLeft = isp.patience;
+    call.answered = true;
+    call.agent = rng.pick(isp.agents);
+    call.transcript.push(
+      ispSay(data, "hold", { hold: String(call.hold) }),
+      ispSay(data, "hello", { name: call.agent, isp: site?.isp.name ?? "" }),
+    );
+    return call;
+  }
   const v = { name: person.name };
   if (!ctx.open) {
     call.transcript.push(say(data, "closed", v));
@@ -133,6 +171,7 @@ export function ask(
 ): AskResult | { error: string } {
   const { world, data, now } = ctx;
   if (call.closed) return { error: "The call has ended." };
+  if (person.isp) return ispAsk(ctx, call, person.isp, askId);
   const fix = ctx.world.cases
     .flatMap((c) => (c.call?.fixes ?? []).map((f) => ({ f, c })))
     .find((x) => x.f.id === askId && ctx.heard.includes(x.f.unlockedBy));
@@ -177,6 +216,20 @@ export function ask(
           : undefined;
         out.lines.push(`${person.name}: ${known ?? def.default ?? "I'm not sure."}`);
         if (known) out.fact = def.id;
+        break;
+      }
+      case "isp-bill": {
+        if (!person.insider) {
+          out.lines.push(say(data, "ispBillNone", v));
+          break;
+        }
+        // One bill per site. A misread digit on one of them, some of the time.
+        const miss = slip() ? rng.int(0, world.sites.length - 1) : -1;
+        world.sites.forEach((s, i) => {
+          const pin =
+            i === miss ? s.isp.pin.replace(/\d$/, (d) => String((Number(d) + 1) % 10)) : s.isp.pin;
+          out.lines.push(say(data, "ispBill", { ...v, site: s.name, account: s.isp.account, pin }));
+        });
         break;
       }
       case "lights": {
@@ -278,4 +331,62 @@ export function powerCycle(data: GameData, dev: Device, now: number): void {
     dev.running = structuredClone(dev.startup);
     applyRunning(dev);
   }
+}
+
+/** The ISP support line. Nothing about the account until the account number and PIN match. */
+function ispAsk(
+  ctx: CallCtx,
+  call: PhoneCall,
+  siteId: string,
+  askId: string,
+): AskResult | { error: string } {
+  const { world, data, now } = ctx;
+  const def = data.calls.isp.asks.find((a) => a.id === askId);
+  if (!def) return { error: "Pick something to ask." };
+  const site = world.sites.find((s) => s.id === siteId);
+  const doc = world.docs.sites.find((s) => s.siteId === siteId);
+  if (!site || !doc) return { error: "No such site." };
+  const v: Record<string, string> = { name: call.agent ?? "Agent", site: doc.name };
+  const out: AskResult = { lines: [] };
+  if (def.kind === "isp-verify") {
+    if (!doc.isp.pin) out.lines.push(ispSay(data, "noPin", v));
+    else out.lines.push(ispSay(data, "you", { account: doc.isp.account, pin: doc.isp.pin }));
+    call.verified = doc.isp.account === site.isp.account && doc.isp.pin === site.isp.pin;
+    out.lines.push(
+      ispSay(data, call.verified ? "verified" : doc.isp.pin ? "badPin" : "noPinReply", v),
+    );
+  } else {
+    out.lines.push(`You: ${fill(def.label, (k) => v[k] ?? "")}`);
+    if (!call.verified) out.lines.push(ispSay(data, "needVerify", v));
+    else if (def.kind === "isp-status") {
+      const ns = netState(world, now);
+      const o = site.isp.outage;
+      const fw = siteFirewall(world, siteId);
+      if (site.isp.rebootUntil !== undefined && now < site.isp.rebootUntil)
+        out.lines.push(ispSay(data, "statusRebooting", v));
+      else if (ns.ispDown.get(siteId) && o)
+        out.lines.push(
+          ispSay(data, "statusOutage", { ...v, since: formatTime(data.calendar, o.since) }),
+        );
+      else if (!fw || !ns.online.get(fw.id) || !wanIp(fw))
+        out.lines.push(ispSay(data, "statusNothing", v));
+      else out.lines.push(ispSay(data, "statusClean", v));
+    } else {
+      // The modem goes dark near the end of the ask and comes back on a clean config.
+      const back = now + def.minutes + data.calls.isp.rebootMinutes;
+      site.isp.rebootUntil = back;
+      const o = site.isp.outage;
+      if (o && o.until === undefined && now >= o.since) o.until = back;
+      out.lines.push(
+        ispSay(data, "reboot", { ...v, minutes: String(data.calls.isp.rebootMinutes) }),
+      );
+    }
+  }
+  call.transcript.push(...out.lines);
+  call.asksLeft--;
+  if (call.asksLeft <= 0) {
+    call.transcript.push(ispSay(data, "tired", v));
+    call.closed = true;
+  }
+  return out;
 }

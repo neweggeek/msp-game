@@ -158,6 +158,12 @@ function applyFault(
         p2.dst = `${a}.${Number(b2) + 1}.${c}.${d}/${prefix}`;
         break;
       }
+      case "isp-outage": {
+        const site = draft.sites.find((s) => s.id === dev.siteId);
+        if (!site) return null;
+        site.isp.outage = { since: parseGameTime(def.startedAt) };
+        break;
+      }
       case "loop-cable": {
         // Two spare wall jacks under one desk, joined by a loose patch cable.
         const free = rng.shuffle(dev.ports.filter((p) => p.role === "access" && !p.link));
@@ -196,12 +202,16 @@ export function visibleMap(draft: Draft, at: number): Map<string, boolean> {
   const w = draft as World;
   const ns = netState(w, at);
   const col = draft.monitoring?.collectorId ?? "";
+  // A collector with no internet cannot report anything to the Ovik cloud.
+  const reporting = canReach(w, col, "1.1.1.1", ns);
   const out = new Map<string, boolean>();
   for (const d of draft.devices) {
     const ip = d.kind === "firewall" ? undefined : d.ip;
     out.set(
       d.id,
-      ns.online.get(d.id) === true && (d.id === col || !ip || canReach(w, col, ip, ns)),
+      reporting &&
+        ns.online.get(d.id) === true &&
+        (d.id === col || !ip || canReach(w, col, ip, ns)),
     );
   }
   return out;

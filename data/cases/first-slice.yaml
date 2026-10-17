@@ -258,3 +258,36 @@
     nextSteps: "Turn on loop protection and BPDU guard on {switch.hostname} access ports. Label spare jacks."
     wrongCause: "The ISP circuit went down overnight."
     wrongChange: "Opened a ticket with the ISP."
+
+- id: stuck-modem
+  name: Overnight Update
+  pick: first-slice
+  playbook: site-down
+  requires:
+    sites: [hq]
+    kinds: { firewall: 1 }
+  roles:
+    firewall: { kind: firewall, site: hq }
+  primary: firewall
+  ticket:
+    origin: client
+    priority: P1
+    title: "Internet is down at the office"
+    body: "No internet since we got in this morning. Email and the shared drive don't work either."
+  faults: [modem-provisioning]
+  fixed:
+    - { type: isp-up, role: firewall }
+  call:
+    facts:
+      modem-lights: "The one that says Online is blinking orange. The rest are green."
+  redHerring: "It looks like the firewall {firewall.hostname} died overnight."
+  rootCause: "The ISP pushed firmware to the modem at 02:14 and it never came back online. {firewall.hostname} is fine."
+  fix: "Call the ISP with the account number and PIN and have them reboot the modem."
+  note:
+    issue: "No internet at the office since 02:14. Every agent offline, {firewall.hostname} ({firewall.ip}) unreachable."
+    findings: "The modem's Online light was blinking orange. The ISP said the modem stopped checking in at 02:14 after a firmware push."
+    changes: "The ISP rebooted the modem from their end. Internet came back."
+    rootCause: "An ISP firmware push left the modem stuck offline."
+    nextSteps: "Ask the ISP for a ticket number and a note on future pushes. Keep the ISP PIN in the docs."
+    wrongCause: "The firewall locked up overnight."
+    wrongChange: "Had the client power-cycle the firewall."
