@@ -1,6 +1,6 @@
 import type { CaseInstance, World } from "../model/types";
 import { resolveName } from "../net/reach";
-import { netState } from "../net/state";
+import { loopLinks, netState } from "../net/state";
 import { tunnelStates } from "../net/vpn";
 
 /** Is the real problem gone? Every "fixed" check of the case must pass. */
@@ -22,6 +22,8 @@ export function caseFixed(world: World, c: CaseInstance, now: number): boolean {
         return dev.sleep === undefined;
       case "no-power-cut":
         return !dev.powerCut || (dev.powerCut.until !== undefined && dev.powerCut.until <= now);
+      case "no-loop":
+        return !loopLinks(world, dev.id).length;
       default:
         return false;
     }

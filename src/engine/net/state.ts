@@ -26,6 +26,8 @@ export interface NetState {
   asleep: Map<string, boolean>;
   /** Dark on a schedule or mid power-cycle. Not the player's outage. */
   cut: Map<string, boolean>;
+  /** Switches drowning in a broadcast storm from a loop. Nothing on them passes traffic. */
+  storm: Map<string, boolean>;
   poe: Map<string, PoeSwitchState>;
 }
 
@@ -106,9 +108,17 @@ export function netState(world: World, now: number, opts: { ignoreCuts?: boolean
     powered.set(d.id, port ? port.state === "delivering" && !cut.get(feed?.device ?? "") : true);
   }
 
+  const storm = new Map<string, boolean>();
+  for (const sw of world.devices.filter((d) => d.kind === "switch")) {
+    const live = loopLinks(world, sw.id).some((l) =>
+      [l.a.port, l.b.port].every((n) => !sw.ports.find((p) => p.name === n)?.shutdown),
+    );
+    storm.set(sw.id, live && powered.get(sw.id) === true);
+  }
+
   const online = new Map<string, boolean>();
   for (const d of world.devices) {
-    let up = powered.get(d.id) === true && !asleep.get(d.id);
+    let up = powered.get(d.id) === true && !asleep.get(d.id) && !storm.get(d.id);
     if (up && d.kind !== "firewall") {
       const link = world.links.find((l) => l.a.device === d.id || l.b.device === d.id);
       const peerRef = link ? (link.a.device === d.id ? link.b : link.a) : undefined;
@@ -119,11 +129,19 @@ export function netState(world: World, now: number, opts: { ignoreCuts?: boolean
         link.condition === "good" &&
         !!peer &&
         powered.get(peer.id) === true &&
+        !storm.get(peer.id) &&
         !peerPort?.shutdown;
     }
     online.set(d.id, up);
   }
-  return { now, online, powered, asleep, cut, poe };
+  return { now, online, powered, asleep, cut, storm, poe };
+}
+
+/** Good cables with both ends on this switch. */
+export function loopLinks(world: World, switchId: string) {
+  return world.links.filter(
+    (l) => l.a.device === switchId && l.b.device === switchId && l.condition === "good",
+  );
 }
 
 /** Is a scheduled power cut taking this device down right now? */

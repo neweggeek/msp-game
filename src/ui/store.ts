@@ -40,7 +40,8 @@ interface UiState {
   message?: string;
   /** Score changes from the last action, shown briefly so points never move without a reason. */
   toast?: { id: number; entries: ScoreEntry[] };
-  start: (seed: string, scenario?: string) => void;
+  /** pick is a scenario id, or "case:<id>" for one case on a one-site client. */
+  start: (seed: string, pick?: string) => void;
   act: (a: Action) => ActionResult;
   setTab: (t: Tab) => void;
   openTicket: (id: string) => void;
@@ -70,9 +71,11 @@ export const useUi = create<UiState>((set, get) => ({
   slot: 1,
   tab: "desk",
   dialog: null,
-  start(seed, scenario = "slice") {
+  start(seed, pick = "slice") {
+    const opts = pick.startsWith("case:") ? { caseId: pick.slice(5) } : { scenario: pick };
+    const scenario = pick;
     try {
-      const game = newGame(seed, data, { scenario });
+      const game = newGame(seed, data, opts);
       set({
         game,
         rev: get().rev + 1,

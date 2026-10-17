@@ -217,3 +217,44 @@
     nextSteps: "Check overnight video tomorrow. Quote a small UPS for the recorder."
     wrongCause: "Recorder firmware crashes every night."
     wrongChange: "Updated the recorder firmware."
+
+- id: tidy-desk
+  name: Tidy Desk
+  pick: first-slice
+  playbook: site-down
+  requires:
+    sites: [hq]
+    kinds: { switch: 1, pc: 1 }
+  roles:
+    switch: { kind: switch, site: hq }
+    pc: { kind: pc, site: hq, pick: random }
+  primary: switch
+  ticket:
+    origin: client
+    priority: P1
+    title: "Nothing works at the office"
+    body: "Nothing works this morning. No internet, no phones, no printing. It was fine when we left last night."
+  faults: [desk-loop]
+  fixed:
+    - { type: no-loop, role: switch }
+    - { type: device-online, role: switch }
+  call:
+    facts:
+      recent-changes: "The cleaning crew moved the desks in {pc.room} last night. They plugged a bunch of loose cables back in."
+    fixes:
+      - id: unplug-desk-loop
+        label: "Look under the desks in {pc.room} for a cable with both ends in wall jacks, and unplug one end."
+        unlockedBy: recent-changes
+        effect: unplug-loop
+        roles: [switch]
+  redHerring: "It looks like the internet is down, or the firewall died overnight."
+  rootCause: "A patch cable joins two wall jacks in {pc.room}, which loops {switch.hostname} back into itself. Loop protection is off, so a broadcast storm floods the switch."
+  fix: "Have a contact find the cable with both ends in the wall in {pc.room} and unplug one end. Turn on loop protection later."
+  note:
+    issue: "Whole office down since 19:24 last night. {switch.hostname} ({switch.ip}) and everything behind it unreachable."
+    findings: "Every agent dropped at the same minute. A contact said all the lights on {switch.hostname} flash at once, and the cleaners replugged cables in {pc.room}."
+    changes: "A contact unplugged a patch cable that joined two wall jacks in {pc.room}."
+    rootCause: "A switch loop through two wall jacks caused a broadcast storm."
+    nextSteps: "Turn on loop protection and BPDU guard on {switch.hostname} access ports. Label spare jacks."
+    wrongCause: "The ISP circuit went down overnight."
+    wrongChange: "Opened a ticket with the ISP."

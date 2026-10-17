@@ -110,11 +110,13 @@ export function DebugView() {
                         ? "asleep"
                         : ns.cut.get(d.id)
                           ? "power cut"
-                          : ns.online.get(d.id)
-                            ? "online"
-                            : ns.powered.get(d.id)
-                              ? "offline"
-                              : "no power"}
+                          : ns.storm.get(d.id)
+                            ? "loop storm"
+                            : ns.online.get(d.id)
+                              ? "online"
+                              : ns.powered.get(d.id)
+                                ? "offline"
+                                : "no power"}
                     </td>
                   </tr>
                 ))}

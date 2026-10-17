@@ -158,6 +158,15 @@ function applyFault(
         p2.dst = `${a}.${Number(b2) + 1}.${c}.${d}/${prefix}`;
         break;
       }
+      case "loop-cable": {
+        // Two spare wall jacks under one desk, joined by a loose patch cable.
+        const free = rng.shuffle(dev.ports.filter((p) => p.role === "access" && !p.link));
+        const [pa, pb] = free;
+        if (!pa || !pb) return null;
+        connect(draft.links, dev, pa.name, dev, pb.name, 2);
+        (draft.links[draft.links.length - 1] as (typeof draft.links)[number]).addedBy = def.id;
+        break;
+      }
     }
   }
   return added;

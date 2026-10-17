@@ -166,6 +166,8 @@ export interface Link {
   b: PortRef;
   lengthM: number;
   condition: "good" | "damaged";
+  /** The fault that plugged this cable in, like a loop under a desk. */
+  addedBy?: string;
 }
 
 export interface DocDevice {
@@ -259,7 +261,7 @@ export interface CaseCall {
     id: string;
     label: string;
     unlockedBy: string;
-    effect: "end-power-cut";
+    effect: "end-power-cut" | "unplug-loop";
     roles: string[];
   }[];
 }

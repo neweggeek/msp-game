@@ -104,6 +104,8 @@ const effectSchema = z.discriminatedUnion("type", [
   }),
   z.object({ type: z.literal("change-wan-ip"), target: z.string() }),
   z.object({ type: z.literal("mangle-phase2"), target: z.string() }),
+  /** A patch cable with both ends in wall jacks on the same switch. No loop protection, so a storm. */
+  z.object({ type: z.literal("loop-cable"), target: z.string() }),
 ]);
 
 const proofSchema = z.discriminatedUnion("type", [
@@ -117,6 +119,7 @@ export const checkSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("dns-internal"), role: z.string() }),
   z.object({ type: z.literal("no-sleep"), role: z.string() }),
   z.object({ type: z.literal("no-power-cut"), role: z.string() }),
+  z.object({ type: z.literal("no-loop"), role: z.string() }),
 ]);
 
 export const faultSchema = z.object({
@@ -189,7 +192,7 @@ export const caseSchema = z.object({
             label: z.string(),
             /** A fact ask id, or "power:<role>" once someone says what that device plugs into. */
             unlockedBy: z.string(),
-            effect: z.enum(["end-power-cut"]),
+            effect: z.enum(["end-power-cut", "unplug-loop"]),
             roles: z.array(z.string()).min(1),
           }),
         )

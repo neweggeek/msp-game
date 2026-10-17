@@ -505,6 +505,18 @@ h3:first-child {
 .statusbar .msg {
   color: var(--warn);
 }
+.statusbar > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.statusbar .actions {
+  flex-wrap: nowrap;
+  flex-shrink: 0;
+}
+.statusbar select {
+  max-width: 170px;
+}
 
 .modal-back {
   position: fixed;
