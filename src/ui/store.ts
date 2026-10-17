@@ -13,6 +13,7 @@ import {
   readSlot,
   writeSlot,
 } from "../engine";
+import { diag, errorText } from "./diag";
 
 const data = gameData();
 
@@ -20,6 +21,8 @@ export type Tab = "desk" | "rmm" | "ovik" | "docs" | "terminal" | "kb" | "debug"
 export type Dialog =
   | { kind: "handoff" | "resolve" | "send-back"; ticket: string }
   | { kind: "web"; from: string; address: string }
+  | { kind: "diag" }
+  | { kind: "bug" }
   | null;
 
 interface UiState {
@@ -46,9 +49,14 @@ interface UiState {
 }
 
 function autosave(game: GameState, slot: number) {
-  writeSlot(slot, makeSave(game)).catch(() => {
-    /* Private windows can block IndexedDB. Export still works. */
-  });
+  try {
+    writeSlot(slot, makeSave(game)).catch((e) => {
+      // Private windows can block IndexedDB. Export still works.
+      diag("warn", `Autosave to slot ${slot} failed: ${errorText(e)}`);
+    });
+  } catch (e) {
+    diag("error", `Autosave crashed: ${errorText(e)}`);
+  }
 }
 
 export const useUi = create<UiState>((set, get) => ({
@@ -68,15 +76,29 @@ export const useUi = create<UiState>((set, get) => ({
         dialog: null,
         message: `New shift. Client: ${game.world.client.name}.`,
       });
+      diag(
+        "info",
+        `New game. Seed "${seed}", scenario ${scenario}, client ${game.world.client.name}.`,
+      );
       autosave(game, get().slot);
     } catch (e) {
+      diag("error", `New game failed for seed "${seed}": ${errorText(e)}`);
       set({ message: (e as Error).message });
     }
   },
   act(a) {
     const { game, slot } = get();
     if (!game) return { ok: false, error: "No game." };
-    const result = applyAction(game, data, a);
+    let result: ActionResult;
+    try {
+      result = applyAction(game, data, a);
+    } catch (e) {
+      diag("error", `Action crashed ${JSON.stringify(a)}: ${errorText(e)}`);
+      result = { ok: false, error: "Something broke. It is in the diagnostics log." };
+      set({ rev: get().rev + 1, message: result.error });
+      return result;
+    }
+    diag("action", `${JSON.stringify(a)}${result.ok ? "" : ` -> refused: ${result.error}`}`);
     const patch: Partial<UiState> = {
       rev: get().rev + 1,
       message: result.ok ? undefined : result.error,
@@ -105,6 +127,7 @@ export const useUi = create<UiState>((set, get) => ({
     }
     try {
       const game = loadSave(save, data);
+      diag("info", `Loaded slot ${slot}: seed "${game.seed}", ${game.log.length} actions.`);
       const open = Object.values(game.sessions).find((s) => !s.closed);
       set({
         game,
@@ -115,6 +138,7 @@ export const useUi = create<UiState>((set, get) => ({
         message: `Loaded slot ${slot}: ${game.log.length} actions.`,
       });
     } catch (e) {
+      diag("error", `Load slot ${slot} failed: ${errorText(e)}`);
       set({ message: (e as Error).message });
     }
   },
@@ -139,8 +163,10 @@ export const useUi = create<UiState>((set, get) => ({
         dialog: null,
         message: `Imported seed "${game.seed}".`,
       });
+      diag("info", `Imported seed "${game.seed}".`);
       autosave(game, get().slot);
     } catch (e) {
+      diag("error", `Import failed: ${errorText(e)}`);
       set({ message: (e as Error).message });
     }
   },
