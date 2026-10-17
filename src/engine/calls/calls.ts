@@ -170,8 +170,10 @@ export function ask(
     const found = !!dev;
     switch (def.kind) {
       case "fact": {
+        // Two cases can know the same fact. The ticket the call is about wins.
         const known = person.insider
-          ? world.cases.find((c) => c.call?.facts[def.id])?.call?.facts[def.id]
+          ? (opts.caseInst?.call?.facts[def.id] ??
+            world.cases.find((c) => c.call?.facts[def.id])?.call?.facts[def.id])
           : undefined;
         out.lines.push(`${person.name}: ${known ?? def.default ?? "I'm not sure."}`);
         if (known) out.fact = def.id;
@@ -205,9 +207,10 @@ export function ask(
         }
         const c = dev.powerCut;
         const fixedNow = c?.until !== undefined && c.until <= now;
-        if (c) out.lines.push(`${person.name}: ${fixedNow ? c.fixedSource : c.source}`);
-        if (c && !fixedNow) out.fact = `power:${dev.id}`;
-        else out.lines.push(say(data, dev.poe ? "poeOnly" : "wall", v));
+        if (c) {
+          out.lines.push(`${person.name}: ${fixedNow ? c.fixedSource : c.source}`);
+          if (!fixedNow) out.fact = `power:${dev.id}`;
+        } else out.lines.push(say(data, dev.poe ? "poeOnly" : "wall", v));
         break;
       }
       case "power-cycle": {

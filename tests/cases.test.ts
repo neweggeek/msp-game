@@ -296,6 +296,9 @@ describe("first slice cases play end to end", () => {
       }
       expect(caseFixed(g.world, c, g.clock.now)).toBe(true);
       expect(ask("test").output?.join("\n")).toContain("always-on");
+      // One answer about the plug, not the fixed source plus a generic one.
+      const src = ask("power-source", nvr.id).output ?? [];
+      expect(src.join("\n")).not.toContain("The wall outlet.");
       const shell = act({ t: "rmm-open", device: server.id }).session as string;
       act({ t: "rmm", session: shell, line: `ping ${nvr.ip}` });
       act({ t: "attach-proof", ticket: t.id, source: shell });
