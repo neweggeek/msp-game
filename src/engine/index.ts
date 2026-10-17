@@ -35,3 +35,4 @@ export { exportSave, importSave, loadSave, makeSave, SaveError, type SaveFile } 
 export { readSlot, writeSlot, SLOTS } from "./save/storage";
 export * from "./model/types";
 export { docsDiff, type DocDiff } from "./gen/diff";
+export { assetTypes, assetTypeOf, connectCommand, type AssetType } from "./docs/assets";

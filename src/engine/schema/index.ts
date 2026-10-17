@@ -356,6 +356,30 @@ export const calendarSchema = z.object({
   workDays: z.array(z.number().int().min(0).max(6)),
 });
 
+export const assetRulesSchema = z.object({
+  types: z
+    .array(
+      z.object({
+        id: z.string(),
+        label: z.string(),
+        kinds: z.array(deviceKindSchema).min(1),
+        connect: z.string().optional(),
+      }),
+    )
+    .min(1),
+  wifi: z.object({
+    label: z.string(),
+    networks: z.array(
+      z.object({
+        ssid: z.string(),
+        vlan: z.enum(["data", "voice", "mgmt"]),
+        security: z.string(),
+        notes: z.string().optional(),
+      }),
+    ),
+  }),
+});
+
 const stalenessLevel = z.object({
   wrongIp: z.number(),
   missingDevice: z.number(),
@@ -410,6 +434,7 @@ export type Dialect = z.infer<typeof dialectSchema>;
 export type SlaRules = z.infer<typeof slaSchema>;
 export type TicketRules = z.infer<typeof ticketRulesSchema>;
 export type CalendarRules = z.infer<typeof calendarSchema>;
+export type AssetRules = z.infer<typeof assetRulesSchema>;
 export type StalenessRules = z.infer<typeof stalenessSchema>;
 export type ClientRules = z.infer<typeof clientRulesSchema>;
 export type BaseVerb = (typeof baseVerbs)[number];

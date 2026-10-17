@@ -159,6 +159,16 @@ export interface DocCredential {
   password: string;
 }
 
+/** A Wi-Fi network as the docs record it. Its passphrase is a vault entry keyed by id. */
+export interface DocWifi {
+  id: string;
+  siteId: string;
+  ssid: string;
+  vlan: number;
+  security: string;
+  notes?: string;
+}
+
 export interface DocSite {
   siteId: string;
   name: string;
@@ -180,6 +190,7 @@ export interface Docs {
   sites: DocSite[];
   devices: DocDevice[];
   credentials: DocCredential[];
+  wifi: DocWifi[];
   contacts: Contact[];
   floorPlan: boolean;
   accessNotes: string[];

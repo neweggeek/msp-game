@@ -1,10 +1,12 @@
-import type { HistoryEvent, World } from "../model/types";
+import type { DeviceKind, HistoryEvent, World } from "../model/types";
 import { canReach } from "../net/reach";
 import { netState } from "../net/state";
 
 export interface OvikRow {
   deviceId: string;
   hostname: string;
+  /** Undefined when discovery could not tell what it is. */
+  kind?: DeviceKind;
   ip: string;
   uplink: string;
   status: "up" | "down" | "unknown";
@@ -40,6 +42,7 @@ export function ovikView(world: World, now: number): OvikView {
     return {
       deviceId: o.deviceId,
       hostname: o.hostname,
+      ...(dev ? { kind: dev.kind } : {}),
       ip: o.ip,
       uplink: o.uplink ?? "",
       status,

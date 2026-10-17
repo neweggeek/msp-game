@@ -1,6 +1,18 @@
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
+import { connectCommand } from "../../engine";
 import { fmt } from "../App";
-import { useGame, useUi } from "../store";
+import {
+  SortTh,
+  TypeChips,
+  countBy,
+  groupByType,
+  ipKey,
+  typeLabel,
+  typeOf,
+  useCopy,
+  useSort,
+} from "../assets/assets";
+import { data, useGame, useUi } from "../store";
 
 type DocTab = "devices" | "sites" | "vault" | "history" | "access";
 
@@ -15,6 +27,11 @@ export function DocsView({ full = false }: { full?: boolean }) {
   const lastEdit = docs.history[docs.history.length - 1];
   const room = (id: string) =>
     game.world.sites.flatMap((s) => s.rooms).find((r) => r.id === id)?.name ?? "";
+  const reveal = (id: string) => {
+    const r = act({ t: "vault-view", device: id });
+    if (r.output) setRevealed((v) => ({ ...v, [id]: r.output?.[1] ?? "" }));
+    else say(r.error);
+  };
   const saveEdit = () => {
     if (!edit) return;
     const r = act({ t: "doc-edit", ...edit });
@@ -62,40 +79,19 @@ export function DocsView({ full = false }: { full?: boolean }) {
             className={`term-tab ${tab === t ? "on" : ""}`}
             onClick={() => setTab(t)}
           >
-            {t === "sites"
-              ? "Sites and IP plan"
-              : t === "access"
-                ? "Access log"
-                : t[0]?.toUpperCase() + t.slice(1)}
+            {t === "devices"
+              ? "Assets"
+              : t === "sites"
+                ? "Sites and IP plan"
+                : t === "access"
+                  ? "Access log"
+                  : t[0]?.toUpperCase() + t.slice(1)}
           </button>
         ))}
       </div>
       <div className="scroll">
         {tab === "devices" && (
-          <table className="grid">
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>IP</th>
-                <th>Model</th>
-                {full && <th>Firmware</th>}
-                {full && <th>Room</th>}
-                {full && <th>Notes</th>}
-              </tr>
-            </thead>
-            <tbody>
-              {docs.devices.map((d) => (
-                <tr key={d.deviceId}>
-                  <td className="mono">{d.hostname}</td>
-                  <td>{editable(`device:${d.deviceId}`, "ip", d.ip ?? "")}</td>
-                  <td>{d.model}</td>
-                  {full && <td>{editable(`device:${d.deviceId}`, "firmware", d.firmware)}</td>}
-                  {full && <td>{room(d.roomId)}</td>}
-                  {full && <td className="dim">{d.notes}</td>}
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <AssetList full={full} editable={editable} revealed={revealed} reveal={reveal} />
         )}
         {tab === "sites" && (
           <div className="body">
@@ -140,7 +136,8 @@ export function DocsView({ full = false }: { full?: boolean }) {
           <table className="grid">
             <thead>
               <tr>
-                <th>Device</th>
+                <th>For</th>
+                <th>Type</th>
                 <th>User</th>
                 <th>Password</th>
                 <th />
@@ -150,23 +147,11 @@ export function DocsView({ full = false }: { full?: boolean }) {
               {docs.credentials.map((c) => (
                 <tr key={c.deviceId}>
                   <td className="mono">{c.hostname}</td>
+                  <td className="dim">{typeLabel(credType(game, c.deviceId))}</td>
                   <td className="mono">{c.username}</td>
                   <td className="mono">{revealed[c.deviceId] ?? "••••••••"}</td>
                   <td>
-                    {!revealed[c.deviceId] && (
-                      <button
-                        type="button"
-                        className="btn small"
-                        onClick={() => {
-                          const r = act({ t: "vault-view", device: c.deviceId });
-                          if (r.output)
-                            setRevealed({ ...revealed, [c.deviceId]: r.output[1] ?? "" });
-                          else say(r.error);
-                        }}
-                      >
-                        Reveal
-                      </button>
-                    )}
+                    <SecretButtons id={c.deviceId} revealed={revealed} reveal={reveal} />
                   </td>
                 </tr>
               ))}
@@ -220,4 +205,209 @@ function label(game: ReturnType<typeof useGame>, entry: string): string {
     game.world.docs.credentials.find((c) => c.deviceId === id)?.hostname ??
     id;
   return kind === "vault" ? `vault ${host}` : (host ?? entry);
+}
+
+type Game = ReturnType<typeof useGame>;
+type Editable = (target: string, field: string, value: string) => ReactNode;
+
+function credType(game: Game, id: string): string {
+  if (game.world.docs.wifi.some((w) => w.id === id)) return "wifi";
+  const d = game.world.docs.devices.find((x) => x.deviceId === id);
+  return d ? typeOf(d.kind) : "";
+}
+
+/** Reveal, then copy. Reveal is the vault read that lands in the access log. */
+function SecretButtons({
+  id,
+  revealed,
+  reveal,
+}: {
+  id: string;
+  revealed: Record<string, string>;
+  reveal: (id: string) => void;
+}) {
+  const copy = useCopy();
+  const pw = revealed[id];
+  return pw === undefined ? (
+    <button type="button" className="btn small" onClick={() => reveal(id)}>
+      Reveal
+    </button>
+  ) : (
+    <button type="button" className="btn small" onClick={() => copy(pw, "password")}>
+      Copy password
+    </button>
+  );
+}
+
+type AssetSort = "name" | "ip" | "model" | "site";
+interface AssetRow {
+  id: string;
+  type: string;
+  name: string;
+  ip: string;
+  model: string;
+  siteId: string;
+  firmware?: string;
+  roomId?: string;
+  notes?: string;
+  wifi?: { vlan: number; security: string };
+}
+
+/**
+ * Hoodoo assets, laid out like a docs platform: a chip per asset type, one
+ * section per type, and each password as a child row under what it opens.
+ */
+function AssetList({
+  full,
+  editable,
+  revealed,
+  reveal,
+}: {
+  full: boolean;
+  editable: Editable;
+  revealed: Record<string, string>;
+  reveal: (id: string) => void;
+}) {
+  const game = useGame();
+  const copy = useCopy();
+  const [type, setType] = useState("all");
+  const [filter, setFilter] = useState("");
+  const { sort, by, cmp } = useSort<AssetSort>("name");
+  const docs = game.world.docs;
+  const siteName = (id: string) => docs.sites.find((s) => s.siteId === id)?.name ?? id;
+  const room = (id: string) =>
+    game.world.sites.flatMap((s) => s.rooms).find((r) => r.id === id)?.name ?? "";
+  const all: AssetRow[] = [
+    ...docs.devices.map((d) => ({
+      id: d.deviceId,
+      type: typeOf(d.kind),
+      name: d.hostname,
+      ip: d.ip ?? "",
+      model: d.model,
+      siteId: d.siteId,
+      firmware: d.firmware,
+      roomId: d.roomId,
+      notes: d.notes,
+    })),
+    ...docs.wifi.map((w) => ({
+      id: w.id,
+      type: "wifi",
+      name: w.ssid,
+      ip: "",
+      model: w.security,
+      siteId: w.siteId,
+      notes: w.notes,
+      wifi: { vlan: w.vlan, security: w.security },
+    })),
+  ];
+  const f = filter.trim().toLowerCase();
+  const rows = all
+    .filter((r) => type === "all" || r.type === type)
+    .filter(
+      (r) =>
+        !f || [r.name, r.ip, r.model, siteName(r.siteId)].some((v) => v.toLowerCase().includes(f)),
+    )
+    .sort((a, b) =>
+      sort.key === "ip"
+        ? cmp(ipKey(a.ip), ipKey(b.ip))
+        : sort.key === "site"
+          ? cmp(siteName(a.siteId), siteName(b.siteId)) || a.name.localeCompare(b.name)
+          : cmp(a[sort.key], b[sort.key]),
+    );
+  const groups = groupByType(rows, (r) => r.type);
+  const cols = full ? 6 : 4;
+  return (
+    <>
+      <div className="asset-bar">
+        <TypeChips counts={countBy(all, (r) => r.type)} value={type} onChange={setType} />
+        <input
+          value={filter}
+          onChange={(e) => setFilter(e.target.value)}
+          placeholder="Filter: name, IP, model, site"
+          aria-label="Filter assets"
+          style={{ width: 200 }}
+        />
+      </div>
+      <table className="grid assets">
+        <thead>
+          <tr>
+            <SortTh k="name" label="Name" sort={sort} by={by} />
+            <SortTh k="ip" label="IP / VLAN" sort={sort} by={by} />
+            <SortTh k="model" label="Model" sort={sort} by={by} />
+            <SortTh k="site" label="Site" sort={sort} by={by} />
+            {full && <th>Firmware / Room</th>}
+            {full && <th>Notes</th>}
+          </tr>
+        </thead>
+        {groups.map((g) => (
+          <tbody key={g.id}>
+            <tr className="group">
+              <td colSpan={cols}>
+                {g.label} <span className="count">{g.rows.length}</span>
+              </td>
+            </tr>
+            {g.rows.flatMap((r) => {
+              const cred = docs.credentials.find((c) => c.deviceId === r.id);
+              const cmd = r.wifi ? undefined : connectCommand(game.world, data, r.id);
+              const out = [
+                <tr key={r.id}>
+                  <td className="mono">{r.name}</td>
+                  <td>
+                    {r.wifi ? (
+                      <span className="mono">VLAN {r.wifi.vlan}</span>
+                    ) : (
+                      editable(`device:${r.id}`, "ip", r.ip)
+                    )}
+                  </td>
+                  <td>{r.model}</td>
+                  <td>{siteName(r.siteId)}</td>
+                  {full && (
+                    <td>
+                      {r.firmware !== undefined &&
+                        editable(`device:${r.id}`, "firmware", r.firmware)}
+                      {r.roomId && <div className="dim">{room(r.roomId)}</div>}
+                    </td>
+                  )}
+                  {full && <td className="dim">{r.notes}</td>}
+                </tr>,
+              ];
+              if (cred)
+                out.push(
+                  <tr key={`${r.id}-pw`} className="child">
+                    <td colSpan={cols}>
+                      <div className="actions">
+                        <span className="dim">└ Password</span>
+                        <span className="mono">{cred.username}</span>
+                        <span className="mono">{revealed[r.id] ?? "••••••••"}</span>
+                        <SecretButtons id={r.id} revealed={revealed} reveal={reveal} />
+                        {cmd && (
+                          <button
+                            type="button"
+                            className="btn small"
+                            title="Paste into a Shinobi RMM shell on a PC that can reach it"
+                            onClick={() => copy(cmd, cmd)}
+                          >
+                            Copy <span className="mono">{cmd}</span>
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>,
+                );
+              return out;
+            })}
+          </tbody>
+        ))}
+        {groups.length === 0 && (
+          <tbody>
+            <tr>
+              <td colSpan={cols} className="dim">
+                Nothing matches.
+              </td>
+            </tr>
+          </tbody>
+        )}
+      </table>
+    </>
+  );
 }

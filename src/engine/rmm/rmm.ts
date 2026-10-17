@@ -1,5 +1,5 @@
 import { uptimeText } from "../cli/views";
-import type { Device, World } from "../model/types";
+import type { Device, DeviceKind, World } from "../model/types";
 import { canReach, dnsServers, resolveName } from "../net/reach";
 import { type NetState, netState } from "../net/state";
 import type { ScriptDef } from "../schema";
@@ -19,6 +19,7 @@ export interface RmmSession {
 export interface AgentRow {
   deviceId: string;
   hostname: string;
+  kind: DeviceKind;
   siteId: string;
   siteName: string;
   user: string;
@@ -51,6 +52,7 @@ export function agents(world: World, now: number): AgentRow[] {
     .map((d) => ({
       deviceId: d.id,
       hostname: d.hostname,
+      kind: d.kind,
       siteId: d.siteId,
       siteName: world.sites.find((s) => s.id === d.siteId)?.name ?? d.siteId,
       user: d.user ?? "",

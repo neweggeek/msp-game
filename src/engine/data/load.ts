@@ -1,6 +1,7 @@
 import { parse } from "yaml";
 import type { z } from "zod";
 import {
+  type AssetRules,
   type Brand,
   type CalendarRules,
   type CaseDef,
@@ -18,6 +19,7 @@ import {
   type StalenessRules,
   type TicketRules,
   actionCostSchema,
+  assetRulesSchema,
   brandSchema,
   calendarSchema,
   caseSchema,
@@ -54,6 +56,7 @@ export interface GameData {
   calendar: CalendarRules;
   staleness: StalenessRules;
   clients: ClientRules;
+  assets: AssetRules;
 }
 
 /** Raw YAML text keyed by path, like "../../../data/devices/fortress.yaml". */
@@ -131,6 +134,7 @@ export function loadData(files: RawFiles): GameData {
     calendar: rule(files, "calendar", calendarSchema),
     staleness: rule(files, "staleness", stalenessSchema),
     clients: rule(files, "clients", clientRulesSchema),
+    assets: rule(files, "assets", assetRulesSchema),
   };
   for (const t of data.devices.values()) {
     if (!data.brands.has(t.brand)) throw new DataError(`device ${t.id}: unknown brand ${t.brand}`);
@@ -152,6 +156,13 @@ export function loadData(files: RawFiles): GameData {
     if (!data.rooms.has(ind.rooms))
       throw new DataError(`industry ${ind.id}: unknown room set ${ind.rooms}`);
   }
+  const kinds = data.assets.types.flatMap((t) => t.kinds);
+  for (const k of new Set(kinds))
+    if (kinds.filter((x) => x === k).length > 1)
+      throw new DataError(`assets.yaml: kind ${k} is in more than one type`);
+  for (const t of data.devices.values())
+    if (!kinds.includes(t.kind))
+      throw new DataError(`device ${t.id}: kind ${t.kind} has no type in assets.yaml`);
   if (!data.tickets.statuses.some((s) => s.initial))
     throw new DataError("tickets.yaml: no initial status");
   return data;

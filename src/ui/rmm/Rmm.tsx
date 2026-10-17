@@ -1,6 +1,9 @@
 import { useState } from "react";
 import { type Device, agents, publicIp } from "../../engine";
+import { SortTh, TypeChips, countBy, groupByType, ipKey, typeOf, useSort } from "../assets/assets";
 import { data, useGame, useUi } from "../store";
+
+type AgentSort = "hostname" | "user" | "siteName" | "ip" | "publicIp" | "status";
 import { Terminal } from "../terminal/Terminal";
 
 export function RmmPage() {
@@ -9,13 +12,25 @@ export function RmmPage() {
   const [filter, setFilter] = useState("");
   const [sel, setSel] = useState<string>();
   const [address, setAddress] = useState("");
-  const rows = agents(game.world, game.clock.now).filter((r) => {
-    const f = filter.trim().toLowerCase();
-    return (
-      !f ||
-      [r.hostname, r.user, r.publicIp, r.ip, r.siteName].some((v) => v.toLowerCase().includes(f))
+  const [type, setType] = useState("all");
+  const { sort, by, cmp } = useSort<AgentSort>("hostname");
+  const all = agents(game.world, game.clock.now);
+  const rows = all
+    .filter((r) => type === "all" || typeOf(r.kind) === type)
+    .filter((r) => {
+      const f = filter.trim().toLowerCase();
+      return (
+        !f ||
+        [r.hostname, r.user, r.publicIp, r.ip, r.siteName].some((v) => v.toLowerCase().includes(f))
+      );
+    })
+    .sort((a, b) =>
+      sort.key === "status"
+        ? cmp(String(!a.online), String(!b.online))
+        : sort.key === "ip" || sort.key === "publicIp"
+          ? cmp(ipKey(a[sort.key]), ipKey(b[sort.key]))
+          : cmp(a[sort.key], b[sort.key]),
     );
-  });
   const row = rows.find((r) => r.deviceId === sel);
   const consent = sel ? game.consent[sel] : undefined;
   return (
@@ -32,36 +47,50 @@ export function RmmPage() {
               aria-label="Filter agents"
             />
           </header>
+          <div className="asset-bar">
+            <TypeChips
+              counts={countBy(all, (r) => typeOf(r.kind))}
+              value={type}
+              onChange={setType}
+            />
+          </div>
           <div className="scroll">
             <table className="grid">
               <thead>
                 <tr>
-                  <th>Agent</th>
-                  <th>User</th>
-                  <th>Site</th>
-                  <th>LAN IP</th>
-                  <th>Public IP</th>
-                  <th>Status</th>
+                  <SortTh k="hostname" label="Agent" sort={sort} by={by} />
+                  <SortTh k="user" label="User" sort={sort} by={by} />
+                  <SortTh k="siteName" label="Site" sort={sort} by={by} />
+                  <SortTh k="ip" label="LAN IP" sort={sort} by={by} />
+                  <SortTh k="publicIp" label="Public IP" sort={sort} by={by} />
+                  <SortTh k="status" label="Status" sort={sort} by={by} />
                 </tr>
               </thead>
-              <tbody>
-                {rows.map((r) => (
-                  <tr
-                    key={r.deviceId}
-                    className={r.deviceId === sel ? "sel" : ""}
-                    onClick={() => setSel(r.deviceId)}
-                    onKeyDown={(e) => e.key === "Enter" && setSel(r.deviceId)}
-                    style={{ cursor: "pointer" }}
-                  >
-                    <td className="mono">{r.hostname}</td>
-                    <td>{r.user || <span className="dim">none</span>}</td>
-                    <td>{r.siteName}</td>
-                    <td className="mono">{r.ip}</td>
-                    <td className="mono">{r.publicIp}</td>
-                    <td className={r.online ? "ok" : "bad"}>{r.online ? "Online" : "Offline"}</td>
+              {groupByType(rows, (r) => typeOf(r.kind)).map((g) => (
+                <tbody key={g.id}>
+                  <tr className="group">
+                    <td colSpan={6}>
+                      {g.label} <span className="count">{g.rows.length}</span>
+                    </td>
                   </tr>
-                ))}
-              </tbody>
+                  {g.rows.map((r) => (
+                    <tr
+                      key={r.deviceId}
+                      className={r.deviceId === sel ? "sel" : ""}
+                      onClick={() => setSel(r.deviceId)}
+                      onKeyDown={(e) => e.key === "Enter" && setSel(r.deviceId)}
+                      style={{ cursor: "pointer" }}
+                    >
+                      <td className="mono">{r.hostname}</td>
+                      <td>{r.user || <span className="dim">none</span>}</td>
+                      <td>{r.siteName}</td>
+                      <td className="mono">{r.ip}</td>
+                      <td className="mono">{r.publicIp}</td>
+                      <td className={r.online ? "ok" : "bad"}>{r.online ? "Online" : "Offline"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              ))}
             </table>
           </div>
         </section>

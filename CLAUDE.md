@@ -47,6 +47,7 @@ Phase 1 notes:
 - Camera Day needs a switch with its own CLI, so it only lands on Aurora CX switches. FortressSwitch is still read-only from the gate.
 - Out of scope for now: ScreenLink sessions, VPN clients, console, truck rolls, editing in the device web GUI.
 - Generator rerolls: a case that does not fit rerolls the client, fault placement rerolls up to 8 times, unsolvable docs reroll up to 8 times.
+- Asset types (data/rules/assets.yaml) group gear in Hoodoo Docs, Ovik and Shinobi RMM, IT Glue and Hudu style. Passwords sit as child rows under their asset. Devices with a CLI dialect get a copy button for `ssh {user}@{ip}` built from the docs, so stale docs give a stale command. Wi-Fi networks are docs only for now (no AP config behind them); their passphrases are vault entries keyed `wifi-<site>-<n>`.
 - If a change alters what an old seed builds, the golden-seed test fails. Bump `GENERATOR_VERSION` in `src/engine/gen/index.ts` on purpose, then run `UPDATE_GOLDEN=1 npm test`.
 
 ## Commands
