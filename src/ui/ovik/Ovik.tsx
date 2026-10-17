@@ -1,7 +1,16 @@
 import { useState } from "react";
 import { ovikView } from "../../engine";
 import { fmt } from "../App";
-import { SortTh, TypeChips, countBy, groupByType, ipKey, typeOf, useSort } from "../assets/assets";
+import {
+  EditCell,
+  SortTh,
+  TypeChips,
+  countBy,
+  groupByType,
+  ipKey,
+  typeOf,
+  useSort,
+} from "../assets/assets";
 import { useGame } from "../store";
 
 type OvikSort = "hostname" | "ip" | "status";
@@ -40,6 +49,10 @@ export function OvikPage() {
             style={{ width: 180 }}
           />
         </div>
+        <p className="dim" style={{ margin: "6px 12px", fontSize: 11.5 }}>
+          Ovik pings the IP in its own list. If a device moved, click ✎ to point Ovik at the new
+          address.
+        </p>
         <div className="scroll">
           <table className="grid">
             <thead>
@@ -59,11 +72,13 @@ export function OvikPage() {
                 </tr>
                 {g.rows.map((r) => (
                   <tr key={r.deviceId}>
-                    <td className="mono">
-                      {r.hostname}
+                    <td>
+                      <EditCell target={`ovik:${r.deviceId}`} field="hostname" value={r.hostname} />
                       {r.discovered && <span className="warn"> new</span>}
                     </td>
-                    <td className="mono">{r.ip}</td>
+                    <td>
+                      <EditCell target={`ovik:${r.deviceId}`} field="ip" value={r.ip} width={110} />
+                    </td>
                     <td className="mono dim">{r.uplink}</td>
                     <td className={r.status === "up" ? "ok" : r.status === "down" ? "bad" : "dim"}>
                       {r.status}

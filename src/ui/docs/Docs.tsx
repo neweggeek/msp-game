@@ -1,7 +1,8 @@
 import { type ReactNode, useState } from "react";
-import { connectCommand } from "../../engine";
+import { type DeviceKind, connectCommand } from "../../engine";
 import { fmt } from "../App";
 import {
+  EditCell,
   SortTh,
   TypeChips,
   countBy,
@@ -22,7 +23,6 @@ export function DocsView({ full = false }: { full?: boolean }) {
   const { act, say } = useUi();
   const [tab, setTab] = useState<DocTab>("devices");
   const [revealed, setRevealed] = useState<Record<string, string>>({});
-  const [edit, setEdit] = useState<{ target: string; field: string; value: string } | null>(null);
   const docs = game.world.docs;
   const lastEdit = docs.history[docs.history.length - 1];
   const room = (id: string) =>
@@ -32,39 +32,9 @@ export function DocsView({ full = false }: { full?: boolean }) {
     if (r.output) setRevealed((v) => ({ ...v, [id]: r.output?.[1] ?? "" }));
     else say(r.error);
   };
-  const saveEdit = () => {
-    if (!edit) return;
-    const r = act({ t: "doc-edit", ...edit });
-    if (r.ok) setEdit(null);
-  };
-  const editable = (target: string, field: string, value: string) =>
-    edit && edit.target === target && edit.field === field ? (
-      <form
-        className="actions"
-        onSubmit={(e) => {
-          e.preventDefault();
-          saveEdit();
-        }}
-      >
-        <input
-          value={edit.value}
-          onChange={(e) => setEdit({ ...edit, value: e.target.value })}
-          style={{ width: 130 }}
-          aria-label={field}
-        />
-        <button type="submit" className="btn small">
-          Save
-        </button>
-      </form>
-    ) : (
-      <span
-        className="mono"
-        onDoubleClick={() => setEdit({ target, field, value })}
-        title="Double-click to edit"
-      >
-        {value}
-      </span>
-    );
+  const editable: Editable = (target, field, value) => (
+    <EditCell target={target} field={field} value={value} />
+  );
   return (
     <section className="panel grow" style={{ flex: full ? 1 : "1 1 60%" }}>
       <header>
@@ -92,11 +62,15 @@ export function DocsView({ full = false }: { full?: boolean }) {
       <div className="scroll">
         {(tab === "devices" || tab === "sites") && (
           <p className="dim" style={{ margin: "6px 12px", fontSize: 11.5 }}>
-            Docs can be wrong. Double-click an IP{full ? ", firmware" : ""} or WAN IP to fix it.
+            Docs can be wrong. Click ✎ on a value to fix it.
+            {tab === "devices" && " Missing a device? Add it below the list."}
           </p>
         )}
         {tab === "devices" && (
-          <AssetList full={full} editable={editable} revealed={revealed} reveal={reveal} />
+          <>
+            <AssetList full={full} editable={editable} revealed={revealed} reveal={reveal} />
+            <AddDevice />
+          </>
         )}
         {tab === "sites" && (
           <div className="body">
@@ -113,7 +87,9 @@ export function DocsView({ full = false }: { full?: boolean }) {
                   <dt>WAN IP</dt>
                   <dd>{editable(`site:${s.siteId}`, "wanIp", s.isp.wanIp)}</dd>
                   <dt>WAN block</dt>
-                  <dd className="mono">{s.isp.wanCidr}</dd>
+                  <dd>{editable(`site:${s.siteId}`, "wanCidr", s.isp.wanCidr)}</dd>
+                  <dt>WAN gateway</dt>
+                  <dd>{editable(`site:${s.siteId}`, "gateway", s.isp.gateway)}</dd>
                   {s.vlans.map((v) => (
                     <span key={v.id} style={{ display: "contents" }}>
                       <dt>VLAN {v.id}</dt>
@@ -414,5 +390,66 @@ function AssetList({
         )}
       </table>
     </>
+  );
+}
+
+/** Write down a device the docs never had: the cameras a case turned up, a rogue switch. */
+function AddDevice() {
+  const game = useGame();
+  const act = useUi((s) => s.act);
+  const sites = game.world.docs.sites;
+  const kinds = data.assets.types.flatMap((t) => t.kinds);
+  const blank = { site: sites[0]?.siteId ?? "", hostname: "", ip: "", kind: kinds[0] ?? "pc" };
+  const [form, setForm] = useState(blank);
+  return (
+    <form
+      className="asset-bar add-device"
+      onSubmit={(e) => {
+        e.preventDefault();
+        const r = act({ t: "doc-add", ...form, kind: form.kind as DeviceKind });
+        if (r.ok) setForm({ ...blank, site: form.site, kind: form.kind });
+      }}
+    >
+      <b>Add a device</b>
+      <input
+        value={form.hostname}
+        onChange={(e) => setForm({ ...form, hostname: e.target.value })}
+        placeholder="Name"
+        aria-label="New device name"
+        style={{ width: 150 }}
+      />
+      <input
+        value={form.ip}
+        onChange={(e) => setForm({ ...form, ip: e.target.value })}
+        placeholder="IP"
+        aria-label="New device IP"
+        style={{ width: 120 }}
+      />
+      <select
+        value={form.kind}
+        onChange={(e) => setForm({ ...form, kind: e.target.value as DeviceKind })}
+        aria-label="New device type"
+      >
+        {kinds.map((k) => (
+          <option key={k} value={k}>
+            {typeLabel(typeOf(k as DeviceKind))}
+          </option>
+        ))}
+      </select>
+      <select
+        value={form.site}
+        onChange={(e) => setForm({ ...form, site: e.target.value })}
+        aria-label="New device site"
+      >
+        {sites.map((x) => (
+          <option key={x.siteId} value={x.siteId}>
+            {x.name}
+          </option>
+        ))}
+      </select>
+      <button type="submit" className="btn small">
+        Add
+      </button>
+    </form>
   );
 }

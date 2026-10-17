@@ -82,3 +82,4 @@ scoring:
   collateralOutage: -20
   closedNotOurs: -15
   docFix: 5
+  docAdd: 5

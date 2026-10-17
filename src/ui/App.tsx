@@ -8,7 +8,8 @@ import { DocsView } from "./docs/Docs";
 import { KbView } from "./kb/Kb";
 import { OvikPage } from "./ovik/Ovik";
 import { RmmPage } from "./rmm/Rmm";
-import { type Tab, data, useGame, useUi } from "./store";
+import { ScoreToast } from "./score/Score";
+import { type Tab, data, openCount, useGame, useUi } from "./store";
 import { Terminal } from "./terminal/Terminal";
 
 export const fmt = (min: number) => formatTime(data.calendar, min);
@@ -53,6 +54,7 @@ export function App() {
       {tab === "debug" && <DebugView />}
       <StatusBar />
       <Dialogs />
+      <ScoreToast />
     </div>
   );
 }
@@ -71,7 +73,8 @@ const tabs: { id: Tab | null; label: string; group?: string }[] = [
 function TopBar() {
   const game = useGame();
   const { tab, setTab } = useUi();
-  const queue = game.book.tickets.filter((t) => t.closedAt === undefined && !t.sentBack).length;
+  const setDialog = useUi((s) => s.setDialog);
+  const queue = openCount(game);
   return (
     <header className="topbar">
       <span className="brand">ATRIUM</span>
@@ -104,9 +107,14 @@ function TopBar() {
         <span>
           QUEUE <b>{queue}</b>
         </span>
-        <span>
+        <button
+          type="button"
+          className="score-btn"
+          onClick={() => setDialog({ kind: "score" })}
+          title="Where your points came from"
+        >
           SCORE <b>{totalScore(game)}</b>
-        </span>
+        </button>
       </div>
     </header>
   );

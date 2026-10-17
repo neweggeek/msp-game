@@ -117,3 +117,58 @@ export function groupByType<T>(
     rows: rows.filter((r) => type(r) === id),
   }));
 }
+
+/** A value you can correct. Double-click (or the pencil) to edit; Enter saves, Esc cancels. */
+export function EditCell({
+  target,
+  field,
+  value,
+  width = 130,
+}: {
+  target: string;
+  field: string;
+  value: string;
+  width?: number;
+}) {
+  const act = useUi((s) => s.act);
+  const [draft, setDraft] = useState<string | null>(null);
+  if (draft === null)
+    return (
+      <span className="editable">
+        <span className="mono" onDoubleClick={() => setDraft(value)} title="Double-click to edit">
+          {value || <span className="dim">(empty)</span>}
+        </span>
+        <button
+          type="button"
+          className="pencil"
+          onClick={() => setDraft(value)}
+          aria-label={`Edit ${field}`}
+          title="Edit"
+        >
+          ✎
+        </button>
+      </span>
+    );
+  return (
+    <form
+      className="actions"
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (act({ t: "doc-edit", target, field, value: draft }).ok) setDraft(null);
+      }}
+    >
+      <input
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        onKeyDown={(e) => e.key === "Escape" && setDraft(null)}
+        style={{ width }}
+        aria-label={field}
+        // biome-ignore lint/a11y/noAutofocus: the player just asked to edit this
+        autoFocus
+      />
+      <button type="submit" className="btn small">
+        Save
+      </button>
+    </form>
+  );
+}
