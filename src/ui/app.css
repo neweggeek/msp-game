@@ -93,6 +93,7 @@ textarea {
   display: flex;
   gap: 4px;
   flex: 1;
+  min-width: 0;
   align-items: center;
   overflow-x: auto;
 }
@@ -141,6 +142,22 @@ textarea {
 .stats b {
   color: var(--text-hi);
   font-weight: 400;
+}
+
+/* Laptop screens: tighten the top bar so every tab stays in view. */
+@media (max-width: 1440px) {
+  .topbar {
+    gap: 10px;
+  }
+  .tab {
+    padding: 0 7px;
+  }
+  .tabs .sep {
+    margin: 0 3px;
+  }
+  .stats {
+    gap: 12px;
+  }
 }
 
 .main {

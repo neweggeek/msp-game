@@ -42,6 +42,7 @@ Phase 1 notes:
 - Scenario "slice" (data/scenarios) plants Camera Day, Wrong Phonebook, Nobody Home and Branch Silence on one client. "quick" plants one random case on a one-site client.
 - Docs are written from the network before the faults, then degraded by staleness. Devices a case is about are never dropped from docs.
 - Closing rule: client tickets need attached output plus a client OK (Customer question with "ask to close"). Alert and tech tickets need output only. Closing anyway is allowed; it costs points, and an unfixed close reopens 90 minutes later.
+- Response target: a ticket note, a handoff or a close is the first response. Until then the queue shows "Respond by". A close that reopens earns nothing for its resolution note.
 - Consent: opening a shell or running a script on a PC with a signed-in user, without asking first, costs points. Users answer only during the client's hidden business hours.
 - Every action costs game minutes (data/rules/actions.yaml). Scoring values live in data/rules/handoffs.yaml.
 - Camera Day needs a switch with its own CLI, so it only lands on Aurora CX switches. FortressSwitch is still read-only from the gate.

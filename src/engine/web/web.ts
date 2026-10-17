@@ -1,8 +1,9 @@
 import { uptimeText } from "../cli/views";
 import type { Fields, World } from "../model/types";
-import { canManage, resolveTarget } from "../net/reach";
+import { canManage, resolveName, resolveTarget } from "../net/reach";
 import { netState } from "../net/state";
 import { tunnelStates } from "../net/vpn";
+import { isIp } from "../util/ip";
 
 export interface WebPage {
   ok: boolean;
@@ -15,8 +16,21 @@ export interface WebPage {
 /** A read-only web admin page, opened in a browser on an RMM host. */
 export function webPage(world: World, now: number, fromId: string, address: string): WebPage {
   const ns = netState(world, now);
-  const target = resolveTarget(world, address, ns);
-  if (!target.device || !canManage(world, fromId, address, "https", ns)) {
+  // Drop any path or port, then look the name up the way the agent would.
+  const host = address.split(/[/:]/)[0] ?? "";
+  let ip = host;
+  if (!isIp(host)) {
+    const from = world.devices.find((d) => d.id === fromId);
+    const r = from && host ? resolveName(world, from, host, ns) : undefined;
+    if (!r?.ok)
+      return {
+        ok: false,
+        error: `This site can't be reached. ${host || address}'s server IP address could not be found.`,
+      };
+    ip = r.ip;
+  }
+  const target = resolveTarget(world, ip, ns);
+  if (!target.device || !canManage(world, fromId, ip, "https", ns)) {
     return { ok: false, error: `This site can't be reached. ${address} took too long to respond.` };
   }
   const d = target.device;

@@ -133,7 +133,7 @@ export const useUi = create<UiState>((set, get) => ({
         game,
         slot,
         rev: get().rev + 1,
-        session: open?.id,
+        session: lastSession(game) ?? open?.id,
         dialog: null,
         message: `Loaded slot ${slot}: ${game.log.length} actions.`,
       });
@@ -171,6 +171,16 @@ export const useUi = create<UiState>((set, get) => ({
     }
   },
 }));
+
+/** The open session the player typed in last, so a reload lands back in the same tab. */
+function lastSession(game: GameState): string | undefined {
+  for (let i = game.log.length - 1; i >= 0; i--) {
+    const a = game.log[i];
+    if (a && (a.t === "cli" || a.t === "rmm") && !game.sessions[a.session]?.closed)
+      return a.session;
+  }
+  return undefined;
+}
 
 /** The game, for components that only render once one exists. */
 export function useGame(): GameState {
