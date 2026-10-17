@@ -1,5 +1,5 @@
 import { type ReactNode, useEffect, useRef, useState } from "react";
-import { ispLines, people, unlockedFixes } from "../../engine";
+import { ispLines, people, teamLines, unlockedFixes } from "../../engine";
 import { data, useGame, useUi } from "../store";
 
 type ModalProps = { title: string; children: ReactNode; footer: ReactNode };
@@ -20,7 +20,7 @@ export function PhoneDialog({
   const game = useGame();
   const { act, setDialog } = useUi();
   const t = ticket ? game.book.tickets.find((x) => x.id === ticket) : undefined;
-  const who = [...people(game.world, t?.contact), ...ispLines(game.world)];
+  const who = [...people(game.world, t?.contact), ...ispLines(game.world), ...teamLines(data)];
   const c = call ? game.calls?.[call] : undefined;
   const person = c ? who.find((p) => p.id === c.person) : undefined;
   const docs = [...game.world.docs.devices].sort((a, b) => a.hostname.localeCompare(b.hostname));
@@ -57,7 +57,8 @@ export function PhoneDialog({
         <p className="dim" style={{ marginTop: 0 }}>
           A quick call can settle a question, test a fix with the client, or put someone's hands on
           the gear. Calls only get answered during the client's business hours. The ISP support
-          lines answer all hours, after a wait on hold, and want the account number and PIN.
+          lines answer all hours, after a wait on hold, and want the account number and PIN. Your
+          team picks up during MSP hours.
           {game.world.client.contactPreference === "scheduled-only" &&
             " This client asked for calls to be scheduled through dispatch."}
         </p>
@@ -70,7 +71,13 @@ export function PhoneDialog({
                 <tr key={p.id}>
                   <td>{p.name}</td>
                   <td className="dim">
-                    {contact ? contact.role : isp ? `ISP for ${isp.name}` : `On ${t?.id}`}
+                    {contact
+                      ? contact.role
+                      : isp
+                        ? `ISP for ${isp.name}`
+                        : p.team
+                          ? "Your team"
+                          : `On ${t?.id}`}
                   </td>
                   <td className="mono dim">{contact?.phone ?? isp?.isp.phone ?? ""}</td>
                   <td>
@@ -86,7 +93,7 @@ export function PhoneDialog({
       </Modal>
     );
 
-  const fixes = person?.isp ? [] : unlockedFixes(game.world, game.heard ?? []);
+  const fixes = person?.isp || person?.team ? [] : unlockedFixes(game.world, game.heard ?? []);
   const ispSite = game.world.docs.sites.find((s) => s.siteId === person?.isp);
   const deviceName = docs.find((d) => d.deviceId === device)?.hostname ?? "it";
   const live = !c.closed;
@@ -133,7 +140,19 @@ export function PhoneDialog({
                   {a.label.replaceAll("{site}", ispSite.name)}
                 </button>
               ))}
+            {person?.team &&
+              data.calls.team.asks.map((a) => (
+                <button
+                  key={a.id}
+                  type="button"
+                  className="btn small"
+                  onClick={() => ask(a.id, true)}
+                >
+                  {a.label.replaceAll("{device}", deviceName)}
+                </button>
+              ))}
             {!ispSite &&
+              !person?.team &&
               data.calls.asks
                 .filter((a) => !a.ticket || t)
                 .map((a) => (

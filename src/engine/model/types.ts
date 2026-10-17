@@ -40,6 +40,8 @@ export interface ClientProfile {
   businessHours: { start: number; end: number };
   afterHoursWindow: { label: string; start: number; end: number };
   contactPreference: "quick-call-ok" | "scheduled-only";
+  /** The client turns the MSP's admin accounts off when no ticket is open, and forgets to turn them back on. */
+  disablesMspAccounts?: boolean;
   staleness: Staleness;
   contacts: Contact[];
   staff: string[];
@@ -150,7 +152,8 @@ export interface Device {
   ports: Port[];
   poeBudgetW?: number;
   poe?: { class: number; drawW: number };
-  credentials?: { username: string; password: string };
+  /** disabled: the client turned the MSP's account off. Logins fail like a wrong password. */
+  credentials?: { username: string; password: string; disabled?: boolean };
   dialect?: string;
   running?: DeviceConfig;
   startup?: DeviceConfig;
@@ -233,6 +236,8 @@ export interface Docs {
   accessNotes: string[];
   history: DocHistoryEntry[];
   accessLog: { at: number; who: string; entry: string }[];
+  /** Hidden: a coworker changed a password on the device and never saved it to the vault. */
+  unsaved: { deviceId: string; who: string }[];
 }
 
 export interface Clue {

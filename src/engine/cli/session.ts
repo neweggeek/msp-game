@@ -275,6 +275,7 @@ function login(s: CliSession, line: string, ctx: CliContext, dev: Device): strin
   const auth = s.login as NonNullable<CliSession["login"]>;
   if (
     dev.credentials &&
+    !dev.credentials.disabled &&
     auth.username === dev.credentials.username &&
     line === dev.credentials.password
   ) {

@@ -5,7 +5,7 @@
   dialect: aurora-cx
   tiers: [low, mid]
   firmware: ["PL.10.13.1000", "PL.10.13.1020"]
-  credentials: { username: admin }
+  credentials: { username: admin, default: admin }
   poeBudgetW: 139
   ports:
     - { pattern: "1/1/{n}", from: 1, to: 12, poe: true }
@@ -18,7 +18,7 @@
   dialect: aurora-cx
   tiers: [low, mid, high]
   firmware: ["PL.10.13.1000", "PL.10.13.1020", "PL.10.14.0010"]
-  credentials: { username: admin }
+  credentials: { username: admin, default: admin }
   poeBudgetW: 195
   ports:
     - { pattern: "1/1/{n}", from: 1, to: 24, poe: true }
@@ -31,7 +31,7 @@
   dialect: aurora-cx
   tiers: [mid, high]
   firmware: ["PL.10.13.1020", "PL.10.14.0010"]
-  credentials: { username: admin }
+  credentials: { username: admin, default: admin }
   poeBudgetW: 250
   ports:
     - { pattern: "1/1/{n}", from: 1, to: 48, poe: true }

@@ -39,6 +39,7 @@ export { docsDiff, type DocDiff } from "./gen/diff";
 export { assetTypes, assetTypeOf, connectCommand, type AssetType } from "./docs/assets";
 export {
   ispLines,
+  teamLines,
   people,
   findPerson,
   unlockedFixes,

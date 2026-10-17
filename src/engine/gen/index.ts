@@ -10,7 +10,7 @@ import { genSite } from "./site";
 import { checkSolvable } from "./validate";
 
 /** Bump when a code change alters what an existing seed builds. */
-export const GENERATOR_VERSION = 8;
+export const GENERATOR_VERSION = 9;
 
 const MAX_WORLD_ATTEMPTS = 200;
 const MAX_FAULT_ATTEMPTS = 8;
@@ -54,6 +54,16 @@ function buildBase(
       probe: role === "hq" && scenario.probe === true,
     };
     sites.push(genSiteGear(rng.fork(`gear-${role}`), data, client, site, plan, opts, ctx));
+  }
+  // Factory passwords nobody changed, and accounts the client switched off.
+  const crng = rng.fork("credentials");
+  const level = data.staleness.levels[client.staleness];
+  for (const d of ctx.devices) {
+    const factory = data.devices.get(d.templateId)?.credentials?.default;
+    if (!d.credentials) continue;
+    if (factory !== undefined && crng.chance(level.defaultPassword))
+      d.credentials.password = factory;
+    if (client.disablesMspAccounts && d.kind === "firewall") d.credentials.disabled = true;
   }
   const fwOf = (siteId: string) =>
     ctx.devices.find((d) => d.kind === "firewall" && d.siteId === siteId) as Device;

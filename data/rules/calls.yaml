@@ -18,6 +18,8 @@ asks:
   - { id: recent-changes, kind: fact, minutes: 2, label: "Did anything change around the office lately?", default: "Not that I know of." }
   - { id: isp-bill, kind: isp-bill, minutes: 4, label: "Can you find the internet bill and read me the account number and security PIN?" }
   - { id: modem-lights, kind: fact, minutes: 4, label: "Can you look at the internet provider's modem? What lights are on?", default: "All the lights are green, I think." }
+  - { id: device-password, kind: device-password, minutes: 3, device: true, label: "Do you have the admin password for {device}?" }
+  - { id: enable-account, kind: enable-account, minutes: 6, device: true, label: "Can you turn our admin account on {device} back on?" }
   - { id: closet-power, kind: fact, minutes: 3, label: "What does the network closet plug into?", default: "The outlets on the wall, I think. I don't go in there much." }
 
 lines:
@@ -40,7 +42,29 @@ lines:
   testCollateral: "{name}: That part works now, but {down} stopped working."
   fixDone: "{name}: Done."
   ispBill: "{name}: The bill for {site} says account {account}, PIN {pin}."
+  devicePassword: "{name}: Let me look. It's {password}."
+  devicePasswordNone: "{name}: I don't have that. {main} keeps the passwords."
+  devicePasswordBlank: "{name}: There's no password on it. Just press Enter."
+  accountAlreadyOn: "{name}: I looked, and your account is already on. I didn't change anything."
+  accountEnabled: "{name}: OK, I logged in and turned it back on."
+  accountNotMine: "{name}: I can't do that. {main} is the only one with the login."
   ispBillNone: "{name}: I don't have the bill here. Our office manager keeps those."
+
+# Your own team. They pick up during MSP hours.
+team:
+  people:
+    - { id: kyle, name: Kyle, role: tier 2 }
+    - { id: maria, name: Maria, role: tier 1 }
+    - { id: dev, name: Dev, role: senior }
+  asks:
+    - { id: vault-password, kind: vault-password, minutes: 3, label: "Did you change the password on {device}? The vault one doesn't work." }
+  lines:
+    hello: "{name}: Hey, what's up?"
+    closed: "{name} isn't in right now. Voicemail."
+    unsaved: "{name}: Oh no. I changed it on the box and never saved it to the vault. It's {password}. I'll fix the entry, sorry."
+    typo: "{name}: I updated that vault entry. I might have fat-fingered it. Try the version before mine in the docs history."
+    notMe: "{name}: I haven't touched {device}. Try the docs history, the factory login, or the client."
+    tired: "{name}: I have to jump on a call. Ping me if you need anything else."
 
 # The ISP's support line for each site. The number comes from the docs.
 isp:

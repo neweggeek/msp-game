@@ -22,6 +22,8 @@ businessHours:
   - { start: 450, end: 1080, weight: 3 }
   - { start: 420, end: 1140, weight: 1 }
 contactPreference: { quick-call-ok: 4, scheduled-only: 1 }
+# Some clients turn the MSP's admin accounts off between tickets, then forget to turn them back on.
+disablesMspAccounts: 0.15
 lan:
   vlans:
     - { id: 10, name: Data, subnet: "10.{site}.10.0/24", role: data }

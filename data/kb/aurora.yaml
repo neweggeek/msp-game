@@ -9,6 +9,13 @@
     - "interface 1/1/5 then: vlan access 10, shutdown, no shutdown, description <text>."
     - "power-over-ethernet priority low|high|critical sets PoE priority on a port."
     - "exit leaves the interface, end goes back to the # prompt."
+- id: aurora-access
+  brand: aurora
+  type: defaults
+  title: "Aurora CX factory login"
+  body:
+    - "Factory login: admin, password admin."
+    - "SSH is on by default on the management VLAN."
 - id: aurora-poe
   brand: aurora
   type: defaults

@@ -48,6 +48,8 @@ Phase 2 notes:
 - Rooms can place fixed gear (`gear` in data/rooms), like the clinic NVR.
 - ISP calls: every docs site has an ISP support line in the phone dialog. It answers all hours after a hold (minutes from `isp.holdMinutes`), then wants the account number and PIN from the docs. Some docs have no PIN; a contact can read it off the bill (`isp-bill` ask, and low competence misreads a digit), and the player fixes the docs PIN by hand. Verified, the agent reports the line (outage, nothing answering behind the modem, or clean) and can reboot the modem. Access token `isp`.
 - ISP outages (effect `isp-outage`, check `isp-up`): the site loses internet and tunnels while the firewall stays up. Ovik needs internet to report, so its collector reads offline. Overnight Update is the quick-play case for it.
+- Credential ladder: a vault password can be wrong (`wrongCredential`). Half the time the docs history still has the good one; otherwise a coworker changed it on the device and never saved it (hidden `docs.unsaved`), and only they know it. They show up in the access log. Devices still on the factory login (`defaultPassword`, defaults in device templates and the vendor KB) have no vault entry. The client's main contact can read device passwords. Coworkers are in the phone dialog under "Your team" and pick up during MSP hours.
+- Disabled MSP accounts: a client with `disablesMspAccounts` has the firewall admin account switched off. Login fails like a wrong password. The docs access notes say so, and only the main contact can turn it back on (`enable-account` ask).
 - The status bar picks what a new shift plants: a scenario, or one case on the one-site quick client. Saves keep the pick.
 
 Phase 1 notes:
