@@ -1,13 +1,13 @@
 {
   "generatorVersion": 8,
   "seeds": {
-    "12345": "960573d7e35a3ddf",
-    "alpha": "23aa9e91d8db3961",
-    "bravo": "7cbd47e120933089",
-    "charlie": "5683578a37b11276",
-    "delta": "a33e2549f59cd019",
-    "echo": "58c3858cd63bfb6f",
-    "camera-day": "cd97d9c74c7f5815",
-    "msp": "d0613739f2e25a81"
+    "12345": "2cdba74fec3ac344",
+    "alpha": "9c91c95944b93de8",
+    "bravo": "3414f7b14add5143",
+    "charlie": "1ed8f68a81c6efe7",
+    "delta": "71c8fa2d6ad009a2",
+    "echo": "283cefa4c0c88926",
+    "camera-day": "02ca067f92cce71c",
+    "msp": "7077a31108d92103"
   }
 }

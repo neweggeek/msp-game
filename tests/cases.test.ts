@@ -356,6 +356,11 @@ describe("first slice cases play end to end", () => {
       const doc = g.world.docs.sites[0] as (typeof g.world.docs.sites)[number];
       const t = g.book.tickets.find((x) => x.caseId === "stuck-modem") as Ticket;
       expect(netState(g.world, g.clock.now).ispDown.get("hq")).toBe(true);
+      expect(
+        ovikView(g.world, g.clock.now).history.some(
+          (h) => h.state === "down" && fmt(h.at).endsWith("02:14"),
+        ),
+      ).toBe(true);
       expect(act({ t: "rmm-open", device: server.id }).ok).toBe(false);
       // A wrong PIN gets nothing.
       doc.isp.pin = "0000" === site.isp.pin ? "1111" : "0000";
@@ -372,7 +377,7 @@ describe("first slice cases play end to end", () => {
       for (let i = 0; i < 10; i++) {
         if (g.calls?.[cid]?.closed) cid = dialUntilAnswered(g, act, t.id);
         const out = act({ t: "call-ask", call: cid, ask: "isp-bill" }).output?.join(" ") ?? "";
-        const m = out.match(/PIN is (\d{4})/);
+        const m = out.match(/PIN (\d{4})/);
         if (m?.[1] === site.isp.pin) break;
       }
       expect(act({ t: "doc-edit", target: "site:hq", field: "pin", value: site.isp.pin }).ok).toBe(

@@ -219,20 +219,17 @@ export function ask(
         break;
       }
       case "isp-bill": {
-        // The ticket's site, or the main office.
-        const siteId =
-          (opts.caseInst &&
-            world.devices.find((d) => d.id === opts.caseInst?.bindings[opts.caseInst.primary])
-              ?.siteId) ||
-          "hq";
-        const isp = world.sites.find((s) => s.id === siteId)?.isp;
-        if (!person.insider || !isp) {
+        if (!person.insider) {
           out.lines.push(say(data, "ispBillNone", v));
           break;
         }
-        // A misread digit, some of the time.
-        const pin = slip() ? isp.pin.replace(/\d$/, (d) => String((Number(d) + 1) % 10)) : isp.pin;
-        out.lines.push(say(data, "ispBill", { ...v, account: isp.account, pin }));
+        // One bill per site. A misread digit on one of them, some of the time.
+        const miss = slip() ? rng.int(0, world.sites.length - 1) : -1;
+        world.sites.forEach((s, i) => {
+          const pin =
+            i === miss ? s.isp.pin.replace(/\d$/, (d) => String((Number(d) + 1) % 10)) : s.isp.pin;
+          out.lines.push(say(data, "ispBill", { ...v, site: s.name, account: s.isp.account, pin }));
+        });
         break;
       }
       case "lights": {
@@ -365,7 +362,9 @@ function ispAsk(
       const ns = netState(world, now);
       const o = site.isp.outage;
       const fw = siteFirewall(world, siteId);
-      if (ns.ispDown.get(siteId) && o)
+      if (site.isp.rebootUntil !== undefined && now < site.isp.rebootUntil)
+        out.lines.push(ispSay(data, "statusRebooting", v));
+      else if (ns.ispDown.get(siteId) && o)
         out.lines.push(
           ispSay(data, "statusOutage", { ...v, since: formatTime(data.calendar, o.since) }),
         );

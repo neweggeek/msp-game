@@ -939,7 +939,8 @@ function run(state: GameState, data: GameData, a: Action): ActionResult {
         }
       }
       if (t) {
-        if (call.answered) t.respondedAt ??= clock.now;
+        // Only talking to the client counts as a response, not the ISP.
+        if (call.answered && !person.isp) t.respondedAt ??= clock.now;
         t.history.push({
           at: clock.now,
           by: "tech",
@@ -984,7 +985,11 @@ function run(state: GameState, data: GameData, a: Action): ActionResult {
         t.history.push({
           at: clock.now,
           by: person.isp ? "isp" : "client",
-          text: res.lines.slice(1).join(" "),
+          // Account numbers and PINs stay off the ticket, like passwords.
+          text:
+            def && "kind" in def && def.kind === "isp-bill"
+              ? "Read the account numbers and PINs off the ISP bill."
+              : res.lines.slice(1).join(" "),
         });
       spend(state, data, def?.minutes ?? 5);
       return { ok: true, output: call.transcript.slice(before) };

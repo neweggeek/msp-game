@@ -39,7 +39,7 @@ lines:
   testBroken: "{name}: No, still not working."
   testCollateral: "{name}: That part works now, but {down} stopped working."
   fixDone: "{name}: Done."
-  ispBill: "{name}: Found it. The account number is {account} and the PIN is {pin}."
+  ispBill: "{name}: The bill for {site} says account {account}, PIN {pin}."
   ispBillNone: "{name}: I don't have the bill here. Our office manager keeps those."
 
 # The ISP's support line for each site. The number comes from the docs.
@@ -65,4 +65,5 @@ isp:
     statusNothing: "{name}: The modem is online and the line is clean. I don't see anything behind the modem answering, though. Check your equipment."
     statusClean: "{name}: The modem is online, the line is clean, and I see traffic going both ways. Everything looks good on our side."
     reboot: "{name}: OK, I sent the reboot. Give it about {minutes} minutes to come back."
+    statusRebooting: "{name}: The modem is still rebooting. Give it a few more minutes."
     tired: "{name}: Is there anything else? Then I'll note the account and let you go."

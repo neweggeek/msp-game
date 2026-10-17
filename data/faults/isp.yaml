@@ -9,8 +9,8 @@
   proof: []
   clues:
     - id: all-offline
-      text: "Shinobi RMM shows every agent at the site offline since 02:14."
-      surface: rmm
+      text: "Ovik history shows the whole site down at 02:14, and Shinobi RMM shows every agent offline."
+      surface: monitoring
       requires: docs
     - id: modem-lights
       text: "On a call, a contact says the Online light on the internet modem is blinking orange."

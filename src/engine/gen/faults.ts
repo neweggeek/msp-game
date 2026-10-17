@@ -202,12 +202,16 @@ export function visibleMap(draft: Draft, at: number): Map<string, boolean> {
   const w = draft as World;
   const ns = netState(w, at);
   const col = draft.monitoring?.collectorId ?? "";
+  // A collector with no internet cannot report anything to the Ovik cloud.
+  const reporting = canReach(w, col, "1.1.1.1", ns);
   const out = new Map<string, boolean>();
   for (const d of draft.devices) {
     const ip = d.kind === "firewall" ? undefined : d.ip;
     out.set(
       d.id,
-      ns.online.get(d.id) === true && (d.id === col || !ip || canReach(w, col, ip, ns)),
+      reporting &&
+        ns.online.get(d.id) === true &&
+        (d.id === col || !ip || canReach(w, col, ip, ns)),
     );
   }
   return out;
