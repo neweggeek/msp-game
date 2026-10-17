@@ -1,0 +1,234 @@
+# seed: transcript-1
+# scenario: slice
+# device: switch
+> configure terminal
+> interface 1/1/3
+> description Lobby AP
+> power-over-ethernet priority high
+> show running-config
+hostname SW-LPT01
+interface 1/1/1
+    no shutdown
+    vlan access 10
+    power-over-ethernet priority low
+interface 1/1/2
+    no shutdown
+    vlan access 10
+    power-over-ethernet priority low
+interface 1/1/3
+    description Lobby AP
+    no shutdown
+    vlan access 10
+    power-over-ethernet priority high
+interface 1/1/4
+    no shutdown
+    vlan access 10
+    power-over-ethernet priority low
+interface 1/1/5
+    no shutdown
+    vlan access 20
+    power-over-ethernet priority low
+interface 1/1/6
+    no shutdown
+    vlan access 10
+    power-over-ethernet priority low
+interface 1/1/7
+    no shutdown
+    vlan access 99
+    power-over-ethernet priority low
+interface 1/1/8
+    no shutdown
+    vlan access 10
+    power-over-ethernet priority low
+interface 1/1/9
+    no shutdown
+    vlan access 20
+    power-over-ethernet priority low
+interface 1/1/10
+    no shutdown
+    vlan access 20
+    power-over-ethernet priority low
+interface 1/1/11
+    no shutdown
+    vlan access 10
+    power-over-ethernet priority low
+interface 1/1/12
+    no shutdown
+    vlan access 10
+    power-over-ethernet priority low
+interface 1/1/13
+    no shutdown
+    vlan access 99
+    power-over-ethernet priority low
+interface 1/1/14
+    no shutdown
+    vlan access 10
+    power-over-ethernet priority low
+interface 1/1/15
+    no shutdown
+    vlan access 10
+    power-over-ethernet priority low
+interface 1/1/16
+    no shutdown
+    vlan access 10
+    power-over-ethernet priority low
+interface 1/1/17
+    no shutdown
+    vlan access 10
+    power-over-ethernet priority low
+interface 1/1/18
+    no shutdown
+    vlan access 20
+    power-over-ethernet priority low
+interface 1/1/19
+    no shutdown
+    vlan access 10
+    power-over-ethernet priority low
+interface 1/1/20
+    no shutdown
+    vlan access 10
+    power-over-ethernet priority low
+interface 1/1/21
+    no shutdown
+    vlan access 10
+    power-over-ethernet priority low
+interface 1/1/22
+    no shutdown
+    vlan access 10
+    power-over-ethernet priority low
+interface 1/1/23
+    no shutdown
+    vlan access 10
+    power-over-ethernet priority low
+interface 1/1/24
+    no shutdown
+    vlan access 10
+    power-over-ethernet priority low
+interface 1/1/25
+    no shutdown
+    vlan access 99
+    power-over-ethernet priority low
+interface 1/1/26
+    no shutdown
+    vlan access 99
+    power-over-ethernet priority low
+interface 1/1/27
+    no shutdown
+    vlan access 10
+    power-over-ethernet priority low
+interface 1/1/28
+    no shutdown
+    vlan access 20
+    power-over-ethernet priority low
+interface 1/1/29
+    no shutdown
+    vlan access 10
+    power-over-ethernet priority low
+interface 1/1/30
+    no shutdown
+    vlan access 10
+    power-over-ethernet priority low
+interface 1/1/31
+    no shutdown
+    vlan access 10
+    power-over-ethernet priority low
+interface 1/1/32
+    no shutdown
+    vlan access 20
+    power-over-ethernet priority low
+interface 1/1/33
+    no shutdown
+    vlan access 10
+    power-over-ethernet priority low
+interface 1/1/34
+    no shutdown
+    vlan access 10
+    power-over-ethernet priority low
+interface 1/1/35
+    no shutdown
+    vlan access 99
+    power-over-ethernet priority low
+interface 1/1/36
+    no shutdown
+    vlan access 10
+    power-over-ethernet priority low
+interface 1/1/37
+    no shutdown
+    vlan access 20
+    power-over-ethernet priority low
+interface 1/1/38
+    no shutdown
+    vlan access 10
+    power-over-ethernet priority low
+interface 1/1/39
+    no shutdown
+    vlan access 20
+    power-over-ethernet priority low
+interface 1/1/40
+    no shutdown
+    vlan access 10
+    power-over-ethernet priority low
+interface 1/1/41
+    no shutdown
+    vlan access 10
+    power-over-ethernet priority low
+interface 1/1/42
+    no shutdown
+    vlan access 10
+    power-over-ethernet priority low
+interface 1/1/43
+    no shutdown
+    vlan access 99
+    power-over-ethernet priority low
+interface 1/1/44
+    no shutdown
+    vlan access 20
+    power-over-ethernet priority low
+interface 1/1/45
+    no shutdown
+    vlan access 20
+    power-over-ethernet priority low
+interface 1/1/46
+    no shutdown
+    vlan access 10
+    power-over-ethernet priority low
+interface 1/1/47
+    no shutdown
+    vlan access 10
+    power-over-ethernet priority low
+interface 1/1/48
+    no shutdown
+    vlan access 10
+    power-over-ethernet priority low
+interface 1/1/49
+    no shutdown
+    no power-over-ethernet
+    power-over-ethernet priority low
+interface 1/1/50
+    no shutdown
+    no power-over-ethernet
+    power-over-ethernet priority low
+interface 1/1/51
+    no shutdown
+    no power-over-ethernet
+    power-over-ethernet priority low
+interface 1/1/52
+    no shutdown
+    no power-over-ethernet
+    power-over-ethernet priority low
+vlan 10
+    name Data
+vlan 20
+    name Voice
+vlan 99
+    name Mgmt
+> exit
+> exit
+> show interface 1/1/3
+Interface 1/1/3 is down
+ Description: Lobby AP
+ Speed -, VLAN 10, PoE searching
+ Rx packets 0, errors 0, CRC 0
+ Tx packets 0, errors 0, drops 0
+> write memory
+Configuration saved.

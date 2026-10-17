@@ -1,13 +1,13 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
-import { DebugView } from "./debug/DebugView";
-import "./debug/debug.css";
+import { App } from "./App";
+import "./app.css";
 
 const root = document.getElementById("root");
 if (root) {
   createRoot(root).render(
     <StrictMode>
-      <DebugView />
+      <App />
     </StrictMode>,
   );
 }

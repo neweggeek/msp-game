@@ -4,7 +4,7 @@
  */
 export function fill(template: string, lookup: (key: string) => unknown): string {
   return template.replace(
-    /\{([a-zA-Z0-9_.]+)(?::([<>])(\d+))?\}/g,
+    /\{([a-zA-Z0-9_.-]+)(?::([<>])(\d+))?\}/g,
     (_m, key: string, align?: string, width?: string) => {
       const raw = lookup(key);
       const text =

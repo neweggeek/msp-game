@@ -7,19 +7,30 @@ import {
   type ClientRules,
   type DeviceTemplate,
   type Dialect,
+  type ExtraTicketDef,
   type FaultDef,
+  type HandoffRules,
+  type KbEntry,
   type RoomTemplate,
+  type ScenarioDef,
+  type ScriptDef,
   type SlaRules,
   type StalenessRules,
   type TicketRules,
+  actionCostSchema,
   brandSchema,
   calendarSchema,
   caseSchema,
   clientRulesSchema,
   deviceTemplateSchema,
   dialectSchema,
+  extraTicketSchema,
   faultSchema,
+  handoffRulesSchema,
+  kbSchema,
   roomTemplateSchema,
+  scenarioSchema,
+  scriptSchema,
   slaSchema,
   stalenessSchema,
   ticketRulesSchema,
@@ -32,6 +43,12 @@ export interface GameData {
   faults: Map<string, FaultDef>;
   cases: Map<string, CaseDef>;
   dialects: Map<string, Dialect>;
+  extraTickets: Map<string, ExtraTicketDef>;
+  scenarios: Map<string, ScenarioDef>;
+  scripts: Map<string, ScriptDef>;
+  kb: Map<string, KbEntry>;
+  handoffs: HandoffRules;
+  actionCosts: Record<string, number>;
   sla: SlaRules;
   tickets: TicketRules;
   calendar: CalendarRules;
@@ -103,6 +120,12 @@ export function loadData(files: RawFiles): GameData {
     faults: listFolder(files, "faults", faultSchema),
     cases: listFolder(files, "cases", caseSchema),
     dialects: listFolder(files, "dialects", dialectSchema),
+    extraTickets: listFolder(files, "tickets", extraTicketSchema),
+    scenarios: listFolder(files, "scenarios", scenarioSchema),
+    scripts: listFolder(files, "rmm", scriptSchema),
+    kb: listFolder(files, "kb", kbSchema),
+    handoffs: rule(files, "handoffs", handoffRulesSchema),
+    actionCosts: rule(files, "actions", actionCostSchema),
     sla: rule(files, "sla", slaSchema),
     tickets: rule(files, "tickets", ticketRulesSchema),
     calendar: rule(files, "calendar", calendarSchema),

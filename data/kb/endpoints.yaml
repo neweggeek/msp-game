@@ -1,0 +1,13 @@
+- id: hawkvision-ptz4
+  brand: hawkvision
+  type: compat
+  title: "Hawkvision PTZ-4 power"
+  body:
+    - "PoE class 4 (802.3at). Draws 18 W idle and up to 25 W with heater and motor running."
+    - "Ships with a static IP. The installer sets it on site."
+- id: fortressap-poe
+  brand: fortress
+  type: compat
+  title: "FortressAP 231G power"
+  body:
+    - "PoE class 4. Needs 802.3at for both radios."

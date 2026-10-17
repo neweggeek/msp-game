@@ -1,0 +1,19 @@
+# Tickets that should go back to dispatch instead of being worked.
+- id: edr-misroute
+  kind: misroute
+  origin: client
+  priority: P3
+  title: "Endpoint security console says the firewall blocks updates"
+  body: "The SentryOne console says agents on six PCs can't download definitions. Probably the firewall?"
+  sendBack: misrouted
+  hint: "The network team has no access to the SentryOne console. It is a security tool."
+
+- id: ap-alert-duplicate
+  kind: duplicate
+  origin: alert
+  priority: P3
+  duplicateOf: camera-day
+  title: "Ovik: {ap.hostname} offline"
+  body: "Ovik alert: {ap.hostname} ({ap.ip}) stopped responding Monday 10:30."
+  sendBack: duplicate
+  hint: "Same outage as the phones and Wi-Fi ticket."

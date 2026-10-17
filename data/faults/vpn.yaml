@@ -1,0 +1,40 @@
+- id: branch-wan-changed
+  name: Branch WAN IP changed after ISP work
+  layer: 3
+  device: firewall
+  startedAt: "0d 06:10"
+  effects:
+    - { type: change-wan-ip, target: fw-branch }
+  proof:
+    - { type: tunnel-down, role: fw-hq }
+  clues:
+    - id: tunnel-down
+      text: "get vpn ipsec tunnel summary on {fw-hq.hostname} shows the tunnel to the branch down."
+      surface: cli
+      requires: "ssh:fw-hq"
+    - id: no-response
+      text: "diagnose vpn ike log on {fw-hq.hostname} shows no response from the branch's old WAN IP."
+      surface: cli
+      requires: "ssh:fw-hq"
+    - id: new-public-ip
+      text: "RMM shows {branch-pc.hostname} on a new public IP."
+      surface: rmm
+      requires: "rmm:branch-pc"
+
+- id: phase2-mangled
+  name: Phase 2 selector changed by a coworker
+  layer: 3
+  device: firewall
+  startedAt: "0d 11:20"
+  effects:
+    - { type: mangle-phase2, target: fw-branch }
+  proof: []
+  clues:
+    - id: selector-mismatch
+      text: "diagnose vpn ike log on {fw-branch.hostname} shows no matching phase 2 selectors."
+      surface: cli
+      requires: "ssh:fw-branch"
+    - id: coworker-note
+      text: "Ticket history shows a coworker edited phase 2 on {fw-branch.hostname} Monday."
+      surface: ticket
+      requires: docs

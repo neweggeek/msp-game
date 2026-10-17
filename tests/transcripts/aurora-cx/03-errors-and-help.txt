@@ -1,0 +1,37 @@
+# seed: transcript-1
+# scenario: slice
+# device: switch
+> ?
+configure    Enter configuration mode.
+show         Show running system information.
+write        Save the running config.
+ping         Ping a host.
+traceroute   Trace the route to a host.
+exit         Log out.
+> show ?
+running-config
+interface
+power-over-ethernet
+vlan
+mac-address-table
+lldp
+version
+> sh ver
+Aurora CX 6000 48G
+Version      : PL.10.13.1020
+Serial       : ACX600048G651948150
+Uptime       : 88 days, 9 hours, 0 minutes
+> show bogus
+Invalid input: bogus
+> configure terminal
+> interface 1/1/99
+Port 1/1/99 does not exist.
+> interface 1/1/2
+> power-over-ethernet priority extreme
+Invalid input: extreme
+> power-over-ethernet priority
+Incomplete command.
+> no shutdown
+> end
+> exit
+Connection to SW-LPT01 closed.

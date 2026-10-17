@@ -1,0 +1,21 @@
+# Shinobi RMM script library. "effect" is an engine primitive.
+- id: reset-dns
+  name: Reset DNS servers to DHCP
+  minutes: 2
+  effect: reset-dns
+  description: "Clears DNS servers typed into the network adapter so it takes them from DHCP."
+- id: power-never-sleep
+  name: Set power plan to never sleep
+  minutes: 2
+  effect: no-sleep
+  description: "Sets sleep and hibernate to never on AC power."
+- id: flush-dns
+  name: Flush DNS cache
+  minutes: 1
+  effect: none
+  description: "Runs ipconfig /flushdns."
+- id: restart-adapter
+  name: Restart network adapter
+  minutes: 3
+  effect: none
+  description: "Disables and enables the adapter. The agent drops for about a minute."

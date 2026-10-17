@@ -1,4 +1,5 @@
 import type { Device, Fields, PoePriority, World } from "../model/types";
+import { inDailyWindow } from "../util/time";
 
 export interface PoePortState {
   port: string;
@@ -19,8 +20,10 @@ export interface PoeSwitchState {
 }
 
 export interface NetState {
+  now: number;
   online: Map<string, boolean>;
   powered: Map<string, boolean>;
+  asleep: Map<string, boolean>;
   poe: Map<string, PoeSwitchState>;
 }
 
@@ -40,7 +43,7 @@ export function poeFor(world: World, sw: Device): PoeSwitchState {
   const budgetW = sw.poeBudgetW ?? 0;
   const ports: PoePortState[] = sw.ports.map((p) => {
     const peer = p.link ? world.devices.find((d) => d.id === p.link?.device) : undefined;
-    const wants = p.poeCapable && peer?.poe;
+    const wants = p.poeCapable && !p.shutdown && peer?.poe;
     return {
       port: p.name,
       state: !p.poeCapable ? "none" : !p.poeEnabled ? "disabled" : wants ? "denied" : "searching",
@@ -67,14 +70,16 @@ export function poeFor(world: World, sw: Device): PoeSwitchState {
   return { deviceId: sw.id, budgetW, requestedW, allocatedW, ports };
 }
 
-/** Derived state: computed from config and faults, never stored. */
-export function netState(world: World): NetState {
+/** Derived state at a game minute: computed from config, faults and time, never stored. */
+export function netState(world: World, now: number): NetState {
   const poe = new Map<string, PoeSwitchState>();
   for (const sw of world.devices.filter((d) => d.kind === "switch"))
     poe.set(sw.id, poeFor(world, sw));
 
   const powered = new Map<string, boolean>();
+  const asleep = new Map<string, boolean>();
   for (const d of world.devices) {
+    asleep.set(d.id, d.sleep !== undefined && inDailyWindow(now, d.sleep));
     if (!d.poe) {
       powered.set(d.id, true);
       continue;
@@ -88,19 +93,34 @@ export function netState(world: World): NetState {
 
   const online = new Map<string, boolean>();
   for (const d of world.devices) {
-    let up = powered.get(d.id) === true;
+    let up = powered.get(d.id) === true && !asleep.get(d.id);
     if (up && d.kind !== "firewall") {
-      const link = world.network.links.find((l) => l.a.device === d.id || l.b.device === d.id);
-      const peer = link ? (link.a.device === d.id ? link.b.device : link.a.device) : undefined;
-      up = !!link && link.condition === "good" && !!peer && powered.get(peer) === true;
+      const link = world.links.find((l) => l.a.device === d.id || l.b.device === d.id);
+      const peerRef = link ? (link.a.device === d.id ? link.b : link.a) : undefined;
+      const peer = peerRef ? world.devices.find((x) => x.id === peerRef.device) : undefined;
+      const peerPort = peer?.ports.find((p) => p.name === peerRef?.port);
+      up =
+        !!link &&
+        link.condition === "good" &&
+        !!peer &&
+        powered.get(peer.id) === true &&
+        !peerPort?.shutdown;
     }
     online.set(d.id, up);
   }
-  return { online, powered, poe };
+  return { now, online, powered, asleep, poe };
 }
 
-/** Firewall interface table from its running config. */
 export function firewallInterfaces(fw: Device): [string, Fields][] {
-  const table = (fw.running?.interfaces ?? {}) as Record<string, Fields>;
-  return Object.entries(table);
+  return Object.entries((fw.running?.interfaces ?? {}) as Record<string, Fields>);
+}
+
+export function siteFirewall(world: World, siteId: string): Device | undefined {
+  return world.devices.find((d) => d.kind === "firewall" && d.siteId === siteId);
+}
+
+export function siteOf(world: World, siteId: string) {
+  const s = world.sites.find((x) => x.id === siteId);
+  if (!s) throw new Error(`no site ${siteId}`);
+  return s;
 }

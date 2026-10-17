@@ -1,23 +1,25 @@
-# Faults from spec/02-device-faults.md. Effects and proofs use engine primitives.
+# Faults from spec/02-device-faults.md. Effects, proofs and checks use engine primitives.
+# "startedAt" is game time: "<day>d HH:MM", day 0 is the Monday before play starts.
 - id: poe-budget-exhausted
   name: PoE budget exhausted, every port the same priority
   layer: 1
   device: switch
+  startedAt: "0d 10:30"
   effects:
-    - { type: set-poe-priority-all, value: low }
-    - { type: add-endpoints, template: hawkvision-ptz4, count: 4, label: "CAM-{nn}" }
+    - { type: set-poe-priority-all, target: switch, value: low }
+    - { type: add-endpoints, target: switch, template: hawkvision-ptz4, count: 4, label: "CAM-{nn}" }
   proof:
     - { type: poe-denied, kind: ap }
   clues:
     - id: ap-offline
-      text: "Ovik shows {ap.hostname} ({ap.ip}) offline since Monday."
+      text: "Ovik shows {ap.hostname} ({ap.ip}) offline since Monday 10:30."
       surface: monitoring
       requires: monitoring
     - id: poe-over-budget
-      text: "diagnose switch poe status on {firewall.hostname} shows {switch.hostname} over its PoE budget."
+      text: "show power-over-ethernet on {switch.hostname} shows it over its PoE budget with {ap.hostname} denied."
       surface: cli
-      requires: "ssh:firewall"
+      requires: "ssh:switch"
     - id: cameras-in-arp
-      text: "get system arp on {firewall.hostname} lists four new camera addresses."
+      text: "get system arp on {firewall.hostname} lists four camera addresses missing from the docs."
       surface: cli
       requires: "ssh:firewall"

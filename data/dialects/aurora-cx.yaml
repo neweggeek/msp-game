@@ -1,0 +1,131 @@
+# Aurora CX dialect: IOS-like modes, no enable step, changes apply live, write memory saves.
+id: aurora-cx
+name: Aurora CX
+abbreviations: unique-prefix
+apply: live
+banner:
+  - "Aurora CX {model}"
+  - "Firmware {firmware}"
+  - ""
+prompts:
+  exec: "{hostname}# "
+  section: "{hostname}(config)# "
+  item: "{hostname}({itemPrompt})# "
+
+sections:
+  - { path: "global", model: system, kind: single }
+  - { path: "interface", model: ports, kind: table, itemPrompt: "config-if", create: false }
+  - { path: "vlan", model: vlans, kind: table, itemPrompt: "config-vlan-{item}" }
+
+fields:
+  system:
+    hostname: { model: hostname, codec: string }
+  ports:
+    description: { model: description, codec: string }
+    shutdown: { model: shutdown, codec: bool }
+    vlan-access: { model: vlan, codec: int }
+    poe: { model: poeEnabled, codec: bool }
+    poe-priority: { model: poePriority, codec: enum, values: [low, high, critical] }
+  vlans:
+    name: { model: name, codec: string }
+
+# How "show running-config" writes each field. {value} is the field value.
+render:
+  style: lines
+  ports:
+    description: "description {value}"
+    shutdown: { "true": "shutdown", "false": "no shutdown" }
+    vlan-access: "vlan access {value}"
+    poe: { "true": "", "false": "no power-over-ethernet" }
+    poe-priority: "power-over-ethernet priority {value}"
+  vlans:
+    name: "name {value}"
+  system:
+    hostname: "hostname {value}"
+
+keywords:
+  show: "Show running system information."
+  configure: "Enter configuration mode."
+  write: "Save the running config."
+  no: "Negate a command or set its default."
+  power-over-ethernet: "Configure PoE on this port."
+
+commands:
+  - { words: "configure terminal", verb: enter-config, section: global, modes: [exec], help: "Enter configuration mode." }
+  - { words: "show running-config", verb: show, modes: [exec, section, item], help: "Show the running config." }
+  - { words: "show interface brief", verb: view, view: interface-brief, modes: [exec], help: "Show port status." }
+  - { words: "show power-over-ethernet", verb: view, view: poe, modes: [exec], help: "Show PoE budget and ports." }
+  - { words: "show power-over-ethernet brief", verb: view, view: poe, modes: [exec], help: "Show PoE budget and ports." }
+  - { words: "show vlan", verb: view, view: vlans, modes: [exec], help: "Show VLANs." }
+  - { words: "show mac-address-table", verb: view, view: mac-table, modes: [exec], help: "Show learned MAC addresses." }
+  - { words: "show lldp neighbor-info", verb: view, view: lldp, modes: [exec], help: "Show LLDP neighbors." }
+  - { words: "show version", verb: view, view: version, modes: [exec], help: "Show firmware version." }
+  - { words: "show interface {port}", verb: counters, view: port-detail, modes: [exec], help: "Show one port with counters." }
+  - { words: "write memory", verb: save, modes: [exec, section, item], help: "Save the running config." }
+  - { words: "ping {target}", verb: ping, modes: [exec], help: "Ping a host." }
+  - { words: "traceroute {target}", verb: traceroute, modes: [exec], help: "Trace the route to a host." }
+  - { words: "exit", verb: exit-shell, modes: [exec], help: "Log out." }
+  - { words: "hostname {value*}", verb: set, field: hostname, modes: [section], help: "Set the switch name." }
+  - { words: "interface {name}", verb: select, table: interface, modes: [section, item], help: "Configure a port." }
+  - { words: "vlan {name}", verb: select, table: vlan, modes: [section], help: "Configure a VLAN." }
+  - { words: "exit", verb: exit-item, modes: [item], help: "Leave this context." }
+  - { words: "exit", verb: exit-config, modes: [section], help: "Leave config mode." }
+  - { words: "end", verb: save-exit, modes: [section, item], help: "Back to the # prompt." }
+  - { words: "description {value*}", verb: set, field: description, modes: [item], help: "Port description." }
+  - { words: "shutdown", verb: set, field: shutdown, value: "true", modes: [item], help: "Disable the port." }
+  - { words: "no shutdown", verb: set, field: shutdown, value: "false", modes: [item], help: "Enable the port." }
+  - { words: "vlan access {value}", verb: set, field: vlan-access, modes: [item], help: "Set the access VLAN." }
+  - { words: "power-over-ethernet", verb: set, field: poe, value: "true", modes: [item], help: "Enable PoE." }
+  - { words: "no power-over-ethernet", verb: set, field: poe, value: "false", modes: [item], help: "Disable PoE." }
+  - { words: "power-over-ethernet priority {value}", verb: set, field: poe-priority, modes: [item], help: "Set PoE priority." }
+  - { words: "name {value*}", verb: set, field: name, modes: [item], help: "VLAN name." }
+
+errors:
+  unknown-command: "Invalid input: {token}"
+  ambiguous: "Ambiguous command: {token}"
+  unknown-field: "Invalid input: {token}"
+  bad-value: "Invalid input: {token}"
+  missing-arg: "Incomplete command."
+  no-entry: "Port {token} does not exist."
+  read-only: "Invalid input: {token}"
+  no-target: "ping: unknown host {token}"
+
+views:
+  version:
+    lines: ["Aurora CX {model}", "Version      : {firmware}", "Serial       : {serial}", "Uptime       : {uptime}"]
+  interface-brief:
+    lines: ["Port      Native  Mode    Status  Reason          Speed   Description", "--------------------------------------------------------------------"]
+    each: { rows: ports, lines: ["{port:<9} {vlan:<7} {mode:<7} {status:<7} {reason:<15} {speed:<7} {description}"] }
+  poe:
+    lines:
+      - "System power budget  : {budgetW} W"
+      - "Total power drawn    : {drawnW} W"
+      - "Power remaining      : {remainingW} W"
+      - ""
+      - "PORT      PRIORITY  STATUS      CLASS  DRAWN    NAME"
+    each: { rows: ports, lines: ["{port:<9} {priority:<9} {state:<11} {class:<6} {drawn:<8} {name}"] }
+  vlans:
+    lines: ["VLAN  Name              Status  Ports", "----------------------------------------------"]
+    each: { rows: vlans, lines: ["{id:<5} {name:<17} up      {ports}"] }
+  mac-table:
+    lines: ["MAC Address        VLAN  Type     Port", "------------------------------------------"]
+    each: { rows: entries, lines: ["{mac:<18} {vlan:<5} dynamic  {port}"] }
+  lldp:
+    lines: ["LOCAL-PORT  CHASSIS-ID         PORT-ID  SYS-NAME"]
+    each: { rows: neighbors, lines: ["{port:<11} {chassis:<18} {peerPort:<8} {name}"] }
+  port-detail:
+    lines:
+      - "Interface {port} is {status}"
+      - " Description: {description}"
+      - " Speed {speed}, VLAN {vlan}, PoE {poe}"
+      - " Rx packets {rxPackets}, errors {rxErrors}, CRC {crc}"
+      - " Tx packets {txPackets}, errors {txErrors}, drops {drops}"
+  ping-ok:
+    lines: ["PING {target} ({target}) 100(128) bytes of data."]
+    each: { rows: replies, lines: ["108 bytes from {target}: icmp_seq={seq} ttl={ttl} time={ms} ms"] }
+    footer: ["", "--- {target} ping statistics ---", "5 packets transmitted, 5 received, 0% packet loss"]
+  ping-fail:
+    lines: ["PING {target} ({target}) 100(128) bytes of data.", "", "--- {target} ping statistics ---", "5 packets transmitted, 0 received, 100% packet loss"]
+  traceroute:
+    lines: ["traceroute to {target} ({target}), 1 hops min, 30 hops max"]
+    each: { rows: hops, lines: [" {n}  {ip}  {ms}ms"] }

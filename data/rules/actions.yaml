@@ -1,0 +1,11 @@
+# Game minutes each player action costs. Time only moves through actions and the clock buttons.
+cli: 1
+rmm-command: 1
+rmm-open: 2
+consent-request: 5
+handoff: 3
+resolve: 5
+send-back: 2
+attach-proof: 1
+doc-edit: 2
+ticket-note: 1

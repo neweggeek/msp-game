@@ -5,8 +5,8 @@ import type {
   DeviceConfig,
   DeviceKind,
   Fields,
+  Isp,
   Link,
-  Network,
   Port,
   Site,
   Vlan,
@@ -23,6 +23,7 @@ const ispNames = [
   "SpectraLink Business",
   "Brightway Broadband",
 ];
+const DAY = 1440;
 
 export function portsFromTemplate(t: DeviceTemplate): Port[] {
   const ports: Port[] = [];
@@ -55,14 +56,33 @@ function serial(rng: Rng, model: string): string {
     .toUpperCase()}${rng.digits(9)}`;
 }
 
+const uptimeDays: Record<DeviceKind, [number, number]> = {
+  firewall: [20, 90],
+  switch: [40, 300],
+  server: [5, 40],
+  pc: [0, 6],
+  ap: [20, 90],
+  phone: [3, 60],
+  camera: [1, 1],
+};
+
 /** Build a device from a template. Exported so faults can add devices the same way. */
 export function makeDevice(
   rng: Rng,
   t: DeviceTemplate,
-  fields: { id: string; hostname: string; roomId: string; managed: boolean },
+  fields: {
+    id: string;
+    siteId: string;
+    hostname: string;
+    roomId: string;
+    managed: boolean;
+    now?: number;
+  },
 ): Device {
+  const [lo, hi] = uptimeDays[t.kind];
   const dev: Device = {
     id: fields.id,
+    siteId: fields.siteId,
     hostname: fields.hostname,
     templateId: t.id,
     kind: t.kind,
@@ -71,6 +91,7 @@ export function makeDevice(
     firmware: rng.pick(t.firmware),
     serial: serial(rng, t.model),
     mac: mac(rng, t.brand),
+    bootAt: (fields.now ?? 0) - rng.int(lo * DAY, hi * DAY + 600),
     roomId: fields.roomId,
     managed: fields.managed,
     rmmAgent: t.rmmAgent === true,
@@ -79,16 +100,27 @@ export function makeDevice(
   if (t.poeBudgetW !== undefined) dev.poeBudgetW = t.poeBudgetW;
   if (t.poe) dev.poe = { ...t.poe };
   if (t.dialect) dev.dialect = t.dialect;
-  if (t.credentials)
+  if (t.tags) dev.tags = [...t.tags];
+  if (t.credentials) {
     dev.credentials = {
       username: t.credentials.username,
       password: `${rng.pick(["Blue", "Iron", "Delta", "Quartz", "Maple"])}-${rng.hex(6)}!`,
     };
+  }
   return dev;
 }
 
-function templatesFor(data: GameData, kind: DeviceKind, tier: string): DeviceTemplate[] {
-  const all = [...data.devices.values()].filter((t) => t.kind === kind);
+function templatesFor(
+  data: GameData,
+  kind: DeviceKind,
+  tier: string,
+  opts: { brand?: string; tag?: string } = {},
+): DeviceTemplate[] {
+  let all = [...data.devices.values()].filter(
+    (t) => t.kind === kind && (opts.tag ? t.tags?.includes(opts.tag) : !t.tags?.length),
+  );
+  if (opts.brand && all.some((t) => t.brand === opts.brand))
+    all = all.filter((t) => t.brand === opts.brand);
   const inTier = all.filter((t) => t.tiers.includes(tier as never));
   return inTier.length > 0 ? inTier : all;
 }
@@ -119,113 +151,105 @@ export function connect(
   });
 }
 
-function roomSlug(site: Site, roomId: string): string {
+function roomSlug(site: Omit<Site, "vlans" | "isp" | "octet">, roomId: string): string {
   const name = site.rooms.find((r) => r.id === roomId)?.name ?? "X";
   return name.toUpperCase().replace(/[^A-Z0-9]/g, "");
 }
 
-export interface Gear {
+export interface GearContext {
   devices: Device[];
-  network: Network;
+  links: Link[];
+  counters: Record<string, number>;
+  staff: string[];
+  now: number;
 }
 
-export function genGear(
+export function nextId(ctx: GearContext, kind: string): string {
+  ctx.counters[kind] = (ctx.counters[kind] ?? 0) + 1;
+  return `${kind}-${ctx.counters[kind]}`;
+}
+
+export interface SiteGearOptions {
+  role: "hq" | "branch";
+  octet: number;
+  switchBrand?: string;
+  probe?: boolean;
+}
+
+/** Build one site's network: firewall, switch, endpoints, cabling, addresses, ISP. */
+export function genSiteGear(
   rng: Rng,
   data: GameData,
   profile: ClientProfile,
-  site: Site,
+  base: Omit<Site, "vlans" | "isp" | "octet">,
   plan: RoomPlan[],
-): Gear {
-  const siteOctet = rng.int(1, 250);
+  opts: SiteGearOptions,
+  ctx: GearContext,
+): Site {
   const vlans: Vlan[] = data.clients.lan.vlans.map((v) => {
-    const subnet = v.subnet.replace("{site}", String(siteOctet));
+    const subnet = v.subnet.replace("{site}", String(opts.octet));
     return { id: v.id, name: v.name, subnet, gateway: hostIn(subnet, 1), role: v.role };
   });
   const vlanOf = (role: Vlan["role"]) => vlans.find((v) => v.role === role) as Vlan;
   const closet =
-    site.rooms.find((r) => r.networkCloset) ?? (site.rooms[0] as Site["rooms"][number]);
+    base.rooms.find((r) => r.networkCloset) ?? (base.rooms[0] as Site["rooms"][number]);
   const managed = profile.managed;
-  const code = profile.code;
-  const devices: Device[] = [];
-  const counters: Record<string, number> = {};
-  const nextId = (kind: string) => {
-    counters[kind] = (counters[kind] ?? 0) + 1;
-    return `${kind}-${counters[kind]}`;
-  };
+  const code = opts.role === "hq" ? profile.code : `${profile.code}B`;
+  const siteId = opts.role;
+  const make = (t: DeviceTemplate, kind: string, hostname: string, roomId: string) =>
+    makeDevice(rng, t, { id: nextId(ctx, kind), siteId, hostname, roomId, managed, now: ctx.now });
+  const pick = (kind: DeviceKind, extra: { brand?: string; tag?: string } = {}) =>
+    rng.pick(templatesFor(data, kind, profile.tier, extra));
 
-  // Endpoints first, so the switch can be sized to fit them.
   const endpoints: Device[] = [];
-  const pick = (kind: DeviceKind) => rng.pick(templatesFor(data, kind, profile.tier));
-  const server = makeDevice(rng, pick("server"), {
-    id: nextId("server"),
-    hostname: `${code}-SRV01`,
-    roomId: closet.id,
-    managed,
-  });
-  endpoints.push(server);
+  if (opts.role === "hq")
+    endpoints.push(make(pick("server"), "server", `${code}-SRV01`, closet.id));
+  if (opts.probe) {
+    const probe = make(pick("pc", { tag: "probe" }), "pc", `${code}-MON01`, closet.id);
+    probe.rmmAgent = managed;
+    endpoints.push(probe);
+  }
   let pcN = 0;
   let phN = 0;
   for (const room of plan) {
     for (let i = 0; i < room.pcs; i++) {
       pcN++;
-      const pc = makeDevice(rng, pick("pc"), {
-        id: nextId("pc"),
-        hostname: `${code}-PC${String(pcN).padStart(2, "0")}`,
-        roomId: room.roomId,
-        managed,
-      });
+      const pc = make(pick("pc"), "pc", `${code}-PC${String(pcN).padStart(2, "0")}`, room.roomId);
       pc.rmmAgent = managed;
+      pc.user = ctx.staff.shift();
       endpoints.push(pc);
     }
     for (let i = 0; i < room.phones; i++) {
       phN++;
       endpoints.push(
-        makeDevice(rng, pick("phone"), {
-          id: nextId("phone"),
-          hostname: `${code}-PH${String(phN).padStart(2, "0")}`,
-          roomId: room.roomId,
-          managed,
-        }),
+        make(pick("phone"), "phone", `${code}-PH${String(phN).padStart(2, "0")}`, room.roomId),
       );
     }
-    if (room.ap) {
+    if (room.ap)
       endpoints.push(
-        makeDevice(rng, pick("ap"), {
-          id: nextId("ap"),
-          hostname: `AP-${roomSlug(site, room.roomId)}`,
-          roomId: room.roomId,
-          managed,
-        }),
+        make(pick("ap"), "ap", `${code}-AP-${roomSlug(base, room.roomId)}`, room.roomId),
       );
-    }
   }
 
-  const fwT = pick("firewall");
-  const spare = rng.int(2, 4);
+  const fwT =
+    opts.role === "branch"
+      ? (data.devices.get("fortressgate-60g") ?? pick("firewall"))
+      : pick("firewall");
+  const spare = rng.int(4, 6);
+  const switches = templatesFor(data, "switch", profile.tier, { brand: opts.switchBrand }).sort(
+    (a, b) => accessPortCount(a) - accessPortCount(b),
+  );
   const switchT =
-    [...templatesFor(data, "switch", profile.tier)]
-      .sort((a, b) => accessPortCount(a) - accessPortCount(b))
-      .find((t) => accessPortCount(t) >= endpoints.length + spare) ??
+    switches.find((t) => accessPortCount(t) >= endpoints.length + spare) ??
     [...data.devices.values()]
       .filter((t) => t.kind === "switch")
       .sort((a, b) => accessPortCount(b) - accessPortCount(a))[0];
   if (!switchT) throw new Error("no switch template");
 
-  const fw = makeDevice(rng, fwT, {
-    id: nextId("firewall"),
-    hostname: `FG-${code}01`,
-    roomId: closet.id,
-    managed,
-  });
-  const sw = makeDevice(rng, switchT, {
-    id: nextId("switch"),
-    hostname: `FS-${code}01`,
-    roomId: closet.id,
-    managed,
-  });
-  devices.push(fw, sw, ...endpoints);
+  const fw = make(fwT, "firewall", `FG-${code}01`, closet.id);
+  const sw = make(switchT, "switch", `SW-${code}01`, closet.id);
+  ctx.devices.push(fw, sw, ...endpoints);
 
-  // Addresses.
   const counter: Record<string, number> = { data: 100, voice: 100, mgmt: 20 };
   const assign = (d: Device, role: Vlan["role"], host?: number) => {
     const v = vlanOf(role);
@@ -238,27 +262,33 @@ export function genGear(
   assign(sw, "mgmt", 2);
   for (const d of endpoints) {
     if (d.kind === "server") assign(d, "data", 10);
+    else if (d.tags?.includes("probe")) assign(d, "data", 11);
     else if (d.kind === "phone") assign(d, "voice");
     else if (d.kind === "ap") assign(d, "mgmt");
     else assign(d, "data");
   }
 
-  // Cabling: firewall LAN to switch uplink, endpoints shuffled across access ports.
-  const links: Link[] = [];
   const fwLan = fw.ports.find((p) => p.role === "lan") as Port;
   const swUp = sw.ports.find((p) => p.role === "uplink") as Port;
-  connect(links, fw, fwLan.name, sw, swUp.name, 1);
+  connect(ctx.links, fw, fwLan.name, sw, swUp.name, 1);
   const access = rng.shuffle(sw.ports.filter((p) => p.role === "access"));
   endpoints.slice(0, access.length).forEach((d, i) => {
     const port = access[i] as Port;
-    const own = d.ports[0] as Port;
     port.vlan = d.vlan;
-    connect(links, sw, port.name, d, own.name, d.roomId === closet.id ? 2 : rng.int(8, 70));
+    connect(
+      ctx.links,
+      sw,
+      port.name,
+      d,
+      (d.ports[0] as Port).name,
+      d.roomId === closet.id ? 2 : rng.int(8, 70),
+    );
   });
+  for (const p of sw.ports)
+    if (p.role === "access" && p.vlan === undefined) p.vlan = vlanOf("data").id;
 
-  // ISP: a /29 from a documentation range.
   const block = ipToInt("198.51.100.0") + rng.int(0, 31) * 8;
-  const isp = {
+  const isp: Isp = {
     name: rng.pick(ispNames),
     circuitId: `CID-${rng.digits(8)}`,
     wanCidr: `${intToIp(block)}/29`,
@@ -266,11 +296,10 @@ export function genGear(
     wanIp: intToIp(block + 2),
     phone: `1-800-555-0${rng.digits(3)}`,
   };
+  // A branch has no server, so its data VLAN always allows ssh as the way in.
+  fw.running = firewallConfig(rng, fw, fwLan.name, vlans, isp, opts.role === "branch");
 
-  fw.running = firewallConfig(rng, fw, fwLan.name, vlans, isp);
-  fw.startup = structuredClone(fw.running);
-
-  return { devices, network: { vlans, links, isp } };
+  return { ...base, octet: opts.octet, vlans, isp };
 }
 
 function firewallConfig(
@@ -278,7 +307,8 @@ function firewallConfig(
   fw: Device,
   lanPort: string,
   vlans: Vlan[],
-  isp: Network["isp"],
+  isp: Isp,
+  forceSsh: boolean,
 ): DeviceConfig {
   const interfaces: Record<string, Fields> = {};
   for (const p of fw.ports) {
@@ -298,8 +328,8 @@ function firewallConfig(
     if (p.name === lanPort) f.status = "up";
     interfaces[p.name] = f;
   }
-  // Half the time the data VLAN also allows ssh, so the server gateway is a second way in.
-  const dataSsh = rng.chance(0.5);
+  // Half the time the data VLAN also allows ssh, so a PC's gateway is a second way in.
+  const dataSsh = rng.chance(0.5) || forceSsh;
   for (const v of vlans) {
     const allow =
       v.role === "mgmt"
@@ -322,5 +352,67 @@ function firewallConfig(
     system: { hostname: fw.hostname, timezone: "US/Central" },
     interfaces,
     routes: { "1": { dst: "0.0.0.0/0", gateway: isp.gateway, device: "wan1" } },
+    phase1: {},
+    phase2: {},
   };
+}
+
+/** Site-to-site tunnel between two firewalls, mirrored on both ends. */
+export function addTunnel(rng: Rng, a: Device, aSite: Site, b: Device, bSite: Site): void {
+  const psk = `${rng.pick(["harbor", "granite", "falcon", "copper"])}${rng.hex(8)}`;
+  const side = (fw: Device, local: Site, remote: Site, name: string) => {
+    const cfg = fw.running as DeviceConfig;
+    (cfg.phase1 as Record<string, Fields>)[name] = {
+      interface: "wan1",
+      remoteGw: remote.isp.wanIp,
+      psk,
+      proposal: ["aes256-sha256"],
+    };
+    (cfg.phase2 as Record<string, Fields>)[name] = {
+      phase1: name,
+      src: `10.${local.octet}.0.0/16`,
+      dst: `10.${remote.octet}.0.0/16`,
+    };
+    const routes = cfg.routes as Record<string, Fields>;
+    routes[String(Object.keys(routes).length + 1)] = {
+      dst: `10.${remote.octet}.0.0/16`,
+      device: name,
+    };
+  };
+  side(a, aSite, bSite, `to-${bSite.id}`);
+  side(b, bSite, aSite, `to-${aSite.id}`);
+}
+
+/** Switch running config mirrors its ports. Built once the network is final. */
+export function switchConfig(sw: Device, vlans: Vlan[]): DeviceConfig {
+  const ports: Record<string, Fields> = {};
+  for (const p of sw.ports) {
+    const f: Fields = {
+      shutdown: p.shutdown === true,
+      poeEnabled: p.poeEnabled,
+      poePriority: p.poePriority,
+    };
+    if (p.mode === "access" && p.vlan !== undefined) f.vlan = p.vlan;
+    if (p.description) f.description = p.description;
+    ports[p.name] = f;
+  }
+  const v: Record<string, Fields> = {};
+  for (const x of vlans) v[String(x.id)] = { name: x.name };
+  return { system: { hostname: sw.hostname }, ports, vlans: v };
+}
+
+/** Push a switch's running config back onto its ports, so the network sim sees it. */
+export function syncSwitchPorts(sw: Device): void {
+  const ports = (sw.running?.ports ?? {}) as Record<string, Fields>;
+  for (const p of sw.ports) {
+    const f = ports[p.name];
+    if (!f) continue;
+    p.shutdown = f.shutdown === true;
+    p.poeEnabled = p.poeCapable && f.poeEnabled !== false;
+    p.poePriority = (f.poePriority as Port["poePriority"]) ?? "low";
+    if (typeof f.vlan === "number") p.vlan = f.vlan;
+    p.description = typeof f.description === "string" ? f.description : undefined;
+  }
+  const host = (sw.running?.system as Fields | undefined)?.hostname;
+  if (typeof host === "string") sw.hostname = host;
 }

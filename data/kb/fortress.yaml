@@ -1,0 +1,37 @@
+- id: fortress-cli
+  brand: fortress
+  type: cli
+  title: "FortressGate CLI reference"
+  body:
+    - "config <section> / edit <entry> / set <field> <value> / next / end. Nothing applies until end. abort throws the changes away."
+    - "get system status: model, firmware, serial, uptime."
+    - "get system arp: IP to MAC table on every interface."
+    - "get router info routing-table all: routes."
+    - "get vpn ipsec tunnel summary: each IPsec tunnel, up or down."
+    - "diagnose vpn ike log: recent IKE negotiation errors."
+    - "diagnose vpn tunnel up <phase1>: bring a tunnel up again."
+    - "config vpn ipsec phase1-interface: set remote-gw <ip>, set psksecret <key>."
+    - "config vpn ipsec phase2-interface: set src-subnet and dst-subnet. Each side must mirror the other."
+    - "execute ping <ip>, execute traceroute <ip>."
+- id: fortress-ipsec-errors
+  brand: fortress
+  type: cli
+  title: "IPsec error messages explained"
+  body:
+    - "negotiation timeout, no response from peer: the peer IP is wrong or unreachable. Check remote-gw against the peer's real WAN IP."
+    - "no matching phase2 found: phase 1 is up but the subnets do not mirror. Local src must equal the peer's dst."
+    - "pre-shared key mismatch: psksecret differs on the two sides."
+- id: fortress-defaults
+  brand: fortress
+  type: defaults
+  title: "FortressGate defaults"
+  body:
+    - "Admin access per interface is set by allowaccess. SSH is off on new LAN interfaces."
+    - "Config changes save on end. There is no separate save command."
+- id: fortress-7.4-notes
+  brand: fortress
+  type: release-notes
+  title: "FortressGate 7.4.x release notes"
+  body:
+    - "7.4.3: known issue, SSL VPN portal slow with more than 200 bookmarks."
+    - "7.4.5: fixes IKE rekey memory leak on 100G models."

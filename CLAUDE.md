@@ -35,12 +35,17 @@ When the spec and the interview disagree, the interview wins. When a feature ID 
 
 ## Current phase
 
-Phase 0 (Foundation) is built. Next is Phase 1, the vertical slice, after review.
+Phase 1 (vertical slice) is built: one managed client with a main office and a branch, four cases, one misroute and one duplicate. Next is Phase 2, after review.
 
-Phase 0 notes:
+Phase 1 notes:
 
-- Only the Fortress dialect exists. Switch PoE settings are not editable from the CLI yet, so Camera Day can be diagnosed but not fixed in game.
-- Tickets start in an `Open` status that the interview's list does not have. Everything else follows the interview.
+- Scenario "slice" (data/scenarios) plants Camera Day, Wrong Phonebook, Nobody Home and Branch Silence on one client. "quick" plants one random case on a one-site client.
+- Docs are written from the network before the faults, then degraded by staleness. Devices a case is about are never dropped from docs.
+- Closing rule: client tickets need attached output plus a client OK (Customer question with "ask to close"). Alert and tech tickets need output only. Closing anyway is allowed; it costs points, and an unfixed close reopens 90 minutes later.
+- Consent: opening a shell or running a script on a PC with a signed-in user, without asking first, costs points. Users answer only during the client's hidden business hours.
+- Every action costs game minutes (data/rules/actions.yaml). Scoring values live in data/rules/handoffs.yaml.
+- Camera Day needs a switch with its own CLI, so it only lands on Aurora CX switches. FortressSwitch is still read-only from the gate.
+- Out of scope for now: ScreenLink sessions, VPN clients, console, truck rolls, editing in the device web GUI.
 - Generator rerolls: a case that does not fit rerolls the client, fault placement rerolls up to 8 times, unsolvable docs reroll up to 8 times.
 - If a change alters what an old seed builds, the golden-seed test fails. Bump `GENERATOR_VERSION` in `src/engine/gen/index.ts` on purpose, then run `UPDATE_GOLDEN=1 npm test`.
 
@@ -48,8 +53,8 @@ Phase 0 notes:
 
 ```
 npm install
-npm run dev          # debug view at http://localhost:5173
-npm test             # all tests, including the 500-seed solvability sweep
+npm run dev          # game at http://localhost:5173
+npm test             # all tests, including the 300-seed solvability sweep and every case played end to end
 npm run typecheck
 npm run lint
 npm run build        # static site in dist/
@@ -60,5 +65,5 @@ UPDATE_TRANSCRIPTS=1 npx vitest run tests/transcripts.test.ts   # refill CLI tra
 
 - `data/` holds content: brands, device templates, room sets, faults, cases, dialects, rules. New content goes here.
 - `src/engine/` holds rules and never imports React. `src/engine/index.ts` is the only API the UI calls.
-- `src/ui/` draws what the engine says. Phase 0 has only the debug view.
+- `src/ui/` draws what the engine says: the Atrium desk (queue, ticket, terminal), Shinobi RMM, Ovik, Hoodoo Docs, Vendor KB, and a Debug tab that shows the truth.
 - `tests/transcripts/<dialect>/*.txt` are CLI transcripts: `> ` lines are input, the rest is expected output.

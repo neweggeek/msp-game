@@ -10,6 +10,7 @@ const saveSchema = z.object({
   saveVersion: z.number().int(),
   generatorVersion: z.number().int(),
   seed: z.string(),
+  scenario: z.string().optional(),
   caseId: z.string().optional(),
   log: z.array(z.object({ t: z.string() }).passthrough()),
   snapshot: z.object({ at: z.number().int(), state: z.string() }).optional(),
@@ -26,6 +27,7 @@ export function makeSave(state: GameState): SaveFile {
     log: structuredClone(state.log),
   };
   if (state.caseId) save.caseId = state.caseId;
+  if (state.scenario) save.scenario = state.scenario;
   if (state.snapshot) save.snapshot = { ...state.snapshot };
   return save;
 }
@@ -57,7 +59,7 @@ export function loadSave(
     };
     from = save.snapshot.at;
   } else {
-    state = newGame(save.seed, data, save.caseId);
+    state = newGame(save.seed, data, { scenario: save.scenario, caseId: save.caseId });
   }
   for (const a of log.slice(from)) applyAction(state, data, a);
   return state;

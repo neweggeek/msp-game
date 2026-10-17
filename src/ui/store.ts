@@ -16,21 +16,30 @@ import {
 
 const data = gameData();
 
+export type Tab = "desk" | "rmm" | "ovik" | "docs" | "terminal" | "kb" | "debug";
+export type Dialog =
+  | { kind: "handoff" | "resolve" | "send-back"; ticket: string }
+  | { kind: "web"; from: string; address: string }
+  | null;
+
 interface UiState {
   game: GameState | null;
   /** Bumps after every engine change, since the engine mutates state in place. */
   rev: number;
   slot: number;
-  selected?: string;
-  showDocs: boolean;
+  tab: Tab;
+  ticket?: string;
   session?: string;
+  dialog: Dialog;
   message?: string;
-  generate: (seed: string) => void;
+  start: (seed: string, scenario?: string) => void;
   act: (a: Action) => ActionResult;
-  select: (id: string) => void;
-  setShowDocs: (v: boolean) => void;
-  setSlot: (slot: number) => void;
+  setTab: (t: Tab) => void;
+  openTicket: (id: string) => void;
   setSession: (id: string | undefined) => void;
+  setDialog: (d: Dialog) => void;
+  setSlot: (slot: number) => void;
+  say: (m: string | undefined) => void;
   loadSlot: (slot: number) => Promise<void>;
   exportFile: () => void;
   importFile: (text: string) => void;
@@ -46,16 +55,18 @@ export const useUi = create<UiState>((set, get) => ({
   game: null,
   rev: 0,
   slot: 1,
-  showDocs: false,
-  generate(seed) {
+  tab: "desk",
+  dialog: null,
+  start(seed, scenario = "slice") {
     try {
-      const game = newGame(seed, data);
+      const game = newGame(seed, data, { scenario });
       set({
         game,
         rev: get().rev + 1,
-        selected: undefined,
+        ticket: undefined,
         session: undefined,
-        message: `Generated seed "${seed}".`,
+        dialog: null,
+        message: `New shift. Client: ${game.world.client.name}.`,
       });
       autosave(game, get().slot);
     } catch (e) {
@@ -66,14 +77,26 @@ export const useUi = create<UiState>((set, get) => ({
     const { game, slot } = get();
     if (!game) return { ok: false, error: "No game." };
     const result = applyAction(game, data, a);
-    set({ rev: get().rev + 1, message: result.ok ? get().message : result.error });
+    const patch: Partial<UiState> = {
+      rev: get().rev + 1,
+      message: result.ok ? undefined : result.error,
+    };
+    if (result.session) patch.session = result.session;
+    set(patch);
     autosave(game, slot);
     return result;
   },
-  select: (id) => set({ selected: id }),
-  setShowDocs: (v) => set({ showDocs: v }),
-  setSlot: (slot) => set({ slot }),
+  setTab: (tab) => set({ tab }),
+  openTicket(id) {
+    const { game } = get();
+    const t = game?.book.tickets.find((x) => x.id === id);
+    if (t && t.openedAt === undefined) get().act({ t: "ticket-open", ticket: id });
+    set({ ticket: id, tab: "desk" });
+  },
   setSession: (id) => set({ session: id }),
+  setDialog: (dialog) => set({ dialog }),
+  setSlot: (slot) => set({ slot }),
+  say: (message) => set({ message }),
   async loadSlot(slot) {
     const save = await readSlot(slot).catch(() => undefined);
     if (!save) {
@@ -88,7 +111,8 @@ export const useUi = create<UiState>((set, get) => ({
         slot,
         rev: get().rev + 1,
         session: open?.id,
-        message: `Loaded slot ${slot}: seed "${game.seed}", ${game.log.length} actions.`,
+        dialog: null,
+        message: `Loaded slot ${slot}: ${game.log.length} actions.`,
       });
     } catch (e) {
       set({ message: (e as Error).message });
@@ -110,8 +134,9 @@ export const useUi = create<UiState>((set, get) => ({
       set({
         game,
         rev: get().rev + 1,
-        selected: undefined,
+        ticket: undefined,
         session: undefined,
+        dialog: null,
         message: `Imported seed "${game.seed}".`,
       });
       autosave(game, get().slot);
@@ -120,5 +145,13 @@ export const useUi = create<UiState>((set, get) => ({
     }
   },
 }));
+
+/** The game, for components that only render once one exists. */
+export function useGame(): GameState {
+  const g = useUi((s) => s.game);
+  useUi((s) => s.rev);
+  if (!g) throw new Error("no game");
+  return g;
+}
 
 export { data };

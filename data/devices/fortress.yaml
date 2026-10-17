@@ -26,7 +26,6 @@
   kind: switch
   brand: fortress
   model: FortressSwitch 108P
-  dialect: fortress
   tiers: [low]
   firmware: ["7.2.6", "7.4.1"]
   poeBudgetW: 130
@@ -38,7 +37,6 @@
   kind: switch
   brand: fortress
   model: FortressSwitch 124P
-  dialect: fortress
   tiers: [low, mid, high]
   firmware: ["7.2.6", "7.4.1", "7.4.2"]
   poeBudgetW: 185
@@ -50,7 +48,6 @@
   kind: switch
   brand: fortress
   model: FortressSwitch 148P
-  dialect: fortress
   tiers: [mid, high]
   firmware: ["7.4.1", "7.4.2"]
   poeBudgetW: 370

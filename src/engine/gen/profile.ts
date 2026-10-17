@@ -2,17 +2,17 @@ import type { GameData } from "../data";
 import type { ClientProfile, Contact, Staleness, Tier } from "../model/types";
 import type { Rng } from "../rng/rng";
 
-export function genProfile(rng: Rng, data: GameData): ClientProfile {
+export function genProfile(rng: Rng, data: GameData, forceTier?: Tier): ClientProfile {
   const rules = data.clients;
   const tierWeights = Object.fromEntries(
     Object.entries(rules.tiers).map(([k, v]) => [k, v.weight]),
   ) as Record<Tier, number>;
-  const tier = rng.weighted(tierWeights);
+  const tier = forceTier ?? rng.weighted(tierWeights);
   const industry = rng.pick(rules.industries);
   const place = rng.pick(rules.places);
   const name = rng.pick(industry.names).replace("{place}", place);
-  const code = name
-    .split(/\s+/)
+  const words = name.split(/\s+/);
+  const code = words
     .map((w) => w[0])
     .join("")
     .toUpperCase()
@@ -21,12 +21,17 @@ export function genProfile(rng: Rng, data: GameData): ClientProfile {
   const hours = rng.pickWeighted(rules.businessHours);
   const window = rng.pickWeighted(rules.afterHoursWindows);
 
+  // Staff names, unique, so a ticket can name the user and RMM can find their PC.
+  const staff = rng
+    .shuffle(rules.firstNames.flatMap((f) => rules.lastNames.map((l) => `${f} ${l}`)))
+    .slice(0, 60);
+
   const contacts: Contact[] = [];
   const count = rng.int(2, 3);
   for (let i = 0; i < count; i++) {
     contacts.push({
       id: `contact-${i + 1}`,
-      name: `${rng.pick(rules.firstNames)} ${rng.pick(rules.lastNames)}`,
+      name: staff[i] as string,
       role: i === 0 ? rng.pick(rules.contactRoles) : "Staff",
       phone: `555-01${rng.digits(2)}`,
       competence: Math.round(rng.next() * 100) / 100,
@@ -39,6 +44,10 @@ export function genProfile(rng: Rng, data: GameData): ClientProfile {
     id: `client-${code.toLowerCase()}`,
     name,
     code,
+    domain: `${words
+      .map((w) => w.toLowerCase().replace(/[^a-z]/g, ""))
+      .join("")
+      .slice(0, 14)}.local`,
     industry: industry.id,
     tier,
     headcount: rng.range(rules.tiers[tier]?.headcount ?? [5, 10]),
@@ -50,5 +59,6 @@ export function genProfile(rng: Rng, data: GameData): ClientProfile {
     ),
     staleness,
     contacts,
+    staff: staff.slice(contacts.length),
   };
 }

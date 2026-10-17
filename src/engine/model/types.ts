@@ -3,7 +3,9 @@ export type DeviceKind = "firewall" | "switch" | "ap" | "phone" | "camera" | "pc
 export type Priority = "P1" | "P2" | "P3" | "P4";
 export type PoePriority = "low" | "high" | "critical";
 export type Staleness = "fresh" | "partly" | "stale";
-export type AccessToken = string; // "docs" | "rmm" | "monitoring" | "ssh:<kind>"
+export type Origin = "client" | "alert" | "tech";
+/** "docs", "monitoring", "rmm", or "ssh:<role>" / "rmm:<role>" for one bound device. */
+export type AccessToken = string;
 
 export interface Contact {
   id: string;
@@ -19,6 +21,7 @@ export interface ClientProfile {
   id: string;
   name: string;
   code: string;
+  domain: string;
   industry: string;
   tier: Tier;
   headcount: number;
@@ -29,6 +32,7 @@ export interface ClientProfile {
   contactPreference: "quick-call-ok" | "scheduled-only";
   staleness: Staleness;
   contacts: Contact[];
+  staff: string[];
 }
 
 export interface Room {
@@ -41,12 +45,32 @@ export interface Room {
   networkCloset: boolean;
 }
 
+export interface Vlan {
+  id: number;
+  name: string;
+  subnet: string;
+  gateway: string;
+  role: "data" | "voice" | "mgmt";
+}
+
+export interface Isp {
+  name: string;
+  circuitId: string;
+  wanIp: string;
+  wanCidr: string;
+  gateway: string;
+  phone: string;
+}
+
 export interface Site {
-  id: string;
+  id: string; // "hq" or "branch"
   name: string;
   address: string;
+  octet: number;
   buildings: { id: string; name: string; floors: number }[];
   rooms: Room[];
+  vlans: Vlan[];
+  isp: Isp;
 }
 
 export interface PortRef {
@@ -59,19 +83,22 @@ export interface Port {
   role: "wan" | "lan" | "uplink" | "access";
   mode: "access" | "trunk" | "routed";
   vlan?: number;
+  shutdown?: boolean;
+  description?: string;
   poeCapable: boolean;
   poeEnabled: boolean;
   poePriority: PoePriority;
   link?: PortRef;
 }
 
-export type ConfigValue = string | number | string[];
+export type ConfigValue = string | number | boolean | string[];
 export type Fields = Record<string, ConfigValue>;
 /** Brand-neutral config. Single sections are Fields, table sections are Record<key, Fields>. */
 export type DeviceConfig = Record<string, Fields | Record<string, Fields>>;
 
 export interface Device {
   id: string;
+  siteId: string;
   hostname: string;
   templateId: string;
   kind: DeviceKind;
@@ -83,12 +110,19 @@ export interface Device {
   ip?: string;
   vlan?: number;
   gateway?: string;
+  /** DNS servers typed into the adapter. Unset means DHCP hands them out. */
+  dns?: string[];
+  /** Logged-in user on a workstation. Remoting in needs their consent. */
+  user?: string;
+  tags?: string[];
+  /** Goes to sleep every night between these minutes of the day. */
+  sleep?: { from: number; to: number };
+  bootAt: number;
   roomId: string;
   managed: boolean;
   rmmAgent: boolean;
-  /** Set when a fault added this device. Undocumented devices never reach the docs. */
+  /** Set when a fault added this device. */
   addedBy?: string;
-  undocumented?: boolean;
   ports: Port[];
   poeBudgetW?: number;
   poe?: { class: number; drawW: number };
@@ -106,35 +140,16 @@ export interface Link {
   condition: "good" | "damaged";
 }
 
-export interface Vlan {
-  id: number;
-  name: string;
-  subnet: string;
-  gateway: string;
-  role: "data" | "voice" | "mgmt";
-}
-
-export interface Network {
-  vlans: Vlan[];
-  links: Link[];
-  isp: {
-    name: string;
-    circuitId: string;
-    wanIp: string;
-    wanCidr: string;
-    gateway: string;
-    phone: string;
-  };
-}
-
 export interface DocDevice {
   deviceId: string;
+  siteId: string;
   hostname: string;
   kind: DeviceKind;
   model: string;
   ip?: string;
   firmware: string;
   roomId: string;
+  notes?: string;
 }
 
 export interface DocCredential {
@@ -144,14 +159,32 @@ export interface DocCredential {
   password: string;
 }
 
+export interface DocSite {
+  siteId: string;
+  name: string;
+  address: string;
+  vlans: Vlan[];
+  isp: Isp;
+}
+
+export interface DocHistoryEntry {
+  at: number;
+  by: string;
+  entry: string; // "device:<id>", "site:<id>", "vault:<id>"
+  field: string;
+  from: string;
+  to: string;
+}
+
 export interface Docs {
+  sites: DocSite[];
   devices: DocDevice[];
   credentials: DocCredential[];
-  vlans: Vlan[];
-  isp: Network["isp"];
   contacts: Contact[];
   floorPlan: boolean;
   accessNotes: string[];
+  history: DocHistoryEntry[];
+  accessLog: { at: number; who: string; entry: string }[];
 }
 
 export interface Clue {
@@ -164,28 +197,72 @@ export interface Clue {
 export interface PlantedFault {
   faultId: string;
   name: string;
-  /** Role name in the fault text -> device id. */
-  bindings: Record<string, string>;
+  startedAt: number;
   addedDevices: string[];
   clues: Clue[];
+}
+
+export interface CaseNote {
+  issue: string;
+  findings: string;
+  changes: string;
+  rootCause: string;
+  nextSteps: string;
+  wrongCause: string;
+  wrongChange: string;
 }
 
 export interface CaseInstance {
   caseId: string;
   name: string;
+  playbook: string;
+  origin: Origin;
+  priority: Priority;
   ticketTitle: string;
   ticketBody: string;
-  priority: Priority;
+  ticketHistory: { at: number; by: string; text: string }[];
+  /** Role name in the case text -> device id. */
+  bindings: Record<string, string>;
+  primary: string;
+  fixed: { type: string; role: string }[];
   redHerring: string;
   rootCause: string;
   fix: string;
+  note: CaseNote;
   faults: PlantedFault[];
+}
+
+export interface ExtraTicket {
+  id: string;
+  kind: "misroute" | "duplicate" | "nothing";
+  origin: Origin;
+  priority: Priority;
+  title: string;
+  body: string;
+  sendBack: "misrouted" | "duplicate" | "nothing";
+  duplicateOf?: string;
+  hint: string;
+}
+
+export interface HistoryEvent {
+  at: number;
+  deviceId: string;
+  state: "down" | "up";
+  note: string;
+}
+
+export interface OvikDevice {
+  deviceId: string;
+  hostname: string;
+  ip: string;
+  /** Switch and port Ovik thinks this device hangs off. Medium reliability. */
+  uplink?: string;
 }
 
 export interface SolvabilityReport {
   solvable: boolean;
   access: AccessToken[];
-  clues: { id: string; requires: AccessToken; reachable: boolean }[];
+  clues: { caseId: string; id: string; requires: AccessToken; reachable: boolean }[];
   /** How many tries each rerollable step took to land this client. */
   attempts: { world: number; faults: number; docs: number };
 }
@@ -193,11 +270,15 @@ export interface SolvabilityReport {
 export interface World {
   generatorVersion: number;
   seed: string;
+  scenario: string;
   client: ClientProfile;
-  site: Site;
+  sites: Site[];
   devices: Device[];
-  network: Network;
+  links: Link[];
   docs: Docs;
-  case: CaseInstance;
+  cases: CaseInstance[];
+  extraTickets: ExtraTicket[];
+  history: HistoryEvent[];
+  monitoring: { collectorId: string; inventory: OvikDevice[] };
   solvability: SolvabilityReport;
 }

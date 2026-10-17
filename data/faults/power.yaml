@@ -1,0 +1,21 @@
+- id: probe-sleeps
+  name: Monitoring probe PC goes to sleep at night
+  layer: 8
+  device: pc
+  startedAt: "-3d 22:04"
+  effects:
+    - { type: sleep-nightly, target: probe, from: "22:04", to: "07:30" }
+  proof: []
+  clues:
+    - id: site-down-nightly
+      text: "Ovik history shows every device at the site down from 22:04 to 07:30, every night."
+      surface: monitoring
+      requires: monitoring
+    - id: server-uptime
+      text: "RMM shows {server.hostname} up for weeks with no drop overnight."
+      surface: rmm
+      requires: "rmm:server"
+    - id: probe-sleep
+      text: "powercfg on {probe.hostname} shows it sleeps after 30 minutes idle."
+      surface: rmm
+      requires: "rmm:probe"

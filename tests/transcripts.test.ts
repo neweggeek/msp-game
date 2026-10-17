@@ -35,8 +35,13 @@ function runFile(path: string): {
   headers: Record<string, string>;
 } {
   const { headers, steps } = parse(readFileSync(path, "utf8"));
-  const g = newGame(headers.seed ?? "transcript", data, headers.case);
-  const dev = g.world.devices.find((d) => d.kind === (headers.device ?? "firewall"));
+  const g = newGame(headers.seed ?? "transcript", data, {
+    scenario: headers.scenario,
+    caseId: headers.case,
+  });
+  const dev = g.world.devices.find(
+    (d) => d.kind === (headers.device ?? "firewall") && d.siteId === (headers.site ?? "hq"),
+  );
   const open = applyAction(g, data, { t: "cli-open", device: dev?.id as string });
   const actual = steps.map(
     (s) =>

@@ -1,0 +1,132 @@
+# Cases chain faults into one mystery. Roles name the devices the text and checks refer to.
+# "fixed" checks decide when the real problem is gone. "note" feeds the resolution note picks.
+
+- id: camera-day
+  name: Camera Day
+  pick: first-slice
+  playbook: wifi
+  requires:
+    sites: [hq]
+    kinds: { switch: 1, ap: 1, phone: 2 }
+  roles:
+    firewall: { kind: firewall, site: hq }
+    switch: { kind: switch, site: hq }
+  primary: ap
+  ticket:
+    origin: client
+    priority: P2
+    title: "Phones rebooting, {ap.room} Wi-Fi down"
+    body: "Desk phones keep rebooting and the Wi-Fi in {ap.room} has been down since Monday. The camera installer was here Monday too."
+  faults: [poe-budget-exhausted]
+  fixed:
+    - { type: device-online, role: ap }
+  redHerring: "AP and phone firmware are a few versions behind, so it looks like a firmware bug."
+  rootCause: "Four new cameras pushed {switch.hostname} past its PoE budget. Every port is low priority, so the switch cut power to the highest ports, including {ap.hostname}."
+  fix: "Set PoE priority high on the AP and phone ports, then quote a bigger PoE switch or a camera switch."
+  note:
+    issue: "Desk phones rebooting and {ap.hostname} ({ap.ip}) in {ap.room} offline since Monday."
+    findings: "{switch.hostname} ({switch.ip}) was asking for more PoE than its budget after four new cameras were plugged in. Every port was low priority, so {ap.hostname} was denied power."
+    changes: "Set PoE priority high on the {ap.hostname} port and the phone ports on {switch.hostname}."
+    rootCause: "Four new cameras pushed {switch.hostname} past its PoE budget."
+    nextSteps: "Sales: quote a larger PoE switch or a separate camera switch. Add the cameras to the docs."
+    wrongCause: "AP and phone firmware bug after an update."
+    wrongChange: "Rebooted {ap.hostname}."
+
+- id: wrong-phonebook
+  name: Wrong Phonebook
+  pick: first-slice
+  playbook: one-user
+  requires:
+    sites: [hq]
+    kinds: { server: 1, pc: 2 }
+  roles:
+    user-pc: { kind: pc, site: hq, hasUser: true, pick: random }
+    server: { kind: server, site: hq }
+  primary: user-pc
+  ticket:
+    origin: client
+    priority: P3
+    title: "{user-pc.user} can't open the shared drive"
+    body: "{user-pc.user} in {user-pc.room} says the S: drive on {server.hostname} won't open since yesterday afternoon. Internet works fine. Nobody else has a problem."
+  faults: [static-public-dns]
+  fixed:
+    - { type: dns-internal, role: user-pc }
+  redHerring: "The file server could be down, or the user's account could be locked."
+  rootCause: "{user-pc.hostname} has public DNS servers typed in, so it can't resolve {server.hostname}."
+  fix: "Reset the adapter DNS to DHCP with consent, then test the share."
+  note:
+    issue: "{user-pc.user} on {user-pc.hostname} ({user-pc.ip}) could not open shares on {server.hostname} ({server.ip})."
+    findings: "{user-pc.hostname} had DNS set by hand to 8.8.8.8 and 8.8.4.4. Ping to {server.ip} worked, name lookups failed."
+    changes: "With {user-pc.user}'s OK, reset the DNS servers on {user-pc.hostname} to DHCP."
+    rootCause: "Public DNS servers typed into {user-pc.hostname} cannot resolve internal names."
+    nextSteps: "None."
+    wrongCause: "{server.hostname} file share permissions."
+    wrongChange: "Restarted the Server service on {server.hostname}."
+
+- id: nobody-home
+  name: Nobody Home
+  pick: first-slice
+  playbook: site-down
+  requires:
+    sites: [hq]
+    kinds: { server: 1 }
+    probe: true
+  roles:
+    probe: { kind: pc, site: hq, tag: probe }
+    server: { kind: server, site: hq }
+    firewall: { kind: firewall, site: hq }
+  primary: probe
+  ticket:
+    origin: alert
+    priority: P3
+    title: "Ovik: {site} site down at 22:04"
+    body: "Ovik raised a site-down alert for {site} at 22:04 last night. It cleared at 07:30. No calls from the client."
+  faults: [probe-sleeps]
+  fixed:
+    - { type: no-sleep, role: probe }
+  redHerring: "It looks like a nightly ISP or power outage."
+  rootCause: "The Ovik probe PC {probe.hostname} goes to sleep at night, so monitoring loses the whole site."
+  fix: "Set the probe PC's power plan to never sleep."
+  note:
+    issue: "Ovik reported {site} down every night from 22:04 to 07:30."
+    findings: "{server.hostname} ({server.ip}) and {firewall.hostname} ({firewall.ip}) stayed up all night. The probe {probe.hostname} ({probe.ip}) was asleep."
+    changes: "Set the power plan on {probe.hostname} to never sleep."
+    rootCause: "The monitoring probe PC sleeps after 30 minutes idle."
+    nextSteps: "Move the probe to {server.hostname} at the next review."
+    wrongCause: "Nightly ISP outage."
+    wrongChange: "Opened an ISP ticket."
+
+- id: branch-silence
+  name: Branch Silence
+  pick: first-slice
+  playbook: tunnel
+  requires:
+    sites: [hq, branch]
+    kinds: { firewall: 2, server: 1 }
+  roles:
+    fw-hq: { kind: firewall, site: hq }
+    fw-branch: { kind: firewall, site: branch }
+    branch-pc: { kind: pc, site: branch, pick: random }
+    server: { kind: server, site: hq }
+  primary: fw-hq
+  ticket:
+    origin: client
+    priority: P2
+    title: "Branch can't reach {server.hostname}"
+    body: "Staff at the branch can't open anything on {server.hostname} since Monday morning. Internet at the branch works. The ISP did work at the branch Monday."
+    history:
+      - { at: "0d 11:40", by: "Kyle (tier 2)", text: "Changed phase 2 on {fw-branch.hostname} trying to bring the tunnel up. Still down. Escalating." }
+  faults: [branch-wan-changed, phase2-mangled]
+  fixed:
+    - { type: tunnel-up, role: fw-hq }
+  redHerring: "It looks like a phase 1 proposal mismatch or a broken VPN service."
+  rootCause: "The ISP changed the branch WAN IP, so {fw-hq.hostname} was dialing the old address. Then the phase 2 change on {fw-branch.hostname} broke the selectors."
+  fix: "Point phase 1 on {fw-hq.hostname} at the new branch WAN IP, fix phase 2 on {fw-branch.hostname}, update the docs."
+  note:
+    issue: "Branch tunnel between {fw-hq.hostname} ({fw-hq.ip}) and {fw-branch.hostname} ({fw-branch.ip}) down since Monday."
+    findings: "Branch WAN IP changed after ISP work. Phase 2 on {fw-branch.hostname} had the wrong remote subnet after an earlier edit."
+    changes: "Set the phase 1 remote gateway on {fw-hq.hostname} to the new branch WAN IP. Fixed the phase 2 remote subnet on {fw-branch.hostname}. Updated the WAN IP in the docs."
+    rootCause: "ISP changed the branch WAN IP; then a phase 2 edit broke the selectors."
+    nextSteps: "Ask the ISP for a static IP at the branch."
+    wrongCause: "Phase 1 encryption proposal mismatch."
+    wrongChange: "Rebooted {fw-branch.hostname}."

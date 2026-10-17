@@ -11,3 +11,6 @@
   name: WorkBox
 - id: rackline
   name: RackLine
+- id: aurora
+  name: Aurora Networking
+  dialect: aurora-cx

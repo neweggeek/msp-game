@@ -1,0 +1,81 @@
+# Status handoffs from the workflow interview. Dispatch acts on each one.
+# {device} and {ip} are the ticket's main device. {detail} is what the tech typed.
+handoffs:
+  - id: resolved
+    name: Resolved
+    detail: "What fixed it"
+  - id: reschedule
+    name: Reschedule
+    detail: "Does the client need to be present?"
+    status: scheduled
+    dispatch: "Booked the next open block on your calendar."
+    followUp: { afterMinutes: 1440, status: feedback-received, text: "Your booked block is here. Pick it back up." }
+  - id: teams-call
+    name: Teams call with client
+    detail: "What needs discussing"
+    status: scheduled
+    dispatch: "Set up a Teams call with the client."
+    followUp: { afterMinutes: 240, status: feedback-received, text: "Call held. Client notes are in the ticket." }
+  - id: after-hours
+    name: After-hours maintenance
+    detail: "Days and times you are available"
+    status: scheduled
+    dispatch: "Booked a window with the client."
+    followUp: { afterMinutes: 1440, status: feedback-received, text: "Window booked. Client approved it." }
+  - id: sales
+    name: Sales
+    detail: "Device and reason: unsupported, end of life, capacity"
+    status: dispatch-review
+    dispatch: "Opened a quote with sales."
+    followUp: { afterMinutes: 480, status: awaiting-client, text: "Quote sent to the client." }
+  - id: customer-question
+    name: Customer question
+    detail: "The question"
+    status: awaiting-client
+    dispatch: "Asked the client."
+    followUp: { afterMinutes: 120, status: feedback-received, text: "Client answered." }
+  - id: new-ticket
+    name: New ticket
+    detail: "The separate issue you found"
+    status: dispatch-review
+    dispatch: "Created a new ticket. It is in your queue."
+
+sendBack:
+  - { id: misrouted, name: "Misrouted: belongs to another team" }
+  - { id: duplicate, name: "Duplicate of another ticket" }
+  - { id: nothing, name: "Nothing to go on" }
+
+notes:
+  good: "{device} ({ip}): {summary}"
+  vague:
+    - "Looked into it. Will follow up."
+    - "Still working on it, more soon."
+    - "Checked things over, see ticket."
+  jargon:
+    - "L2 issue on access layer, remediation pending per findings."
+    - "Config drift suspected, actioning per SOP."
+    - "Root caused at infra layer, pending next steps."
+summaries:
+  reschedule: "needs more work. Booking the next block."
+  teams-call: "need to talk this through with the client."
+  after-hours: "change needs an after-hours window so staff are not cut off."
+  sales: "needs a quote. Current gear does not cover what the site needs."
+  customer-question: "question for the client before the next step."
+  new-ticket: "found a separate issue. Opening its own ticket."
+
+scoring:
+  goodNote: 10
+  vagueNote: -5
+  jargonNote: 0
+  resolutionPart: 5
+  wrongRootCause: -20
+  consentViolation: -30
+  misrouteBouncedEarly: 15
+  misrouteWorkedLong: -10
+  duplicateBounced: 10
+  wrongSendBack: -15
+  closedClean: 25
+  closedNoProof: -10
+  reopened: -25
+  slaBreach: -15
+  docFix: 5

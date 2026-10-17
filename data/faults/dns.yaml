@@ -1,0 +1,17 @@
+- id: static-public-dns
+  name: Public DNS servers typed into one PC
+  layer: 7
+  device: pc
+  startedAt: "0d 16:40"
+  effects:
+    - { type: set-dns, target: user-pc, servers: ["8.8.8.8", "8.8.4.4"] }
+  proof: []
+  clues:
+    - id: dns-public
+      text: "ipconfig /all on {user-pc.hostname} shows DNS servers 8.8.8.8 and 8.8.4.4, not {server.hostname} ({server.ip})."
+      surface: rmm
+      requires: "rmm:user-pc"
+    - id: name-fails
+      text: "nslookup {server.hostname} from {user-pc.hostname} fails, but ping {server.ip} works."
+      surface: rmm
+      requires: "rmm:user-pc"

@@ -1,0 +1,26 @@
+- id: aurora-cli
+  brand: aurora
+  type: cli
+  title: "Aurora CX CLI reference"
+  body:
+    - "No enable step. configure terminal enters config mode. Changes apply right away. write memory saves them."
+    - "show interface brief, show vlan, show mac-address-table, show lldp neighbor-info."
+    - "show power-over-ethernet: budget, power drawn, and each port's priority and state."
+    - "interface 1/1/5 then: vlan access 10, shutdown, no shutdown, description <text>."
+    - "power-over-ethernet priority low|high|critical sets PoE priority on a port."
+    - "exit leaves the interface, end goes back to the # prompt."
+- id: aurora-poe
+  brand: aurora
+  type: defaults
+  title: "Aurora CX PoE behavior"
+  body:
+    - "Default PoE priority is low on every port."
+    - "When the budget runs out, the switch denies power to the lowest priority ports first. Among equal priority, the highest port number loses."
+    - "PoE class 4 devices like PTZ cameras draw up to 30 W each."
+- id: aurora-naming
+  brand: aurora
+  type: naming
+  title: "Feature names on Aurora CX"
+  body:
+    - "Access port: vlan access <id>. Other brands: switchport access vlan <id>."
+    - "Trunk: vlan trunk allowed <ids>. Other brands: switchport trunk allowed vlan, or tagged."

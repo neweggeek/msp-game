@@ -7,12 +7,22 @@ import {
   schedule,
 } from "../clock/clock";
 import type { GameData } from "../data";
-import type { Priority } from "../model/types";
+import type { Origin, Priority } from "../model/types";
 
 export interface TicketEntry {
   at: number;
-  by: "tech" | "dispatch" | "system";
+  /** "tech", "dispatch", "system", "client", or a coworker's name. */
+  by: string;
   text: string;
+}
+
+export interface Proof {
+  at: number;
+  kind: "output" | "client";
+  source: string;
+  lines: string[];
+  /** Engine truth at the moment it was attached. The player never sees this flag. */
+  provesFixed: boolean;
 }
 
 export interface Ticket {
@@ -23,7 +33,19 @@ export interface Ticket {
   priority: Priority;
   status: string;
   caseId?: string;
+  extraId?: string;
+  origin: Origin;
+  /** Who reported it, for client tickets. */
+  contact?: string;
   createdAt: number;
+  /** First time the tech opened it. Time on the ticket counts from here. */
+  openedAt?: number;
+  proofs: Proof[];
+  /** Client said it is good to close. */
+  clientConfirmed: boolean;
+  sentBack?: string;
+  /** Handoffs picked so far, so note options stay fresh. */
+  handoffs: number;
   lastStatusAt: number;
   respondedAt?: number;
   closedAt?: number;
@@ -90,13 +112,27 @@ export function createTicket(
   book: TicketBook,
   clock: ClockState,
   data: GameData,
-  input: { clientId: string; title: string; body: string; priority: Priority; caseId?: string },
+  input: {
+    clientId: string;
+    title: string;
+    body: string;
+    priority: Priority;
+    origin: Origin;
+    caseId?: string;
+    extraId?: string;
+    contact?: string;
+    history?: TicketEntry[];
+  },
 ): Ticket {
   const initial = data.tickets.statuses.find((s) => s.initial)?.id ?? "open";
   const now = clock.now;
+  const { history: past = [], ...rest } = input;
   const t: Ticket = {
     id: `T-${book.nextNumber++}`,
-    ...input,
+    ...rest,
+    proofs: [],
+    clientConfirmed: false,
+    handoffs: 0,
     status: initial,
     createdAt: now,
     lastStatusAt: now,
@@ -104,14 +140,14 @@ export function createTicket(
     breaches: {},
     flaggedP1: false,
     version: 1,
-    history: [{ at: now, by: "dispatch", text: `Ticket created at ${input.priority}.` }],
+    history: [...past, { at: now, by: "dispatch", text: `Ticket created at ${input.priority}.` }],
   };
   book.tickets.push(t);
   scheduleTimers(clock, data, t);
   return t;
 }
 
-function find(book: TicketBook, id: string): Ticket | undefined {
+export function find(book: TicketBook, id: string): Ticket | undefined {
   return book.tickets.find((t) => t.id === id);
 }
 
@@ -122,6 +158,7 @@ export function setStatus(
   data: GameData,
   id: string,
   status: string,
+  note?: string,
 ): TicketResult {
   const t = find(book, id);
   const def = data.tickets.statuses.find((s) => s.id === status);
@@ -135,7 +172,11 @@ export function setStatus(
   t.respondedAt ??= clock.now;
   t.version++;
   if (def.final) t.closedAt = clock.now;
-  t.history.push({ at: clock.now, by: "tech", text: `Status set to ${def.name}.` });
+  t.history.push({
+    at: clock.now,
+    by: "tech",
+    text: note ? `${note} (Status: ${def.name})` : `Status set to ${def.name}.`,
+  });
   if (!def.final) scheduleAging(clock, data, t);
   return { ok: true };
 }

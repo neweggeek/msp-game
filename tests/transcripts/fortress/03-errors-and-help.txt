@@ -10,6 +10,7 @@ exit         Exit the CLI.
 > get ?
 system
 router
+vpn
 > exe ?
 ping
 traceroute
@@ -17,12 +18,12 @@ traceroute
 Unknown action 0
 Command fail. Return code -1
 > g system status
-Version: FortressGate-100G v7.4.5,build2225 (GA)
-Serial-Number: FG100G399808110
-Hostname: FG-OHI01
+Version: FortressGate-60G v7.2.8,build3968 (GA)
+Serial-Number: FG60G633553216
+Hostname: FG-HPT01
 Operation Mode: NAT
 Current HA mode: standalone
-System time: Tue Oct 20 08:00:00 2026
+System time: Tue Oct 20 08:04:00 2026
 > config system nothing
 command parse error before 'nothing'
 Command fail. Return code -61
@@ -51,11 +52,11 @@ Command fail. Return code -61
 > unset alias
 > show
 edit "data"
-    set ip 10.168.10.1 255.255.255.0
+    set ip 10.31.10.1 255.255.255.0
     set allowaccess ping
     set status up
     set vlanid 10
-    set interface "port1"
+    set interface "internal1"
     set role lan
     set type vlan
 next
@@ -66,6 +67,6 @@ Command fail. Return code -3
 > execute ping not-an-ip
 Unable to resolve hostname.
 > exit
-Connection to FG-OHI01 closed.
+Connection to FG-HPT01 closed.
 > get system status
 Session is closed.

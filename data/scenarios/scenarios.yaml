@@ -1,0 +1,14 @@
+- id: slice
+  name: "Vertical slice: one managed client, four cases"
+  sites: [hq, branch]
+  tier: mid
+  switchBrand: aurora
+  probe: true
+  cases: [camera-day, wrong-phonebook, nobody-home, branch-silence]
+  extraTickets: [edr-misroute, ap-alert-duplicate]
+
+- id: quick
+  name: "Quick play: one random case"
+  sites: [hq]
+  cases: []
+  extraTickets: []

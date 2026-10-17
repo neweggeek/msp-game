@@ -1,5 +1,6 @@
 import type { ConfigValue } from "../model/types";
 import type { Dialect } from "../schema";
+import { fnv1a } from "../util/hash";
 import { isIp, maskToPrefix, parseCidr, prefixToMask } from "../util/ip";
 
 export type FieldDef = Dialect["fields"][string][string];
@@ -17,11 +18,16 @@ export function parseValue(def: FieldDef, tokens: string[]): Parsed {
   switch (def.codec) {
     case "string":
     case "quoted":
+    case "secret":
       return { ok: true, value: tokens.map(unquote).join(" ") };
     case "int":
       return /^\d+$/.test(first) ? { ok: true, value: Number(first) } : bad(first);
     case "enum":
       return def.values?.includes(first) ? { ok: true, value: first } : bad(first);
+    case "bool":
+      if (["true", "enable", "yes"].includes(first)) return { ok: true, value: true };
+      if (["false", "disable", "no"].includes(first)) return { ok: true, value: false };
+      return bad(first);
     case "list": {
       const wrong = def.values ? tokens.find((t) => !def.values?.includes(t)) : undefined;
       return wrong ? bad(wrong) : { ok: true, value: tokens };
@@ -49,6 +55,9 @@ export function formatValue(def: FieldDef, value: ConfigValue): string {
     case "string":
     case "quoted":
       return `"${String(value)}"`;
+    case "secret":
+      // Devices never print a secret back. The hash still changes when it does.
+      return `ENC ${(fnv1a(String(value)) >>> 0).toString(16).padStart(8, "0")}${(fnv1a(`x${value}`) >>> 0).toString(16).padStart(8, "0")}`;
     case "list":
       return Array.isArray(value) ? value.join(" ") : String(value);
     case "ip-mask": {

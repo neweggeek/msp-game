@@ -1,0 +1,38 @@
+- id: aurora-6000-12g
+  kind: switch
+  brand: aurora
+  model: Aurora CX 6000 12G
+  dialect: aurora-cx
+  tiers: [low, mid]
+  firmware: ["PL.10.13.1000", "PL.10.13.1020"]
+  credentials: { username: admin }
+  poeBudgetW: 139
+  ports:
+    - { pattern: "1/1/{n}", from: 1, to: 12, poe: true }
+    - { pattern: "1/1/{n}", from: 13, to: 14, role: uplink }
+
+- id: aurora-6000-24g
+  kind: switch
+  brand: aurora
+  model: Aurora CX 6000 24G
+  dialect: aurora-cx
+  tiers: [low, mid, high]
+  firmware: ["PL.10.13.1000", "PL.10.13.1020", "PL.10.14.0010"]
+  credentials: { username: admin }
+  poeBudgetW: 195
+  ports:
+    - { pattern: "1/1/{n}", from: 1, to: 24, poe: true }
+    - { pattern: "1/1/{n}", from: 25, to: 28, role: uplink }
+
+- id: aurora-6000-48g
+  kind: switch
+  brand: aurora
+  model: Aurora CX 6000 48G
+  dialect: aurora-cx
+  tiers: [mid, high]
+  firmware: ["PL.10.13.1020", "PL.10.14.0010"]
+  credentials: { username: admin }
+  poeBudgetW: 250
+  ports:
+    - { pattern: "1/1/{n}", from: 1, to: 48, poe: true }
+    - { pattern: "1/1/{n}", from: 49, to: 52, role: uplink }

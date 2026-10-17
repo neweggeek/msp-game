@@ -1,0 +1,41 @@
+# seed: transcript-1
+# scenario: slice
+> get vpn ipsec tunnel summary
+'to-branch' 198.51.100.114:0  selectors(total,up): 1/0  rx(pkt,err): 0/0  tx(pkt,err): 121/121
+> diagnose vpn ike log
+07:58:14 ike 0:to-branch: negotiation timeout, no response from 198.51.100.114
+07:59:13 ike 0:-: ignoring request from 203.0.113.250: no matching gateway
+> show vpn ipsec phase1-interface
+config vpn ipsec phase1-interface
+    edit "to-branch"
+        set interface "wan1"
+        set remote-gw 198.51.100.114
+        set psksecret ENC a906a1f0da63e78e
+        set proposal aes256-sha256
+    next
+end
+> show vpn ipsec phase2-interface
+config vpn ipsec phase2-interface
+    edit "to-branch"
+        set phase1name "to-branch"
+        set src-subnet 10.31.0.0 255.255.0.0
+        set dst-subnet 10.61.0.0 255.255.0.0
+    next
+end
+> diagnose vpn tunnel up to-branch
+Bringing up to-branch...
+Negotiation failed. See diagnose vpn ike log.
+> get system performance status
+CPU states: 2% user 1% system 0% nice 97% idle
+Memory: 5009000k total, 2053690k used (41%)
+Average network usage: 2907 kbps in 1 minute
+Uptime: 62 days, 10 hours, 44 minutes
+> get router info routing-table all
+Codes: S - static, C - connected
+
+S*       0.0.0.0/0 [10/0] via 198.51.100.89, wan1
+S*       10.61.0.0/16 [10/0] is directly connected, to-branch
+C        198.51.100.88/29 is directly connected, wan1
+C        10.31.10.0/24 is directly connected, data
+C        10.31.20.0/24 is directly connected, voice
+C        10.31.99.0/24 is directly connected, mgmt

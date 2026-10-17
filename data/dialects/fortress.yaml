@@ -4,7 +4,7 @@
 id: fortress
 name: Fortress
 abbreviations: unique-prefix
-save: on-end
+apply: on-end
 banner:
   - "Connected to {hostname} ({ip})"
   - ""
@@ -17,6 +17,8 @@ sections:
   - { path: "system global", model: system, kind: single }
   - { path: "system interface", model: interfaces, kind: table, prompt: interface }
   - { path: "router static", model: routes, kind: table, prompt: static, autoKey: true }
+  - { path: "vpn ipsec phase1-interface", model: phase1, kind: table, prompt: phase1-interface }
+  - { path: "vpn ipsec phase2-interface", model: phase2, kind: table, prompt: phase2-interface }
 
 fields:
   system:
@@ -36,6 +38,15 @@ fields:
     dst: { model: dst, codec: ip-mask }
     gateway: { model: gateway, codec: ip }
     device: { model: device, codec: quoted }
+  phase1:
+    interface: { model: interface, codec: quoted }
+    remote-gw: { model: remoteGw, codec: ip }
+    psksecret: { model: psk, codec: secret }
+    proposal: { model: proposal, codec: list, values: [aes128-sha256, aes256-sha256, aes256-sha1] }
+  phase2:
+    phase1name: { model: phase1, codec: quoted }
+    src-subnet: { model: src, codec: ip-mask }
+    dst-subnet: { model: dst, codec: ip-mask }
 
 # Help text for a first word shared by several commands.
 keywords:
@@ -57,6 +68,10 @@ commands:
   - { words: "get system arp", verb: view, view: arp, modes: [exec], help: "Get ARP table." }
   - { words: "get system interface", verb: view, view: interface-list, modes: [exec], help: "Get interface list." }
   - { words: "get router info routing-table all", verb: view, view: routes, modes: [exec], help: "Get routing table." }
+  - { words: "get system performance status", verb: view, view: performance, modes: [exec], help: "Get CPU, memory and uptime." }
+  - { words: "get vpn ipsec tunnel summary", verb: view, view: tunnel-summary, modes: [exec], help: "Get IPsec tunnel summary." }
+  - { words: "diagnose vpn ike log", verb: view, view: ike-log, modes: [exec], help: "Show recent IKE negotiation errors." }
+  - { words: "diagnose vpn tunnel up {name}", verb: view, view: tunnel-up, modes: [exec], help: "Bring a tunnel up." }
   - { words: "diagnose switch poe status", verb: counters, view: poe-status, modes: [exec], help: "Show PoE power on managed switches." }
   - { words: "diagnose switch port-stats {port}", verb: counters, view: port-stats, modes: [exec], help: "Show counters for a managed switch port." }
   - { words: "execute ping {target}", verb: ping, modes: [exec], help: "Ping a host." }
@@ -74,6 +89,20 @@ errors:
   no-target: "Unable to resolve hostname."
 
 views:
+  performance:
+    lines:
+      - "CPU states: 2% user 1% system 0% nice 97% idle"
+      - "Memory: {memTotal}k total, {memUsed}k used ({memPct}%)"
+      - "Average network usage: {netKbps} kbps in 1 minute"
+      - "Uptime: {uptime}"
+  tunnel-summary:
+    empty: "No IPsec tunnels configured."
+    each: { rows: tunnels, lines: ["'{name}' {peer}:0  selectors(total,up): 1/{selectorsUp}  rx(pkt,err): {rx}/0  tx(pkt,err): {tx}/{txErr}"] }
+  ike-log:
+    empty: "No recent IKE errors."
+    each: { rows: entries, lines: ["{time} ike 0:{tunnel}: {message}"] }
+  tunnel-up:
+    lines: ["Bringing up {name}...", "{result}"]
   system-status:
     lines:
       - "Version: {model} v{firmware},build{build} (GA)"

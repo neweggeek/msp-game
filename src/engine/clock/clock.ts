@@ -51,7 +51,7 @@ export function advance(clock: ClockState, minutes: number, fire: (t: Timer) => 
 }
 
 export const dayIndex = (min: number) => Math.floor(min / DAY);
-export const dayOfWeek = (min: number) => dayIndex(min) % 7; // 0 = Monday
+export const dayOfWeek = (min: number) => ((dayIndex(min) % 7) + 7) % 7; // 0 = Monday
 export const minuteOfDay = (min: number) => ((min % DAY) + DAY) % DAY;
 
 export function isWorkDay(cal: CalendarRules, min: number): boolean {

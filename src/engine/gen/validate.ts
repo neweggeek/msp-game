@@ -1,47 +1,79 @@
-import type { AccessToken, Docs, SolvabilityReport, World } from "../model/types";
+import type { AccessToken, CaseInstance, Docs, SolvabilityReport, World } from "../model/types";
 import { canManage, canReach } from "../net/reach";
 import { netState } from "../net/state";
 
-/** Access the player starts with, given the truth and what the docs say. */
+type Checkable = Omit<World, "solvability">;
+
+/**
+ * Access the player starts with for one case, given the truth and the docs.
+ * Role tokens: "rmm:<role>" the agent answers, "ssh:<role>" docs creds work and
+ * some RMM host can reach it at the docs IP or its own gateway.
+ */
 export function accessPaths(
-  world: Omit<World, "solvability">,
+  world: Checkable,
+  c: CaseInstance | null,
+  now: number,
   docs: Docs = world.docs,
 ): AccessToken[] {
   const w = world as World;
-  const ns = netState(w);
+  const ns = netState(w, now);
   const access: AccessToken[] = ["docs"];
-  const isp = w.network.isp.gateway;
   const rmmHosts = w.devices.filter(
-    (d) => d.rmmAgent && ns.online.get(d.id) && canReach(w, d.id, isp, ns),
+    (d) => d.rmmAgent && ns.online.get(d.id) && canReach(w, d.id, "1.1.1.1", ns),
   );
   if (rmmHosts.length > 0) access.push("rmm");
-  if (rmmHosts.some((d) => d.kind === "server")) access.push("monitoring");
+  const collector = w.devices.find((d) => d.id === w.monitoring?.collectorId);
+  if (collector && ns.online.get(collector.id)) access.push("monitoring");
+  if (!c) return access;
 
-  const fw = w.devices.find((d) => d.kind === "firewall");
-  if (fw?.credentials) {
-    const cred = docs.credentials.find((c) => c.deviceId === fw.id);
-    const credOk =
-      cred?.username === fw.credentials.username && cred.password === fw.credentials.password;
-    const docIp = docs.devices.find((d) => d.deviceId === fw.id)?.ip;
-    const viaHost = rmmHosts.some((h) =>
-      [docIp, h.gateway].some((ip) => ip !== undefined && canManage(w, h.id, ip, "ssh", ns)),
+  for (const [role, id] of Object.entries(c.bindings)) {
+    const dev = w.devices.find((d) => d.id === id);
+    if (!dev) continue;
+    if (rmmHosts.some((h) => h.id === id)) access.push(`rmm:${role}`);
+    if (!dev.credentials) continue;
+    const cred = docs.credentials.find((x) => x.deviceId === id);
+    if (cred?.username !== dev.credentials.username || cred.password !== dev.credentials.password)
+      continue;
+    const docIp = docs.devices.find((x) => x.deviceId === id)?.ip;
+    const via = rmmHosts.some((h) =>
+      [docIp, h.gateway].some(
+        (ip) => ip !== undefined && canManage(w, h.id, ip, "ssh", ns) && ownedBy(w, ip, id),
+      ),
     );
-    if (credOk && viaHost) access.push("ssh:firewall");
+    if (via) access.push(`ssh:${role}`);
   }
   return access;
 }
 
+/** Is this IP one of the device's own addresses? */
+function ownedBy(world: World, ip: string, id: string): boolean {
+  const dev = world.devices.find((d) => d.id === id);
+  if (!dev) return false;
+  if (dev.ip === ip) return true;
+  const ifaces = (dev.running?.interfaces ?? {}) as Record<string, Record<string, unknown>>;
+  return Object.values(ifaces).some((f) => typeof f.ip === "string" && f.ip.split("/")[0] === ip);
+}
+
 export function checkSolvable(
-  world: Omit<World, "solvability">,
+  world: Checkable,
+  now: number,
   attempts: SolvabilityReport["attempts"],
 ): SolvabilityReport {
-  const access = accessPaths(world);
-  const clues = world.case.faults.flatMap((f) =>
-    f.clues.map((c) => ({
-      id: c.id,
-      requires: c.requires,
-      reachable: access.includes(c.requires),
-    })),
-  );
-  return { solvable: clues.every((c) => c.reachable), access, clues, attempts };
+  const access = new Set(accessPaths(world, null, now));
+  const clues: SolvabilityReport["clues"] = [];
+  for (const c of world.cases) {
+    const caseAccess = accessPaths(world, c, now);
+    for (const a of caseAccess) access.add(a.includes(":") ? `${a}@${c.caseId}` : a);
+    for (const f of c.faults) {
+      for (const cl of f.clues)
+        clues.push({
+          caseId: c.caseId,
+          id: cl.id,
+          requires: cl.requires,
+          reachable: caseAccess.includes(cl.requires),
+        });
+    }
+  }
+  // Every case needs at least one clue, and every clue a way in.
+  return { solvable: clues.every((x) => x.reachable), access: [...access], clues, attempts };
 }
