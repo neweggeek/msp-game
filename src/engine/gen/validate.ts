@@ -44,15 +44,12 @@ export function accessPaths(
   // ScreenLink: a contact, or the user on a ticket, shares the PC they sit at.
   const live = (d: Device | undefined): d is Device =>
     !!d && ns.online.get(d.id) === true && canReach(w, d.id, "1.1.1.1", ns);
-  const screenHosts = w.client.contacts
-    .map((p) => personPc(w, { id: p.id, name: p.name }))
-    .filter(live);
+  const screenHosts = w.client.contacts.map((p) => personPc(w, p)).filter(live);
   if (screenHosts.length > 0) access.push("screen");
   if (!c) return access;
-  for (const id of Object.values(c.bindings)) {
-    const d = w.devices.find((x) => x.id === id);
-    if (d?.kind === "pc" && d.user && live(d)) screenHosts.push(d);
-  }
+  // The ticket's user can be called too, and shares the PC the ticket is about.
+  const primary = w.devices.find((x) => x.id === c.bindings[c.primary]);
+  if (primary?.kind === "pc" && primary.user && live(primary)) screenHosts.push(primary);
   const hosts = [...rmmHosts, ...screenHosts];
 
   for (const [role, id] of Object.entries(c.bindings)) {

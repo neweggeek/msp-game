@@ -66,14 +66,9 @@ export function people(world: World, ticketContact?: string): Person[] {
   return out;
 }
 
-/** The PC a person sits at: a ticket user's own, or a contact's desk PC at the main office. */
-export function personPc(world: World, person: { id: string; name: string }): Device | undefined {
-  if (person.id.startsWith("user:"))
-    return world.devices.find((d) => d.kind === "pc" && d.user === person.name);
-  const pcs = world.devices
-    .filter((d) => d.kind === "pc" && d.siteId === "hq" && !d.tags?.includes("probe"))
-    .sort((a, b) => a.id.localeCompare(b.id));
-  return pcs.length > 0 ? pcs[fnv1a(person.id) % pcs.length] : undefined;
+/** The PC a person sits at: the one signed in under their name. */
+export function personPc(world: World, person: { name: string }): Device | undefined {
+  return world.devices.find((d) => d.kind === "pc" && d.user === person.name);
 }
 
 /** Your coworkers. Their names match the docs history and access log. */

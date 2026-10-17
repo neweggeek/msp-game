@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { powerCycle } from "../src/engine/calls/calls";
+import { personPc, powerCycle } from "../src/engine/calls/calls";
 import { gameData } from "../src/engine/data";
 import type { Device } from "../src/engine/model/types";
 import { bootTime, netState } from "../src/engine/net/state";
@@ -237,5 +237,15 @@ describe("calls review fixes", () => {
       act({ t: "call-ask", call: id, ask: "power-cycle", device: pc.id });
     }
     expect(g.score.some((e) => e.reason.startsWith("Had someone unplug"))).toBe(true);
+  });
+  it("a contact shares their own desk PC over ScreenLink", () => {
+    for (let i = 0; i < 20; i++) {
+      const g = newGame(`desk-${i}`, data);
+      for (const c of g.world.client.contacts) {
+        const pc = personPc(g.world, c);
+        if (pc) expect(pc.user).toBe(c.name);
+      }
+      expect(g.world.client.contacts.some((c) => personPc(g.world, c))).toBe(true);
+    }
   });
 });

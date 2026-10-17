@@ -3,6 +3,7 @@ import { formatTime } from "../src/engine/clock/clock";
 import { gameData } from "../src/engine/data";
 import type { Device } from "../src/engine/model/types";
 import { ovikView } from "../src/engine/monitor/ovik";
+import { canManage } from "../src/engine/net/reach";
 import { netState } from "../src/engine/net/state";
 import { tunnelStates } from "../src/engine/net/vpn";
 import { publicIp } from "../src/engine/rmm/rmm";
@@ -463,8 +464,24 @@ describe("first slice cases play end to end", () => {
     });
     expect(caseFixed(g.world, c, g.clock.now)).toBe(true);
     expect(g.score.some((e) => e.reason.includes("without"))).toBe(false);
+    // SSH typed in the ScreenLink shell rides on it.
+    const ns = netState(g.world, g.clock.now);
+    const target = g.world.devices
+      .flatMap((d) => [
+        d.ip,
+        ...Object.values((d.running?.interfaces ?? {}) as Record<string, { ip?: string }>).map(
+          (f) => f.ip?.split("/")[0],
+        ),
+      ])
+      .find((ip) => ip && canManage(g.world, pc.id, ip, "ssh", ns));
+    const ssh = act({ t: "rmm", session: shell, line: `ssh admin@${target}` });
+    const cli = Object.values(g.sessions).find((x) => x.kind === "device")?.id as string;
+    expect(ssh.output?.join(" ")).toContain("Opened SSH");
     // They leave when their patience runs out, and the shell closes.
     act({ t: "advance", minutes: 200 });
+    expect(act({ t: "cli", session: cli, line: "admin" }).output?.join(" ")).toContain(
+      "ScreenLink session it ran through has ended",
+    );
     expect(act({ t: "rmm", session: shell, line: "hostname" }).output?.join(" ")).toContain(
       "session ended",
     );

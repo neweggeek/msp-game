@@ -50,6 +50,15 @@ export function agentOnline(world: World, d: Device, ns: NetState): boolean {
   return d.rmmAgent && ns.online.get(d.id) === true && canReach(world, d.id, AGENT_PROBE, ns);
 }
 
+/** Is the shell's way in still there? ScreenLink needs no agent, just the PC on the internet. */
+export function shellUp(world: World, s: RmmSession, ns: NetState): boolean {
+  const d = world.devices.find((x) => x.id === s.deviceId);
+  if (!d) return false;
+  return s.via
+    ? ns.online.get(d.id) === true && canReach(world, d.id, AGENT_PROBE, ns)
+    : agentOnline(world, d, ns);
+}
+
 export function agents(world: World, now: number): AgentRow[] {
   const ns = netState(world, now);
   return world.devices
@@ -245,11 +254,7 @@ export function runRmmLine(s: RmmSession, line: string, world: World, now: numbe
 
 function rmmExec(s: RmmSession, line: string, world: World, d: Device, now: number): RmmLineResult {
   const ns = netState(world, now);
-  // ScreenLink needs no agent, just the PC on the internet.
-  const up = s.via
-    ? ns.online.get(d.id) === true && canReach(world, d.id, AGENT_PROBE, ns)
-    : agentOnline(world, d, ns);
-  if (!up) {
+  if (!shellUp(world, s, ns)) {
     s.closed = true;
     return {
       output: [

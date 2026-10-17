@@ -63,7 +63,8 @@ export function genProfile(rng: Rng, data: GameData, forceTier?: Tier): ClientPr
     ),
     staleness,
     contacts,
-    staff: staff.slice(contacts.length),
+    // Contacts come first, so they get desk PCs at the main office like everyone else.
+    staff,
     disablesMspAccounts: rng.chance(rules.disablesMspAccounts),
   };
 }

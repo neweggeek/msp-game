@@ -10,7 +10,7 @@ import { genSite } from "./site";
 import { checkSolvable } from "./validate";
 
 /** Bump when a code change alters what an existing seed builds. */
-export const GENERATOR_VERSION = 10;
+export const GENERATOR_VERSION = 11;
 
 const MAX_WORLD_ATTEMPTS = 200;
 const MAX_FAULT_ATTEMPTS = 8;
@@ -235,7 +235,8 @@ export function generate(seed: string, data: GameData, opts: GenerateOptions = {
       draft.history.sort((a, b) => a.at - b.at || a.deviceId.localeCompare(b.deviceId));
       const monitoring = {
         collectorId: draft.monitoring?.collectorId ?? "",
-        inventory: ovikInventory(rng.fork("ovik"), draft, base.draft),
+        // A client with no Ovik has nothing in it.
+        inventory: draft.client.managed ? ovikInventory(rng.fork("ovik"), draft, base.draft) : [],
       };
       const extras = extraTickets(data, scenario.extraTickets, cases, draft);
       for (let d = 0; d < MAX_DOC_ATTEMPTS; d++) {

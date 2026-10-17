@@ -17,7 +17,7 @@ import { DEVICE_KINDS, type DeviceKind, type Priority, type World } from "../mod
 import { ovikView } from "../monitor/ovik";
 import { canManage, resolveTarget } from "../net/reach";
 import { netState } from "../net/state";
-import { type RmmSession, agentOnline, openRmm, runRmmLine, runScript } from "../rmm/rmm";
+import { type RmmSession, agentOnline, openRmm, runRmmLine, runScript, shellUp } from "../rmm/rmm";
 import { Rng } from "../rng/rng";
 import { caseFixed } from "../tickets/checks";
 import {
@@ -362,13 +362,23 @@ export function collateralDown(state: GameState, siteId?: string): string[] {
   });
 }
 
+/** A ScreenLink shell whose person went back to work. */
+function screenEnded(state: GameState, s: RmmSession): boolean {
+  return s.until !== undefined && state.clock.now >= s.until;
+}
+
 /** Can this SSH session still reach its device the way it came in? */
 function sessionReaches(state: GameState, s: CliSession): boolean {
   if (!s.fromId || !s.address) return true;
   const { world } = state;
   const ns = netState(world, state.clock.now);
   const host = world.devices.find((d) => d.id === s.fromId);
-  return !!host && agentOnline(world, host, ns) && canManage(world, host.id, s.address, "ssh", ns);
+  const parent = s.parent ? state.sessions[s.parent] : undefined;
+  const up =
+    parent?.kind === "rmm"
+      ? shellUp(world, parent, ns) && !screenEnded(state, parent)
+      : !!host && agentOnline(world, host, ns);
+  return !!host && up && canManage(world, host.id, s.address, "ssh", ns);
 }
 
 /**
@@ -544,6 +554,14 @@ function run(state: GameState, data: GameData, a: Action): ActionResult {
       if (!s || s.kind !== "device") return { ok: false, error: `No session ${a.session}.` };
       const typedPassword = !!s.login;
       const dev = world.devices.find((d) => d.id === s.deviceId);
+      // SSH typed in a ScreenLink shell ends with it.
+      const parent = s.parent ? state.sessions[s.parent] : undefined;
+      if (parent?.kind === "rmm" && screenEnded(state, parent) && !s.closed) {
+        s.closed = true;
+        const line = `Connection to ${s.address ?? dev?.hostname} closed. The ScreenLink session it ran through has ended.`;
+        s.transcript.push(line);
+        return { ok: true, output: [line] };
+      }
       // The box lost power under you: the session is gone.
       if (dev && netState(world, clock.now).cut.get(dev.id)) {
         s.closed = true;
@@ -608,6 +626,7 @@ function run(state: GameState, data: GameData, a: Action): ActionResult {
         username: res.ssh.username,
         fromId: s.deviceId,
         address: res.ssh.address,
+        parent: s.id,
       });
       return { ...opened, output: [`Opened SSH to ${res.ssh.address} in a new tab.`] };
     }
