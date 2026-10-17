@@ -1,6 +1,6 @@
 import { type ReactNode, useState } from "react";
 import { closeBlockers, handoffNotes, resolutionNotes, webPage } from "../../engine";
-import { DiagnosticsBody, DiagnosticsButtons } from "../DiagnosticsPanel";
+import { BugReportDialog, DiagnosticsBody, DiagnosticsButtons } from "../DiagnosticsPanel";
 import { data, useGame, useUi } from "../store";
 
 function Modal({
@@ -40,6 +40,7 @@ export function Dialogs() {
   const dialog = useUi((s) => s.dialog);
   useUi((s) => s.rev);
   if (!dialog) return null;
+  if (dialog.kind === "bug") return <BugReportDialog Modal={Modal} />;
   if (dialog.kind === "diag")
     return (
       <Modal title="Diagnostics" footer={<DiagnosticsButtons />}>

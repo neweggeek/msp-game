@@ -22,6 +22,7 @@ export type Dialog =
   | { kind: "handoff" | "resolve" | "send-back"; ticket: string }
   | { kind: "web"; from: string; address: string }
   | { kind: "diag" }
+  | { kind: "bug" }
   | null;
 
 interface UiState {

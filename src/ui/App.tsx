@@ -223,6 +223,14 @@ function StatusBar() {
         Diagnostics
         {issues.errors > 0 && ` (${issues.errors} error${issues.errors === 1 ? "" : "s"})`}
       </button>
+      <button
+        type="button"
+        className="btn small"
+        onClick={() => setDialog({ kind: "bug" })}
+        title="Something wrong or confusing? Tell us. It saves with the game details."
+      >
+        Report bug
+      </button>
       <input
         ref={file}
         type="file"

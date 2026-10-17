@@ -48,7 +48,7 @@ Phase 1 notes:
 - Out of scope for now: ScreenLink sessions, VPN clients, console, truck rolls, editing in the device web GUI.
 - Generator rerolls: a case that does not fit rerolls the client, fault placement rerolls up to 8 times, unsolvable docs reroll up to 8 times.
 - Terminal pacing (src/ui/terminal/pace.ts) is UI only: ping replies 1s apart, Windows timeouts 4s each, Unix ping fail 5s, Ctrl+C or Esc skips. The engine still answers at once, so game time and tests do not change.
-- Diagnostics (src/ui/diag.ts): errors, warnings, crashes and every action go to a log kept in localStorage. The Diagnostics button in the status bar copies or saves the report, which includes the seed and action log for a replay.
+- Diagnostics (src/ui/diag.ts): errors, warnings, crashes and every action go to a log kept in localStorage. "Report bug" saves the player's note plus a snapshot (tab, ticket, terminal tail, last actions) in a separate list that is never trimmed by the rolling log. The Diagnostics button in the status bar copies or saves the report, which includes the seed and action log for a replay.
 - If a change alters what an old seed builds, the golden-seed test fails. Bump `GENERATOR_VERSION` in `src/engine/gen/index.ts` on purpose, then run `UPDATE_GOLDEN=1 npm test`.
 
 ## Commands
