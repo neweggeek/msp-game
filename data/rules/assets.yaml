@@ -1,0 +1,29 @@
+# Asset types, the way MSP documentation tools group a client's gear:
+# one type per kind of thing, each with its own list, and passwords
+# hang under the asset they open. Order here is the order on screen.
+#
+# connect: the command the copy button puts on the clipboard. {user} and
+# {ip} come from the docs, so a stale doc gives a stale command. Only
+# devices whose template has a CLI dialect get the button.
+types:
+  - { id: firewall, label: Firewalls, kinds: [firewall], connect: "ssh {user}@{ip}" }
+  - { id: switch, label: Switches, kinds: [switch], connect: "ssh {user}@{ip}" }
+  - { id: ap, label: Access points, kinds: [ap] }
+  - { id: server, label: Servers, kinds: [server] }
+  - { id: workstation, label: Workstations, kinds: [pc] }
+  - { id: phone, label: Phones, kinds: [phone] }
+  - { id: camera, label: Cameras, kinds: [camera] }
+
+# Wi-Fi networks the MSP documents for every site that has access points.
+# {code} is the client code. vlan is a VLAN role from the site plan.
+wifi:
+  label: Wi-Fi networks
+  networks:
+    - ssid: "{code}-Staff"
+      vlan: data
+      security: WPA2-Personal
+      notes: Staff laptops and phones.
+    - ssid: "{code}-Guest"
+      vlan: data
+      security: WPA2-Personal
+      notes: Guest. Client isolation on, internet only.

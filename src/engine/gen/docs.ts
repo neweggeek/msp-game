@@ -106,6 +106,35 @@ export function genDocs(
     }
   }
 
+  const floorPlan = rng.chance(0.15);
+
+  // Wi-Fi: one set of networks per site with access points. Passphrases live in the vault.
+  const wifi: Docs["wifi"] = [];
+  for (const site of snapshot.sites) {
+    if (!snapshot.devices.some((d) => d.kind === "ap" && d.siteId === site.id)) continue;
+    data.assets.wifi.networks.forEach((n, i) => {
+      const vlan = site.vlans.find((v) => v.role === n.vlan);
+      if (!vlan) return;
+      const id = `wifi-${site.id}-${i + 1}`;
+      const ssid = n.ssid.replace("{code}", snapshot.client.code);
+      const entry: Docs["wifi"][number] = {
+        id,
+        siteId: site.id,
+        ssid,
+        vlan: vlan.id,
+        security: n.security,
+      };
+      if (n.notes) entry.notes = n.notes;
+      wifi.push(entry);
+      credentials.push({
+        deviceId: id,
+        hostname: ssid,
+        username: "PSK",
+        password: `${rng.pick(["Harbor", "Cedar", "Copper", "Lantern", "Orchid"])}${rng.int(10, 99)}-${rng.hex(4)}`,
+      });
+    });
+  }
+
   return {
     sites: snapshot.sites.map((s) => ({
       siteId: s.id,
@@ -116,8 +145,9 @@ export function genDocs(
     })),
     devices,
     credentials,
+    wifi,
     contacts: structuredClone(snapshot.client.contacts),
-    floorPlan: rng.chance(0.15),
+    floorPlan,
     accessNotes,
     history,
     accessLog,
