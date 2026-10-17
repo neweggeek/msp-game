@@ -3,6 +3,7 @@ import { SLOTS, formatTime, ovikView, totalScore } from "../engine";
 import { DebugView } from "./debug/DebugView";
 import { Desk } from "./desk/Desk";
 import { Dialogs } from "./desk/Dialogs";
+import { diagCounts } from "./diag";
 import { DocsView } from "./docs/Docs";
 import { KbView } from "./kb/Kb";
 import { OvikPage } from "./ovik/Ovik";
@@ -151,7 +152,8 @@ function Clock() {
 
 function StatusBar() {
   const game = useGame();
-  const { message, slot, setSlot, loadSlot, exportFile, importFile, start } = useUi();
+  const { message, slot, setSlot, loadSlot, exportFile, importFile, start, setDialog } = useUi();
+  const issues = diagCounts();
   const file = useRef<HTMLInputElement>(null);
   const [seed, setSeed] = useState(game.seed);
   const v = ovikView(game.world, game.clock.now);
@@ -211,6 +213,15 @@ function StatusBar() {
       </button>
       <button type="button" className="btn small" onClick={() => file.current?.click()}>
         Import
+      </button>
+      <button
+        type="button"
+        className="btn small"
+        onClick={() => setDialog({ kind: "diag" })}
+        title="Errors and the action log, to copy and send back"
+      >
+        Diagnostics
+        {issues.errors > 0 && ` (${issues.errors} error${issues.errors === 1 ? "" : "s"})`}
       </button>
       <input
         ref={file}
