@@ -55,6 +55,8 @@ export interface Ticket {
   flaggedP1: boolean;
   /** Dispatch's hourly P1 check-ins are running for this ticket. */
   p1Clock?: boolean;
+  /** When the current run of P1 check-ins started. */
+  p1Since?: number;
   /** Escalated to the senior, who answered with a hint. */
   escalatedAt?: number;
   /** Bumps on every tech status update, so stale aging timers know to stand down. */
@@ -192,6 +194,8 @@ export function setPriority(
   id: string,
   priority: Priority,
   by: "tech" | "dispatch",
+  /** Targets count from here. Defaults to when the ticket was created. */
+  from?: number,
 ): TicketResult {
   const t = find(book, id);
   if (!t) return { ok: false, error: `No ticket ${id}.` };
@@ -199,7 +203,7 @@ export function setPriority(
     return { ok: false, error: "Only dispatch sets P1. Flag it for dispatch instead." };
   }
   t.priority = priority;
-  Object.assign(t, dueTimes(data, priority, t.createdAt));
+  Object.assign(t, dueTimes(data, priority, from ?? t.createdAt));
   t.history.push({ at: clock.now, by, text: `Priority set to ${priority}.` });
   schedule(clock, t.responseDue, "ticket-response-due", { ticket: t.id, version: t.version });
   schedule(clock, t.resolveDue, "ticket-resolve-due", { ticket: t.id, version: t.version });

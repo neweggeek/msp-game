@@ -15,7 +15,7 @@ function setup(opts: { caseId?: string } = {}, caseId?: string) {
 
 describe("desk rules", () => {
   it("dispatch checks in on a P1 every hour; a note keeps it quiet", () => {
-    const { g, act, t } = setup({ caseId: "tidy-desk" });
+    const { g, act, t } = setup({ caseId: "stuck-modem" });
     expect(t.priority).toBe("P1");
     act({ t: "ticket-open", ticket: t.id });
     act({ t: "ticket-note", ticket: t.id, text: "Whole site dark. Calling the contact." });
@@ -70,5 +70,43 @@ describe("desk rules", () => {
     act({ t: "advance", minutes: 31 });
     const stuck = g.score.filter((e) => e.reason.includes("no check-in"));
     expect(stuck.map((e) => e.ticketId)).toEqual([quiet.id]);
+  });
+  it("a P1 flag on a stopped office is granted, with targets from the grant", () => {
+    const { g, act, t } = setup({ caseId: "tidy-desk" });
+    expect(t.priority).toBe("P2");
+    act({ t: "advance", minutes: 120 });
+    act({ t: "ticket-flag-p1", ticket: t.id, reason: "Whole office is down" });
+    act({ t: "advance", minutes: 20 });
+    expect(t.priority).toBe("P1");
+    expect(t.resolveDue).toBeGreaterThan(g.clock.now);
+    expect(g.score.some((e) => e.reason.includes("flag was right"))).toBe(true);
+    // Only dispatch changes a P1.
+    expect(act({ t: "ticket-priority", ticket: t.id, priority: "P3" }).ok).toBe(false);
+  });
+
+  it("the night does not count against a P1 or the hour rule", () => {
+    const { g, act, t } = setup({ caseId: "stuck-modem" });
+    act({ t: "ticket-open", ticket: t.id });
+    act({ t: "ticket-note", ticket: t.id, text: "Site down. ISP next." });
+    const toFive = 17 * 60 - (g.clock.now % 1440) - 10;
+    act({ t: "advance", minutes: 50 });
+    act({ t: "ticket-note", ticket: t.id, text: "Still on hold with the ISP." });
+    act({ t: "advance", minutes: toFive - 51 });
+    act({ t: "ticket-note", ticket: t.id, text: "Waiting on the ISP overnight." });
+    const before = g.score.length;
+    // Go home, come back at 08:00.
+    act({ t: "advance", minutes: 1440 - (g.clock.now % 1440) + 480 });
+    expect(g.score.length).toBe(before);
+  });
+
+  it("a reopened P1 gets its check-ins back", () => {
+    const { g, act, t } = setup({ caseId: "stuck-modem" });
+    act({ t: "ticket-open", ticket: t.id });
+    act({ t: "resolve", ticket: t.id, note: 0 });
+    act({ t: "advance", minutes: 100 });
+    expect(t.closedAt).toBeUndefined();
+    const before = g.score.filter((e) => e.reason.includes("P1 hourly")).length;
+    act({ t: "advance", minutes: 180 });
+    expect(g.score.filter((e) => e.reason.includes("P1 hourly")).length).toBeGreaterThan(before);
   });
 });
