@@ -84,3 +84,9 @@ scoring:
   docFix: 5
   docAdd: 5
   callUnwanted: -10
+  p1CheckInMissed: -10
+  p1FlagGood: 10
+  p1FlagBad: -5
+  escalatedEarly: -10
+  seniorHelp: -5
+  noCheckIn: -5

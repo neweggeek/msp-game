@@ -11,3 +11,24 @@ techPriorities: [P2, P3, P4]
 aging:
   followUpAfterDays: 3
   p1AfterBusinessDays: 2
+# Desk rules from the workflow interview.
+desk:
+  # Dispatch wants an update on a P1 this often, during MSP hours.
+  p1CheckInMinutes: 60
+  # Dispatch looks at a P1 flag this long after you raise it.
+  p1FlagReviewMinutes: 15
+  # Roadblocked: escalate no sooner than this. The senior wants to hear what you ruled out.
+  escalateAfterMinutes: 30
+  # No fix after this long on a ticket: tell the team where you are (a note or an escalation).
+  checkInAfterMinutes: 60
+  # Business minutes until the senior answers an escalation.
+  seniorReplyMinutes: 30
+  senior: "Dev (senior)"
+  lines:
+    p1CheckIn: "Checking in on {ticket}. It is a P1, so we need an update every hour."
+    p1Granted: "Reviewed the flag. {ticket} is now a P1. Hourly check-ins from here."
+    p1Declined: "Reviewed the flag. {ticket} stays {priority}. P1 is for a stopped business, and this is not one."
+    stuck: "An hour on {ticket} with no fix and no word to the team. Post a note or escalate."
+    seniorTooEarly: "Give it a real try first. Come back after half an hour with what you ruled out."
+    seniorAgain: "I already sent you my read on this one."
+    seniorHint: "Had a look. {hint}"

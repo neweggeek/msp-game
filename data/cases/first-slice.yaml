@@ -235,6 +235,7 @@
     title: "Nothing works at the office"
     body: "Nothing works this morning. No internet, no phones, no printing. It was fine when we left last night."
   faults: [desk-loop]
+  p1Worthy: true
   fixed:
     - { type: no-loop, role: switch }
     - { type: device-online, role: switch }
@@ -275,6 +276,7 @@
     title: "Internet is down at the office"
     body: "No internet since we got in this morning. Email and the shared drive don't work either."
   faults: [modem-provisioning]
+  p1Worthy: true
   fixed:
     - { type: isp-up, role: firewall }
   call:

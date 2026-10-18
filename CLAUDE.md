@@ -35,7 +35,7 @@ When the spec and the interview disagree, the interview wins. When a feature ID 
 
 ## Current phase
 
-Phase 1 (vertical slice) is built: one managed client with a main office and a branch, four cases, one misroute and one duplicate. Phase 2 (access and people) is in progress: calls, remote hands, the ISP line, the credential ladder, ScreenLink and the VPN are in. The slice now has six cases (Tuesday 7 PM and Lights Out added). Tidy Desk is quick-play only, since it takes the whole site down. Plan and order: /mnt/project-files/msp-game-reviews/phase-2-proposal.md (project files, not the repo).
+Phase 1 (vertical slice) is built: one managed client with a main office and a branch, four cases, one misroute and one duplicate. Phase 2 (access and people) is in progress: calls, remote hands, the ISP line, the credential ladder, ScreenLink, the VPN and the desk rules are in. The slice now has six cases (Tuesday 7 PM and Lights Out added). Tidy Desk is quick-play only, since it takes the whole site down. Plan and order: /mnt/project-files/msp-game-reviews/phase-2-proposal.md (project files, not the repo).
 
 Phase 2 notes:
 
@@ -54,6 +54,7 @@ Phase 2 notes:
 - Shells (RMM or ScreenLink) can now fix two things by hand: `Set-DnsClientServerAddress -InterfaceAlias Ethernet -ResetServerAddresses` and `powercfg /change standby-timeout-ac 0`.
 - VPN (data/rules/vpn.yaml, src/engine/vpn, src/ui/vpn): some managed clients give the MSP an SSL VPN account on the main office firewall (`device.vpn`, port in running `sslvpn`). Docs hold the profile and the vault entry `vpn-<site>`; a stale page can have the wrong port. Your laptop has one app per firewall brand; firmware lines need a minimum app version (`minVersion`, also in the Vendor KB), and Update costs `upgradeMinutes`. Sign-in is a code from the MSP authenticator (one game minute per code, the firewall also takes the one before) or a push to approve. Bad codes lock the account. Connected, the laptop terminal can ping and SSH to what the firewall reaches inside; those SSH sessions close when the VPN drops and follow the lockout rule. Access token `vpn`.
 - Firewall clocks: `system ntp` in the Fortress dialect. With ntpsync off the clock drifts by `clockDrift` minutes (`clockOffset()`), shown in get system status and the SSL VPN log, and codes stop matching. Codes Rejected (quick play, needs a code-based VPN) is that fault; check `clock-synced`.
+- Desk rules (`desk` in data/rules/tickets.yaml, `deskTimer` in game.ts): dispatch checks in on every open P1 each hour of MSP time and charges `p1CheckInMissed` when the tech wrote nothing that hour. Flag P1 goes to dispatch, which grants it only for cases marked `p1Worthy` (a stopped business). Escalate (with a note) before `escalateAfterMinutes` on the ticket gets a push back and `escalatedEarly`; after that the senior answers on the ticket with the case's root cause, once, for `seniorHelp`. A case ticket an hour in with no fix and no tech note, handoff or escalation charges `noCheckIn` once.
 - Scenario "breakfix": a one-site client with `managed: false`. No RMM agents and no Ovik, so ScreenLink, calls and docs are the only ways in.
 - The status bar picks what a new shift plants: a scenario, or one case on the one-site quick client. Saves keep the pick.
 

@@ -53,6 +53,10 @@ export interface Ticket {
   resolveDue: number;
   breaches: { response?: number; resolve?: number };
   flaggedP1: boolean;
+  /** Dispatch's hourly P1 check-ins are running for this ticket. */
+  p1Clock?: boolean;
+  /** Escalated to the senior, who answered with a hint. */
+  escalatedAt?: number;
   /** Bumps on every tech status update, so stale aging timers know to stand down. */
   version: number;
   history: TicketEntry[];
