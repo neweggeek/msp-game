@@ -13,7 +13,7 @@ export function ScreenLinkPage() {
   const invites = [...(game.screenlink ?? [])].reverse();
   const now = game.clock.now;
   return (
-    <main className="main">
+    <main className="main split">
       <section className="col">
         <section className="panel">
           <header>

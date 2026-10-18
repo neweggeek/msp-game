@@ -18,7 +18,16 @@ import { diag, errorText } from "./diag";
 
 const data = gameData();
 
-export type Tab = "desk" | "rmm" | "screenlink" | "ovik" | "docs" | "terminal" | "kb" | "debug";
+export type Tab =
+  | "desk"
+  | "rmm"
+  | "screenlink"
+  | "ovik"
+  | "docs"
+  | "vpn"
+  | "terminal"
+  | "kb"
+  | "debug";
 export type Dialog =
   | { kind: "handoff" | "resolve" | "send-back"; ticket: string }
   | { kind: "web"; from: string; address: string }
@@ -195,7 +204,11 @@ export function openCount(game: GameState): number {
 function lastSession(game: GameState): string | undefined {
   for (let i = game.log.length - 1; i >= 0; i--) {
     const a = game.log[i];
-    if (a && (a.t === "cli" || a.t === "rmm") && !game.sessions[a.session]?.closed)
+    if (
+      a &&
+      (a.t === "cli" || a.t === "rmm" || a.t === "local") &&
+      !game.sessions[a.session]?.closed
+    )
       return a.session;
   }
   return undefined;

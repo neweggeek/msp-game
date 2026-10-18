@@ -103,7 +103,11 @@ export function canManage(
   ns: NetState,
 ): boolean {
   if (!canReach(world, fromId, ip, ns)) return false;
-  const target = resolveTarget(world, ip, ns);
+  return answers(resolveTarget(world, ip, ns), service);
+}
+
+/** Does this target take management sessions for the service? Switches with a CLI, or allowaccess. */
+function answers(target: Target, service: string): boolean {
   if (target.kind === "device") return target.device?.kind === "switch" && !!target.device.dialect;
   if (target.kind !== "firewall-iface" || !target.device || !target.iface) return false;
   const f = (target.device.running?.interfaces as Record<string, Record<string, unknown>>)[
@@ -111,6 +115,39 @@ export function canManage(
   ];
   const allow = f?.allowaccess;
   return Array.isArray(allow) && allow.includes(service);
+}
+
+/** The firewall's SSL VPN takes connections: it is up, its site has internet, and the VPN is on. */
+export function sslVpnUp(fw: Device, ns: NetState): boolean {
+  const cfg = fw.running?.sslvpn as Record<string, unknown> | undefined;
+  return ns.online.get(fw.id) === true && wanUp(fw, ns) && cfg?.status === "enable";
+}
+
+/**
+ * From the laptop over this firewall's SSL VPN: can traffic reach an IP? VPN users land behind
+ * the firewall, so it is the firewall's own view, minus the internet.
+ */
+export function vpnCanReach(world: World, fw: Device, ip: string, ns: NetState): boolean {
+  if (!sslVpnUp(fw, ns)) return false;
+  const target = resolveTarget(world, ip, ns);
+  if (target.kind === "none" || target.kind === "internet" || target.kind === "isp-gateway")
+    return false;
+  // The firewall's WAN side is the way in, not a place to manage from inside the tunnel.
+  if (target.kind === "firewall-iface" && target.device?.id === fw.id) {
+    const f = firewallInterfaces(fw).find(([n]) => n === target.iface)?.[1];
+    return f?.role === "lan";
+  }
+  return fromFirewall(world, fw, target, ip, ns);
+}
+
+export function vpnCanManage(
+  world: World,
+  fw: Device,
+  ip: string,
+  service: string,
+  ns: NetState,
+): boolean {
+  return vpnCanReach(world, fw, ip, ns) && answers(resolveTarget(world, ip, ns), service);
 }
 
 /** DNS servers a device uses: typed in, or what DHCP gives at its site. */

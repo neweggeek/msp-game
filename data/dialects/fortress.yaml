@@ -15,6 +15,8 @@ prompts:
 
 sections:
   - { path: "system global", model: system, kind: single }
+  - { path: "system ntp", model: ntp, kind: single }
+  - { path: "vpn ssl settings", model: sslvpn, kind: single }
   - { path: "system interface", model: interfaces, kind: table, prompt: interface }
   - { path: "router static", model: routes, kind: table, prompt: static, autoKey: true }
   - { path: "vpn ipsec phase1-interface", model: phase1, kind: table, prompt: phase1-interface }
@@ -25,6 +27,12 @@ fields:
     hostname: { model: hostname, codec: string }
     timezone: { model: timezone, codec: string }
     admin-sport: { model: adminHttpsPort, codec: int }
+  ntp:
+    ntpsync: { model: ntpsync, codec: enum, values: [enable, disable] }
+    server: { model: server, codec: quoted }
+  sslvpn:
+    status: { model: status, codec: enum, values: [enable, disable] }
+    port: { model: port, codec: int }
   interfaces:
     ip: { model: ip, codec: ip-mask }
     allowaccess: { model: allowaccess, codec: list, values: [ping, https, ssh, http, snmp, fabric] }
@@ -72,6 +80,7 @@ commands:
   - { words: "get vpn ipsec tunnel summary", verb: view, view: tunnel-summary, modes: [exec], help: "Get IPsec tunnel summary." }
   - { words: "diagnose vpn ike log", verb: view, view: ike-log, modes: [exec], help: "Show recent IKE negotiation errors." }
   - { words: "diagnose vpn tunnel up {name}", verb: view, view: tunnel-up, modes: [exec], help: "Bring a tunnel up." }
+  - { words: "diagnose vpn ssl log", verb: view, view: ssl-log, modes: [exec], help: "Show recent SSL VPN sign-ins." }
   - { words: "diagnose switch poe status", verb: counters, view: poe-status, modes: [exec], help: "Show PoE power on managed switches." }
   - { words: "diagnose switch port-stats {port}", verb: counters, view: port-stats, modes: [exec], help: "Show counters for a managed switch port." }
   - { words: "execute ping {target}", verb: ping, modes: [exec], help: "Ping a host." }
@@ -101,6 +110,9 @@ views:
   ike-log:
     empty: "No recent IKE errors."
     each: { rows: entries, lines: ["{time} ike 0:{tunnel}: {message}"] }
+  ssl-log:
+    empty: "No recent SSL VPN sign-ins."
+    each: { rows: entries, lines: ["{time} sslvpn: {message}"] }
   tunnel-up:
     lines: ["Bringing up {name}...", "{result}"]
   system-status:

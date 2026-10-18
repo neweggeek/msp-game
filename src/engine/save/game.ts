@@ -15,8 +15,8 @@ import type { GameData } from "../data";
 import { GENERATOR_VERSION, generate } from "../gen";
 import { DEVICE_KINDS, type DeviceKind, type Priority, type World } from "../model/types";
 import { ovikView } from "../monitor/ovik";
-import { canManage, resolveTarget } from "../net/reach";
-import { netState } from "../net/state";
+import { canManage, resolveTarget, vpnCanManage } from "../net/reach";
+import { clockOffset, netState } from "../net/state";
 import { type RmmSession, agentOnline, openRmm, runRmmLine, runScript, shellUp } from "../rmm/rmm";
 import { Rng } from "../rng/rng";
 import { caseFixed } from "../tickets/checks";
@@ -38,6 +38,17 @@ import {
 } from "../tickets/tickets";
 import { isIp } from "../util/ip";
 import { fill } from "../util/template";
+import {
+  type LocalSession,
+  type VpnState,
+  approvePush,
+  connect,
+  newVpnState,
+  openLocal,
+  runLocal,
+  upgradeApp,
+  vpnLink,
+} from "../vpn/client";
 
 export const SAVE_VERSION = 2;
 export const SNAPSHOT_EVERY = 50;
@@ -75,7 +86,21 @@ export type Action =
   | { t: "call-ask"; call: string; ask: string; device?: string }
   | { t: "call-end"; call: string }
   | { t: "sl-new" }
-  | { t: "sl-open"; code: string };
+  | { t: "sl-open"; code: string }
+  | { t: "vpn-upgrade"; app: string }
+  | {
+      t: "vpn-connect";
+      app: string;
+      gateway: string;
+      port: number;
+      username: string;
+      password: string;
+      code?: string;
+    }
+  | { t: "vpn-push"; approve: boolean }
+  | { t: "vpn-disconnect" }
+  | { t: "local-open" }
+  | { t: "local"; session: string; line: string };
 
 export interface ScreenLinkInvite {
   code: string;
@@ -103,7 +128,7 @@ export interface CalendarEntry {
   title: string;
 }
 
-export type TermSession = CliSession | RmmSession;
+export type TermSession = CliSession | RmmSession | LocalSession;
 
 export interface GameState {
   saveVersion: number;
@@ -137,6 +162,8 @@ export interface GameState {
   unwantedCalls?: string[];
   /** ScreenLink support sessions: a join code, then who joined from which PC and until when. */
   screenlink?: ScreenLinkInvite[];
+  /** Your VPN apps, connection and authenticator lockouts. */
+  vpn?: VpnState;
   log: Action[];
   snapshot?: { at: number; state: string };
 }
@@ -254,9 +281,14 @@ function cliContext(state: GameState, data: GameData, s: CliSession): CliContext
   return {
     world: state.world,
     dialect,
-    time: formatTime(data.calendar, state.clock.now, true),
+    // The box's own clock, which drifts while NTP sync is off.
+    time: formatTime(data.calendar, state.clock.now + clockOffset(device(state, s.deviceId)), true),
     now: state.clock.now,
   };
+}
+
+function device(state: GameState, id: string) {
+  return state.world.devices.find((d) => d.id === id) as World["devices"][number];
 }
 
 /** Client business hours, hidden from the player. Weekdays only. */
@@ -369,9 +401,13 @@ function screenEnded(state: GameState, s: RmmSession): boolean {
 
 /** Can this SSH session still reach its device the way it came in? */
 function sessionReaches(state: GameState, s: CliSession): boolean {
-  if (!s.fromId || !s.address) return true;
   const { world } = state;
   const ns = netState(world, state.clock.now);
+  if (s.vpn && s.address) {
+    const fw = vpnLink(state.vpn, world, state.clock.now);
+    return fw?.id === s.vpn && vpnCanManage(world, fw, s.address, "ssh", ns);
+  }
+  if (!s.fromId || !s.address) return true;
   const host = world.devices.find((d) => d.id === s.fromId);
   const parent = s.parent ? state.sessions[s.parent] : undefined;
   const up =
@@ -554,6 +590,13 @@ function run(state: GameState, data: GameData, a: Action): ActionResult {
       if (!s || s.kind !== "device") return { ok: false, error: `No session ${a.session}.` };
       const typedPassword = !!s.login;
       const dev = world.devices.find((d) => d.id === s.deviceId);
+      // SSH over the VPN ends when the tunnel does.
+      if (s.vpn && !s.closed && vpnLink(state.vpn, world, clock.now)?.id !== s.vpn) {
+        s.closed = true;
+        const line = `Connection to ${s.address} closed. The VPN is no longer connected.`;
+        s.transcript.push(line);
+        return { ok: true, output: [line] };
+      }
       // SSH typed in a ScreenLink shell ends with it.
       const parent = s.parent ? state.sessions[s.parent] : undefined;
       if (parent?.kind === "rmm" && screenEnded(state, parent) && !s.closed) {
@@ -750,7 +793,10 @@ function run(state: GameState, data: GameData, a: Action): ActionResult {
         const pick = n === undefined ? s?.last : s?.outputs?.[Number(n)];
         if (!s || !pick)
           return { ok: false, error: "Run a command first, then attach its output." };
-        const host = world.devices.find((d) => d.id === s.deviceId)?.hostname ?? s.deviceId;
+        const host =
+          s.kind === "local"
+            ? "laptop"
+            : (world.devices.find((d) => d.id === s.deviceId)?.hostname ?? s.deviceId);
         source = `${host}: ${pick.line}`;
         lines = pick.output.slice(0, 40);
       }
@@ -1082,6 +1128,63 @@ function run(state: GameState, data: GameData, a: Action): ActionResult {
       if (!call) return { ok: false, error: `No call ${a.call}.` };
       call.closed = true;
       return { ok: true };
+    }
+    case "vpn-upgrade": {
+      state.vpn ??= newVpnState(data);
+      const r = upgradeApp(state.vpn, data, a.app);
+      if (r.ok) spend(state, data, data.vpn.upgradeMinutes);
+      return { ok: r.ok, output: r.output };
+    }
+    case "vpn-connect": {
+      state.vpn ??= newVpnState(data);
+      const { t: _t, ...req } = a;
+      const r = connect(state.vpn, world, data, clock.now, req, (m) =>
+        formatTime(data.calendar, m),
+      );
+      spend(state, data, data.vpn.connectMinutes);
+      return { ok: r.ok, output: r.output };
+    }
+    case "vpn-push": {
+      state.vpn ??= newVpnState(data);
+      const r = approvePush(state.vpn, world, data, clock.now, a.approve);
+      return { ok: r.ok, output: r.output };
+    }
+    case "vpn-disconnect": {
+      if (state.vpn) {
+        state.vpn.conn = undefined;
+        state.vpn.push = undefined;
+      }
+      return { ok: true, output: ["Disconnected."] };
+    }
+    case "local-open": {
+      const id = `s${state.nextSession++}`;
+      state.sessions[id] = openLocal(id);
+      return { ok: true, session: id };
+    }
+    case "local": {
+      const s = state.sessions[a.session];
+      if (!s || s.kind !== "local") return { ok: false, error: `No session ${a.session}.` };
+      const res = runLocal(s, a.line, state.vpn, world, clock.now);
+      if (res.output.length > 0) remember(s, a.line, res.output);
+      spend(state, data, cost(data, "rmm-command"));
+      if (!res.ssh) return { ok: true, output: res.output };
+      const ns = netState(world, clock.now);
+      const fw = vpnLink(state.vpn, world, clock.now);
+      const fail = (line: string) => {
+        s.transcript.splice(s.transcript.length - 1, 0, line);
+        return { ok: true, output: [line] };
+      };
+      const target = resolveTarget(world, res.ssh.address, ns);
+      if (!fw || !target.device)
+        return fail(`ssh: connect to host ${res.ssh.address} port 22: Connection timed out`);
+      if (!vpnCanManage(world, fw, res.ssh.address, "ssh", ns))
+        return fail(`ssh: connect to host ${res.ssh.address} port 22: Connection refused`);
+      const opened = openDeviceSession(state, data, target.device.id, {
+        username: res.ssh.username,
+        address: res.ssh.address,
+        vpn: fw.id,
+      });
+      return { ...opened, output: [`Opened SSH to ${res.ssh.address} in a new tab.`] };
     }
     case "vault-view": {
       const cred = world.docs.credentials.find((c) => c.deviceId === a.device);

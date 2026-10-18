@@ -191,3 +191,9 @@ export function siteOf(world: World, siteId: string) {
   if (!s) throw new Error(`no site ${siteId}`);
   return s;
 }
+
+/** Minutes a device's clock is off: it drifts while NTP sync is off. */
+export function clockOffset(d: Device): number {
+  const ntp = d.running?.ntp as Fields | undefined;
+  return ntp?.ntpsync === "disable" ? (d.clockDrift ?? 0) : 0;
+}

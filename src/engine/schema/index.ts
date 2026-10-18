@@ -72,7 +72,7 @@ export const roomTemplateSchema = z.object({
 /** "docs", "monitoring", "rmm", "hands" (a phone call), "isp" (its support line), or "ssh:<role>" / "rmm:<role>". */
 export const accessTokenSchema = z
   .string()
-  .regex(/^(docs|rmm|monitoring|hands|isp|screen|(ssh|rmm):[a-z-]+)$/);
+  .regex(/^(docs|rmm|monitoring|hands|isp|screen|vpn|(ssh|rmm):[a-z-]+)$/);
 /** "<day>d HH:MM", day 0 is the Monday epoch. Negative days are before it. */
 export const gameTimeSchema = z.string().regex(/^-?\d+d \d{2}:\d{2}$/);
 const clock = z.string().regex(/^\d{2}:\d{2}$/);
@@ -109,6 +109,12 @@ const effectSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("loop-cable"), target: z.string() }),
   /** The ISP's side of the site goes down until they fix it. Target is the site's firewall. */
   z.object({ type: z.literal("isp-outage"), target: z.string() }),
+  /** NTP sync off and the firewall clock drifts this many minutes, so token codes stop matching. */
+  z.object({
+    type: z.literal("clock-drift"),
+    target: z.string(),
+    minutes: z.tuple([z.number().int(), z.number().int()]),
+  }),
 ]);
 
 const proofSchema = z.discriminatedUnion("type", [
@@ -124,6 +130,7 @@ export const checkSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("no-power-cut"), role: z.string() }),
   z.object({ type: z.literal("no-loop"), role: z.string() }),
   z.object({ type: z.literal("isp-up"), role: z.string() }),
+  z.object({ type: z.literal("clock-synced"), role: z.string() }),
 ]);
 
 export const faultSchema = z.object({
@@ -158,6 +165,8 @@ export const caseSchema = z.object({
     sites: z.array(z.string()).min(1),
     kinds: z.record(deviceKindSchema, z.number().int()),
     probe: z.boolean().optional(),
+    /** The main office firewall gives the MSP a VPN account with this sign-in. */
+    vpn: z.enum(["totp", "push"]).optional(),
   }),
   roles: z.record(
     z.object({
@@ -248,6 +257,31 @@ export const scriptSchema = z.object({
   minutes: z.number().int().min(0),
   effect: z.enum(["reset-dns", "no-sleep", "none"]),
   description: z.string(),
+});
+
+export const vpnRulesSchema = z.object({
+  apps: z.array(
+    z.object({
+      brand: z.string(),
+      name: z.string(),
+      installed: z.string(),
+      latest: z.string(),
+      minVersion: z.record(z.string()),
+    }),
+  ),
+  upgradeMinutes: z.number().int(),
+  connectMinutes: z.number().int(),
+  chance: z.number().min(0).max(1),
+  ports: z.array(z.number().int()).min(1),
+  pushChance: z.number().min(0).max(1),
+  wrongPort: z.object({ fresh: z.number(), partly: z.number(), stale: z.number() }),
+  mfa: z.object({
+    stepMinutes: z.number().int().min(1),
+    badCodesToLock: z.number().int().min(1),
+    lockMinutes: z.number().int(),
+    pushMinutes: z.number().int(),
+  }),
+  messages: z.record(z.string()),
 });
 
 export const kbSchema = z.object({
@@ -546,6 +580,7 @@ export type ExtraTicketDef = z.infer<typeof extraTicketSchema>;
 export type ScenarioDef = z.infer<typeof scenarioSchema>;
 export type ScriptDef = z.infer<typeof scriptSchema>;
 export type KbEntry = z.infer<typeof kbSchema>;
+export type VpnRules = z.infer<typeof vpnRulesSchema>;
 export type HandoffRules = z.infer<typeof handoffRulesSchema>;
 export type CallRules = z.infer<typeof callRulesSchema>;
 export type CheckDef = z.infer<typeof checkSchema>;

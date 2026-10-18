@@ -291,3 +291,36 @@
     nextSteps: "Ask the ISP for a ticket number and a note on future pushes. Keep the ISP PIN in the docs."
     wrongCause: "The firewall locked up overnight."
     wrongChange: "Had the client power-cycle the firewall."
+
+- id: codes-rejected
+  name: Codes Rejected
+  pick: first-slice
+  playbook: access
+  requires:
+    sites: [hq]
+    kinds: { firewall: 1 }
+    vpn: totp
+  roles:
+    firewall: { kind: firewall, site: hq }
+  primary: firewall
+  ticket:
+    origin: tech
+    priority: P3
+    title: "MSP VPN rejects every authenticator code"
+    body: "Kyle (tier 2): I tried the MSP VPN to {firewall.hostname} this morning. It took the password, then rejected three fresh authenticator codes and locked me out. The codes on my phone look right. Nothing is down for the client, but we need the VPN back."
+    history:
+      - { at: "1d 07:24", by: "Kyle (tier 2)", text: "Three codes rejected on the VPN, account locked for 30 minutes. Escalating to network." }
+  faults: [firewall-clock-drift]
+  fixed:
+    - { type: clock-synced, role: firewall }
+  redHerring: "The authenticator token looks broken, or someone changed the VPN password."
+  rootCause: "NTP sync is off on {firewall.hostname}, so its clock drifted minutes away from real time. Token codes are checked against that clock, so every fresh code looks expired."
+  fix: "Get on {firewall.hostname} another way (RMM, then SSH). Run config system ntp, set ntpsync enable, end. Then connect the VPN with a fresh code."
+  note:
+    issue: "MSP VPN to {firewall.hostname} ({firewall.ip}) rejected every authenticator code and locked the account."
+    findings: "get system status on {firewall.hostname} showed the clock minutes off. NTP sync was disabled. The SSL VPN log showed the rejected codes."
+    changes: "Turned NTP sync back on for {firewall.hostname}. The clock came back to the right time, and a fresh code connected."
+    rootCause: "Firewall clock drift with NTP sync off made every token code look expired."
+    nextSteps: "Add an Ovik check for clock drift on {firewall.hostname}. Find out who turned NTP off."
+    wrongCause: "The authenticator token on the phone was out of sync."
+    wrongChange: "Re-enrolled the authenticator token."

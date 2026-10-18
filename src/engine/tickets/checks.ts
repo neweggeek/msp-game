@@ -1,6 +1,6 @@
 import type { CaseInstance, World } from "../model/types";
 import { resolveName } from "../net/reach";
-import { loopLinks, netState } from "../net/state";
+import { clockOffset, loopLinks, netState } from "../net/state";
 import { tunnelStates } from "../net/vpn";
 
 /** Is the real problem gone? Every "fixed" check of the case must pass. */
@@ -26,6 +26,8 @@ export function caseFixed(world: World, c: CaseInstance, now: number): boolean {
         return !ns.ispDown.get(dev.siteId);
       case "no-loop":
         return !loopLinks(world, dev.id).length;
+      case "clock-synced":
+        return clockOffset(dev) === 0;
       default:
         return false;
     }

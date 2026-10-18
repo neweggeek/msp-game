@@ -359,6 +359,8 @@ function firewallConfig(
   }
   return {
     system: { hostname: fw.hostname, timezone: "US/Central" },
+    ntp: { ntpsync: "enable", server: "time.fortressguard.net" },
+    sslvpn: { status: "disable", port: 443 },
     interfaces,
     routes: { "1": { dst: "0.0.0.0/0", gateway: isp.gateway, device: "wan1" } },
     phase1: {},

@@ -1,0 +1,26 @@
+# Faults about clocks and time sync.
+- id: firewall-clock-drift
+  name: NTP sync off, firewall clock drifted
+  layer: 7
+  device: firewall
+  startedAt: "1d 07:20"
+  effects:
+    - { type: clock-drift, target: firewall, minutes: [4, 11] }
+  proof: []
+  clues:
+    - id: wrong-time
+      text: "get system status on {firewall.hostname} shows a system time several minutes off from yours."
+      surface: cli
+      requires: "ssh:firewall"
+    - id: ntp-off
+      text: "show system ntp on {firewall.hostname} shows ntpsync disabled."
+      surface: cli
+      requires: "ssh:firewall"
+    - id: codes-in-log
+      text: "diagnose vpn ssl log on {firewall.hostname} shows three token codes rejected at 07:20, then the lockout."
+      surface: cli
+      requires: "ssh:firewall"
+    - id: kyle-tried
+      text: "Ticket history says Kyle typed three fresh codes this morning and got locked out."
+      surface: ticket
+      requires: docs

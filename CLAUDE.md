@@ -35,7 +35,7 @@ When the spec and the interview disagree, the interview wins. When a feature ID 
 
 ## Current phase
 
-Phase 1 (vertical slice) is built: one managed client with a main office and a branch, four cases, one misroute and one duplicate. Phase 2 (access and people) is in progress: calls and remote hands are in. The slice now has six cases (Tuesday 7 PM and Lights Out added). Tidy Desk is quick-play only, since it takes the whole site down. Plan and order: /mnt/project-files/msp-game-reviews/phase-2-proposal.md (project files, not the repo).
+Phase 1 (vertical slice) is built: one managed client with a main office and a branch, four cases, one misroute and one duplicate. Phase 2 (access and people) is in progress: calls, remote hands, the ISP line, the credential ladder, ScreenLink and the VPN are in. The slice now has six cases (Tuesday 7 PM and Lights Out added). Tidy Desk is quick-play only, since it takes the whole site down. Plan and order: /mnt/project-files/msp-game-reviews/phase-2-proposal.md (project files, not the repo).
 
 Phase 2 notes:
 
@@ -52,6 +52,8 @@ Phase 2 notes:
 - Disabled MSP accounts: a client with `disablesMspAccounts` has the firewall admin account switched off. Login fails like a wrong password. The docs access notes say so, and only the main contact can turn it back on (`enable-account` ask).
 - ScreenLink (src/ui/screenlink, actions `sl-new` and `sl-open`): make a join code, then call someone and use the `screenlink-join` ask. A contact joins from their desk PC (`personPc`), a ticket user from their own PC. Low competence mistypes the code. The shell needs no agent and no consent, and closes when they leave (patience sets how long). Access token `screen`; it also grants `rmm:<role>` and `ssh:<role>` from that PC.
 - Shells (RMM or ScreenLink) can now fix two things by hand: `Set-DnsClientServerAddress -InterfaceAlias Ethernet -ResetServerAddresses` and `powercfg /change standby-timeout-ac 0`.
+- VPN (data/rules/vpn.yaml, src/engine/vpn, src/ui/vpn): some managed clients give the MSP an SSL VPN account on the main office firewall (`device.vpn`, port in running `sslvpn`). Docs hold the profile and the vault entry `vpn-<site>`; a stale page can have the wrong port. Your laptop has one app per firewall brand; firmware lines need a minimum app version (`minVersion`, also in the Vendor KB), and Update costs `upgradeMinutes`. Sign-in is a code from the MSP authenticator (one game minute per code, the firewall also takes the one before) or a push to approve. Bad codes lock the account. Connected, the laptop terminal can ping and SSH to what the firewall reaches inside; those SSH sessions close when the VPN drops and follow the lockout rule. Access token `vpn`.
+- Firewall clocks: `system ntp` in the Fortress dialect. With ntpsync off the clock drifts by `clockDrift` minutes (`clockOffset()`), shown in get system status and the SSL VPN log, and codes stop matching. Codes Rejected (quick play, needs a code-based VPN) is that fault; check `clock-synced`.
 - Scenario "breakfix": a one-site client with `managed: false`. No RMM agents and no Ovik, so ScreenLink, calls and docs are the only ways in.
 - The status bar picks what a new shift plants: a scenario, or one case on the one-site quick client. Saves keep the pick.
 
@@ -67,7 +69,7 @@ Phase 1 notes:
 - Consent: opening a shell or running a script on a PC with a signed-in user, without asking first, costs points. Users answer only during the client's hidden business hours.
 - Every action costs game minutes (data/rules/actions.yaml). Scoring values live in data/rules/handoffs.yaml.
 - Camera Day needs a switch with its own CLI, so it only lands on Aurora CX switches. FortressSwitch is still read-only from the gate.
-- Out of scope for now: VPN clients, console, truck rolls, editing in the device web GUI.
+- Out of scope for now: console, truck rolls, editing in the device web GUI.
 - Generator rerolls: a case that does not fit rerolls the client, fault placement rerolls up to 8 times, unsolvable docs reroll up to 8 times.
 - Asset types (data/rules/assets.yaml) group gear in Hoodoo Docs, Ovik and Shinobi RMM, IT Glue and Hudu style. Passwords sit as child rows under their asset. Devices with a CLI dialect get a copy button for `ssh {user}@{ip}` built from the docs, so stale docs give a stale command. Wi-Fi networks are docs only for now (no AP config behind them); their passphrases are vault entries keyed `wifi-<site>-<n>`.
 - Terminal pacing (src/ui/terminal/pace.ts) is UI only: ping replies 1s apart, Windows timeouts 4s each, Unix ping fail 5s, Ctrl+C or Esc skips. The engine still answers at once, so game time and tests do not change.

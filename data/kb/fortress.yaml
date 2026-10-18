@@ -29,6 +29,8 @@
     - "Admin access per interface is set by allowaccess. SSH is off on new LAN interfaces."
     - "Config changes save on end. There is no separate save command."
     - "Factory login: admin with a blank password."
+    - "SSL VPN settings: config vpn ssl settings, set status enable, set port <port>. show vpn ssl settings prints the port users connect to."
+    - "System time comes from NTP: config system ntp, set ntpsync enable. With sync off the clock drifts, and token codes stop matching."
 - id: fortress-7.4-notes
   brand: fortress
   type: release-notes
@@ -36,3 +38,19 @@
   body:
     - "7.4.3: known issue, SSL VPN portal slow with more than 200 bookmarks."
     - "7.4.5: fixes IKE rekey memory leak on 100G models."
+- id: fortress-vpn-compat
+  brand: fortress
+  type: compat
+  title: "FortressClient and firmware compatibility"
+  body:
+    - "FortressGate 7.2.x firmware: FortressClient 7.0 or newer."
+    - "FortressGate 7.4.x firmware: FortressClient 7.2 or newer. Older clients fail with error -7200."
+    - "Error -5: the client got no answer. Check the gateway IP and port, and that the site has internet."
+    - "Error -456: the token code is wrong or the firewall clock is off. Three bad codes lock the account for 30 minutes."
+- id: fortress-vpn-log
+  brand: fortress
+  type: cli
+  title: "SSL VPN sign-in log"
+  body:
+    - "diagnose vpn ssl log: recent SSL VPN sign-ins, failures and lockouts with the firewall's own time stamps."
+    - "Token codes depend on the firewall clock. If get system status shows the wrong time, fix NTP before resetting the token."

@@ -28,6 +28,7 @@ export function Terminal() {
   const name = (id: string) => {
     const x = game.sessions[id];
     const dev = game.world.devices.find((d) => d.id === x?.deviceId);
+    if (x?.kind === "local") return "Laptop";
     return x?.kind === "rmm"
       ? `${dev?.hostname} (${x.via ? "ScreenLink" : "agent"})`
       : `SSH ${dev?.hostname} ${x && "address" in x && x.address ? x.address : (dev?.ip ?? "")}`;
@@ -37,7 +38,11 @@ export function Terminal() {
     if (!s || s.closed || busy) return;
     const before = s.transcript.length;
     const r = act(
-      s.kind === "rmm" ? { t: "rmm", session: s.id, line } : { t: "cli", session: s.id, line },
+      s.kind === "rmm"
+        ? { t: "rmm", session: s.id, line }
+        : s.kind === "local"
+          ? { t: "local", session: s.id, line }
+          : { t: "cli", session: s.id, line },
     );
     setLine("");
     if (PACED.test(line)) playOut(s.id, s.transcript, before);

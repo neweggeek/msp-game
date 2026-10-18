@@ -35,6 +35,8 @@ export function renderBound(text: string, bindings: Record<string, string>, draf
 export function caseFits(c: CaseDef, draft: Draft): boolean {
   if (!c.requires.sites.every((s) => draft.sites.some((x) => x.id === s))) return false;
   if (c.requires.probe && !draft.devices.some((d) => d.tags?.includes("probe"))) return false;
+  const vpn = c.requires.vpn;
+  if (vpn && !draft.devices.some((d) => d.siteId === "hq" && d.vpn?.mfa === vpn)) return false;
   return Object.entries(c.requires.kinds).every(
     ([kind, n]) => draft.devices.filter((d) => d.kind === kind).length >= n,
   );
@@ -162,6 +164,22 @@ function applyFault(
         const site = draft.sites.find((s) => s.id === dev.siteId);
         if (!site) return null;
         site.isp.outage = { since: parseGameTime(def.startedAt) };
+        break;
+      }
+      case "clock-drift": {
+        const ntp = dev.running?.ntp as Record<string, unknown> | undefined;
+        if (!ntp) return null;
+        ntp.ntpsync = "disable";
+        dev.clockDrift = rng.int(e.minutes[0], e.minutes[1]) * (rng.chance(0.5) ? 1 : -1);
+        // Someone already tried: three codes rejected, then the lockout.
+        const at = parseGameTime(def.startedAt);
+        const user = dev.vpn?.username ?? "msp";
+        for (let i = 0; i < 3; i++)
+          dev.vpn?.log.push({ at: at + i, text: `token code rejected for ${user}` });
+        dev.vpn?.log.push({
+          at: at + 2,
+          text: `${user} locked for 30 minutes after 3 bad token codes`,
+        });
         break;
       }
       case "loop-cable": {

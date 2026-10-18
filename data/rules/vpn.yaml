@@ -1,0 +1,43 @@
+# Your laptop's VPN clients, one app per firewall brand, and the MSP authenticator on your phone.
+apps:
+  - brand: fortress
+    name: FortressClient
+    installed: "7.0.9"
+    latest: "7.4.2"
+    # The oldest app version each firmware line lets in. The Vendor KB has the same table.
+    minVersion: { "7.2": "7.0", "7.4": "7.2" }
+  - brand: barricade
+    name: Barricade VPN
+    installed: "5.1.0"
+    latest: "5.1.0"
+    minVersion: {}
+upgradeMinutes: 12
+connectMinutes: 2
+# Share of managed clients that give the MSP a VPN account on the main office firewall.
+chance: 0.5
+ports: [443, 10443, 4443]
+# Share of those accounts that use push sign-in instead of a typed code.
+pushChance: 0.35
+# Chance the docs have the wrong port, by staleness.
+wrongPort: { fresh: 0, partly: 0.1, stale: 0.25 }
+mfa:
+  # A code lasts this many game minutes. The firewall also takes the one before.
+  stepMinutes: 1
+  badCodesToLock: 3
+  lockMinutes: 30
+  pushMinutes: 5
+messages:
+  noApp: "{app} is not installed on this laptop."
+  unreachable: "Unable to establish the VPN connection. The VPN server may be unreachable. (-5)"
+  wrongApp: "The server at {gateway} did not answer the {app} handshake. Check which VPN app this firewall needs."
+  oldApp: "The VPN server rejected the client version {version}. This server needs {app} {min} or newer. (-7200)"
+  badLogin: "Permission denied. Check the username and password. (-12)"
+  locked: "Account {username} is locked after too many bad codes. Try again after {time}."
+  needCode: "This account needs a token code from your authenticator."
+  badCode: "Token code rejected. (-456)"
+  nowLocked: "Token code rejected. Account {username} is now locked for {minutes} minutes."
+  pushSent: "Sign-in request sent. Approve it on your phone."
+  pushExpired: "The sign-in request timed out. Connect again."
+  pushDenied: "Sign-in denied on your phone."
+  connected: "Connected to {gateway}. You can reach {site} from the laptop terminal."
+  dropped: "The VPN to {gateway} dropped."
