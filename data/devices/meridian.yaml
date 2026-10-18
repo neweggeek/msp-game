@@ -1,0 +1,36 @@
+# Cloud-managed switches. No CLI and no local login: the Meridian Dashboard is the only way in.
+- id: meridian-ms120-8lp
+  kind: switch
+  brand: meridian
+  model: Meridian MS120-8LP
+  cloud: true
+  tiers: [low]
+  firmware: ["MS 15.21", "MS 15.22"]
+  poeBudgetW: 67
+  ports:
+    - { pattern: "{n}", from: 1, to: 8, poe: true }
+    - { pattern: "{n}", from: 9, to: 10, role: uplink }
+
+- id: meridian-ms120-24p
+  kind: switch
+  brand: meridian
+  model: Meridian MS120-24P
+  cloud: true
+  tiers: [low, mid, high]
+  firmware: ["MS 15.21", "MS 15.22", "MS 16.7"]
+  poeBudgetW: 185
+  ports:
+    - { pattern: "{n}", from: 1, to: 24, poe: true }
+    - { pattern: "{n}", from: 25, to: 28, role: uplink }
+
+- id: meridian-ms210-48lp
+  kind: switch
+  brand: meridian
+  model: Meridian MS210-48LP
+  cloud: true
+  tiers: [mid, high]
+  firmware: ["MS 15.22", "MS 16.7"]
+  poeBudgetW: 250
+  ports:
+    - { pattern: "{n}", from: 1, to: 48, poe: true }
+    - { pattern: "{n}", from: 49, to: 52, role: uplink }

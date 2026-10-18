@@ -256,6 +256,9 @@ export function ask(
         if (fix.f.effect === "end-power-cut" && d?.powerCut && d.powerCut.until === undefined)
           d.powerCut.until = now;
         if (fix.f.effect === "unplug-loop" && d) unplugLoops(world, d);
+        if (fix.f.effect === "replace-cable" && d)
+          for (const l of world.links)
+            if (l.a.device === d.id || l.b.device === d.id) l.condition = "good";
       }
     }
     // They say done either way. Check their work.
@@ -453,6 +456,7 @@ function unplugLoops(world: World, sw: Device): void {
 /** Off for a few minutes, then up on its saved config. Unsaved changes are gone. */
 export function powerCycle(data: GameData, dev: Device, now: number): void {
   dev.rebootUntil = now + data.calls.rebootMinutes;
+  dev.rebootAt = now;
   if (dev.startup) {
     dev.running = structuredClone(dev.startup);
     applyRunning(dev);
@@ -501,6 +505,7 @@ function ispAsk(
       // The modem goes dark near the end of the ask and comes back on a clean config.
       const back = now + def.minutes + data.calls.isp.rebootMinutes;
       site.isp.rebootUntil = back;
+      site.isp.rebootAt = now;
       const o = site.isp.outage;
       if (o && o.until === undefined && now >= o.since) o.until = back;
       out.lines.push(

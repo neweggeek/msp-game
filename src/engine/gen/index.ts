@@ -10,7 +10,7 @@ import { genSite } from "./site";
 import { checkSolvable } from "./validate";
 
 /** Bump when a code change alters what an existing seed builds. */
-export const GENERATOR_VERSION = 12;
+export const GENERATOR_VERSION = 14;
 
 const MAX_WORLD_ATTEMPTS = 200;
 const MAX_FAULT_ATTEMPTS = 8;
@@ -44,6 +44,8 @@ function buildBase(
     now: playStart,
   };
   const hqOctet = rng.int(10, 60);
+  // Some clients run cloud-managed switches. A scenario that names a brand decides for itself.
+  const cloud = !scenario.switchBrand && rng.fork("cloud").chance(data.cloud.chance);
   const sites: Site[] = [];
   for (const role of scenario.sites) {
     const { site, plan } = genSite(rng.fork(`site-${role}`), data, client, role);
@@ -51,7 +53,7 @@ function buildBase(
     const opts = {
       role,
       octet,
-      switchBrand: scenario.switchBrand,
+      switchBrand: scenario.switchBrand ?? (cloud ? data.cloud.vendor : undefined),
       probe: role === "hq" && scenario.probe === true,
     };
     sites.push(genSiteGear(rng.fork(`gear-${role}`), data, client, site, plan, opts, ctx));
@@ -102,6 +104,14 @@ function buildBase(
     history: [],
     monitoring: { collectorId: collector?.id ?? "", inventory: [] },
   };
+  if (ctx.devices.some((d) => d.cloud)) {
+    const orng = rng.fork("cloud-org");
+    draft.cloudOrg = {
+      name: client.name,
+      username: `noc+${client.code.toLowerCase()}@harborline-it.net`,
+      password: `${orng.pick(["Cloud", "Harbor", "Summit", "Signal"])}-${orng.hex(8)}`,
+    };
+  }
   return { draft, ctx };
 }
 

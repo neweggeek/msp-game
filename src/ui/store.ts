@@ -25,6 +25,7 @@ export type Tab =
   | "ovik"
   | "docs"
   | "vpn"
+  | "cloud"
   | "terminal"
   | "kb"
   | "debug";

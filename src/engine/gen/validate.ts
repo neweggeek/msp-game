@@ -1,4 +1,5 @@
 import { personPc } from "../calls/calls";
+import { cloudOnline } from "../cloud/dashboard";
 import type {
   AccessToken,
   CaseInstance,
@@ -64,6 +65,16 @@ export function accessPaths(
     return ok && fw ? [fw] : [];
   });
   if (vpnFws.length > 0) access.push("vpn");
+  // Cloud dashboard: the docs login works and a cloud-managed device is checking in.
+  const org = w.cloudOrg;
+  const cloudPass = docs.credentials.find((x) => x.deviceId === "cloud")?.password;
+  if (
+    org &&
+    docs.cloud?.username === org.username &&
+    cloudPass === org.password &&
+    w.devices.some((d) => d.cloud && cloudOnline(w, d, ns))
+  )
+    access.push("cloud");
   if (!c) return access;
   // The ticket's user can be called too, and shares the PC the ticket is about.
   const primary = w.devices.find((x) => x.id === c.bindings[c.primary]);
@@ -122,7 +133,7 @@ export function checkSolvable(
           caseId: c.caseId,
           id: cl.id,
           requires: cl.requires,
-          reachable: caseAccess.includes(cl.requires),
+          reachable: cl.requires.split("|").some((r) => caseAccess.includes(r)),
         });
     }
   }

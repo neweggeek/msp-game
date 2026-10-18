@@ -327,3 +327,44 @@
     nextSteps: "Add an Ovik check for clock drift on {firewall.hostname}. Find out who turned NTP off."
     wrongCause: "The authenticator token on the phone was out of sync."
     wrongChange: "Re-enrolled the authenticator token."
+
+- id: crushed-cable
+  name: Crushed Cable
+  pick: first-slice
+  playbook: one-user
+  requires:
+    sites: [hq]
+    kinds: { switch: 1, pc: 1 }
+    cloud: true
+  roles:
+    switch: { kind: switch, site: hq }
+    pc: { kind: pc, site: hq, hasUser: true, pick: random }
+  primary: pc
+  ticket:
+    origin: client
+    priority: P3
+    title: "{pc.user} has no network"
+    body: "{pc.user}'s computer says no internet since Monday morning. Everyone else is fine. We restarted it twice."
+  faults: [crushed-cable]
+  fixed:
+    - { type: cable-good, role: pc }
+  call:
+    facts:
+      recent-changes: "{pc.user} got a new desk chair and a plastic floor mat on Monday. The network cable runs across the floor under it."
+    fixes:
+      - id: swap-patch-cable
+        label: "Swap the patch cable from the wall jack to {pc.hostname} for a new one, and route it along the wall, not under the chair."
+        unlockedBy: recent-changes
+        effect: replace-cable
+        roles: [pc]
+  redHerring: "It looks like a network driver or a Windows update broke the PC's adapter."
+  rootCause: "The new chair rolled over {pc.hostname}'s patch cable on Monday and crushed it. One pair is open, so the link died."
+  fix: "Run a cable test from the cloud dashboard, then have a contact swap the patch cable and route it out from under the chair."
+  note:
+    issue: "{pc.hostname} ({pc.ip}) has had no network since Monday 09:40. The rest of the office is fine."
+    findings: "The Meridian Dashboard showed {pc.hostname}'s port on {switch.hostname} ({switch.ip}) flapping with CRC errors, then down. A cable test showed pair 3-6 open near the desk end. The user got a new chair and floor mat Monday."
+    changes: "A contact swapped the patch cable to {pc.hostname} and routed it along the wall."
+    rootCause: "A desk chair crushed the patch cable to {pc.hostname}."
+    nextSteps: "None. Cable is out from under the chair. Use cable covers if it has to cross the floor."
+    wrongCause: "Network driver broken by a Windows update."
+    wrongChange: "Reinstalled the network driver on {pc.hostname}."

@@ -28,6 +28,10 @@ export function caseFixed(world: World, c: CaseInstance, now: number): boolean {
         return !loopLinks(world, dev.id).length;
       case "clock-synced":
         return clockOffset(dev) === 0;
+      case "cable-good":
+        return world.links
+          .filter((l) => l.a.device === dev.id || l.b.device === dev.id)
+          .every((l) => l.condition === "good");
       default:
         return false;
     }

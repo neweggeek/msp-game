@@ -55,3 +55,10 @@ export {
   type LocalSession,
   type VpnState,
 } from "./vpn/client";
+export {
+  dashboard,
+  type DashDevice,
+  type DashEvent,
+  type DashPort,
+  type PortChange,
+} from "./cloud/dashboard";

@@ -241,7 +241,7 @@ export function viewData(name: string, ctx: ViewContext): ViewResult {
     case "poe-status": {
       // Switches managed from this gate: the ones at its site with no CLI of their own.
       const switches = world.devices.filter(
-        (d) => d.kind === "switch" && d.siteId === device.siteId && !d.dialect,
+        (d) => d.kind === "switch" && d.siteId === device.siteId && !d.dialect && !d.cloud,
       );
       return {
         ok: true,
@@ -361,15 +361,24 @@ export function viewData(name: string, ctx: ViewContext): ViewResult {
       const owners =
         name === "port-stats"
           ? world.devices.filter(
-              (d) => d.kind === "switch" && d.siteId === device.siteId && !d.dialect,
+              (d) => d.kind === "switch" && d.siteId === device.siteId && !d.dialect && !d.cloud,
             )
           : [device];
       for (const sw of owners) {
         const port = sw.ports.find((p) => p.name === portName);
         if (!port) continue;
         const peer = port.link ? world.devices.find((d) => d.id === port.link?.device) : undefined;
+        const cable = world.links.find(
+          (l) =>
+            (l.a.device === sw.id && l.a.port === port.name) ||
+            (l.b.device === sw.id && l.b.port === port.name),
+        );
         const up =
-          !port.shutdown && !!peer && ns.powered.get(peer.id) === true && !ns.asleep.get(peer.id);
+          !port.shutdown &&
+          !!peer &&
+          cable?.condition !== "damaged" &&
+          ns.powered.get(peer.id) === true &&
+          !ns.asleep.get(peer.id);
         const base = fnv1a(`${sw.id}:${port.name}`);
         // A storm floods every port with broadcasts, and the switch drops most of them.
         const storm = up && ns.storm.get(sw.id) === true;

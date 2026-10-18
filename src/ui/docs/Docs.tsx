@@ -103,6 +103,15 @@ export function DocsView({ full = false }: { full?: boolean }) {
                       </dd>
                     </>
                   )}
+                  {s.siteId === "hq" && game.world.docs.cloud && (
+                    <>
+                      <dt>Cloud dashboard</dt>
+                      <dd className="mono">
+                        {game.world.docs.cloud.dashboard} · {game.world.docs.cloud.url} · org{" "}
+                        {game.world.docs.cloud.org} · {game.world.docs.cloud.username}
+                      </dd>
+                    </>
+                  )}
                   {s.vlans.map((v) => (
                     <span key={v.id} style={{ display: "contents" }}>
                       <dt>VLAN {v.id}</dt>
@@ -222,6 +231,7 @@ type Editable = (target: string, field: string, value: string) => ReactNode;
 function credType(game: Game, id: string): string {
   if (game.world.docs.wifi.some((w) => w.id === id)) return "wifi";
   if (id.startsWith("vpn-")) return "VPN";
+  if (id === "cloud") return "Cloud";
   const d = game.world.docs.devices.find((x) => x.deviceId === id);
   return d ? typeOf(d.kind) : "";
 }

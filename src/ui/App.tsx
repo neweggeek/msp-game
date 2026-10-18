@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { SLOTS, formatTime, ovikView, totalScore } from "../engine";
+import { CloudPage } from "./cloud/Cloud";
 import { DebugView } from "./debug/DebugView";
 import { Desk } from "./desk/Desk";
 import { Dialogs } from "./desk/Dialogs";
@@ -37,6 +38,7 @@ export function App() {
       {tab === "rmm" && <RmmPage />}
       {tab === "screenlink" && <ScreenLinkPage />}
       {tab === "vpn" && <VpnPage />}
+      {tab === "cloud" && <CloudPage />}
       {tab === "ovik" && <OvikPage />}
       {tab === "docs" && (
         <main className="main single">
@@ -70,6 +72,7 @@ const tabs: { id: Tab | null; label: string; group?: string }[] = [
   { id: "ovik", label: "Ovik" },
   { id: "docs", label: "Hoodoo Docs", group: "|" },
   { id: "vpn", label: "VPN clients" },
+  { id: "cloud", label: data.cloud.name },
   { id: "terminal", label: "Terminal" },
   { id: "kb", label: "Vendor KB" },
 ];

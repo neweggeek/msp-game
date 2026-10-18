@@ -37,6 +37,7 @@ export function caseFits(c: CaseDef, draft: Draft): boolean {
   if (c.requires.probe && !draft.devices.some((d) => d.tags?.includes("probe"))) return false;
   const vpn = c.requires.vpn;
   if (vpn && !draft.devices.some((d) => d.siteId === "hq" && d.vpn?.mfa === vpn)) return false;
+  if (c.requires.cloud && !draft.devices.some((d) => d.siteId === "hq" && d.cloud)) return false;
   return Object.entries(c.requires.kinds).every(
     ([kind, n]) => draft.devices.filter((d) => d.kind === kind).length >= n,
   );
@@ -180,6 +181,27 @@ function applyFault(
           at: at + 2,
           text: `${user} locked for 30 minutes after 3 bad token codes`,
         });
+        break;
+      }
+      case "damage-cable": {
+        // A chair rolled over the patch cable at the desk. It flapped a few times, then died.
+        const link = draft.links.find((l) => l.a.device === dev.id || l.b.device === dev.id);
+        const sw =
+          link &&
+          draft.devices.find(
+            (d) => d.id === (link.a.device === dev.id ? link.b.device : link.a.device),
+          );
+        if (!link || sw?.kind !== "switch") return null;
+        link.condition = "damaged";
+        const port = link.a.device === sw.id ? link.a.port : link.b.port;
+        const at = parseGameTime(def.startedAt);
+        sw.cloudLog ??= [];
+        let t = at - 45;
+        for (let i = 0; i < 4; i++) {
+          t += rng.int(6, 10);
+          sw.cloudLog.push({ at: t, text: `Port ${port}: link down` });
+          sw.cloudLog.push({ at: t + 1, text: `Port ${port}: link up at 100 Mbps, CRC errors` });
+        }
         break;
       }
       case "loop-cable": {

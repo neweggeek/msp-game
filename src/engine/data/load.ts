@@ -7,6 +7,7 @@ import {
   type CallRules,
   type CaseDef,
   type ClientRules,
+  type CloudRules,
   type DeviceTemplate,
   type Dialect,
   type ExtraTicketDef,
@@ -27,6 +28,7 @@ import {
   callRulesSchema,
   caseSchema,
   clientRulesSchema,
+  cloudRulesSchema,
   deviceTemplateSchema,
   dialectSchema,
   extraTicketSchema,
@@ -63,6 +65,7 @@ export interface GameData {
   assets: AssetRules;
   calls: CallRules;
   vpn: VpnRules;
+  cloud: CloudRules;
 }
 
 /** Raw YAML text keyed by path, like "../../../data/devices/fortress.yaml". */
@@ -143,6 +146,7 @@ export function loadData(files: RawFiles): GameData {
     assets: rule(files, "assets", assetRulesSchema),
     calls: rule(files, "calls", callRulesSchema),
     vpn: rule(files, "vpn", vpnRulesSchema),
+    cloud: rule(files, "cloud", cloudRulesSchema),
   };
   for (const t of data.devices.values()) {
     if (!data.brands.has(t.brand)) throw new DataError(`device ${t.id}: unknown brand ${t.brand}`);

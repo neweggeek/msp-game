@@ -168,6 +168,27 @@ export function genDocs(
     );
   }
 
+  // Cloud-managed gear: the dashboard login is the only way in, so it must be in the docs.
+  let cloud: Docs["cloud"];
+  if (snapshot.cloudOrg) {
+    const org = snapshot.cloudOrg;
+    cloud = {
+      dashboard: data.cloud.name,
+      url: data.cloud.url,
+      org: org.name,
+      username: org.username,
+    };
+    credentials.push({
+      deviceId: "cloud",
+      hostname: data.cloud.name,
+      username: org.username,
+      password: org.password,
+    });
+    accessNotes.push(
+      `The switches are cloud-managed and have no CLI. Sign in to the ${data.cloud.name} (${data.cloud.url}) as ${org.username}. The password is in the vault.`,
+    );
+  }
+
   const floorPlan = rng.chance(0.15);
 
   // Wi-Fi: one set of networks per site with access points. Passphrases live in the vault.
@@ -213,6 +234,7 @@ export function genDocs(
     contacts: structuredClone(snapshot.client.contacts),
     floorPlan,
     accessNotes,
+    ...(cloud ? { cloud } : {}),
     history,
     accessLog,
     unsaved,
