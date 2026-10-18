@@ -1,4 +1,4 @@
-import { type PhoneCall, ask, dial, findPerson } from "../calls/calls";
+import { type PhoneCall, ask, dial, findPerson, plantTrap } from "../calls/calls";
 import { type CliContext, type CliSession, openSession, runLine } from "../cli/session";
 import {
   type ClockState,
@@ -299,8 +299,11 @@ function promiseTimer(state: GameState, data: GameData, timer: Timer): void {
   const p = timer.payload;
   const t = p.ticket ? find(state.book, String(p.ticket)) : undefined;
   if (timer.kind === "promise-time") {
-    const c = state.world.cases.find((x) => x.caseId === t?.caseId);
-    const kept = t?.closedAt !== undefined || (c && caseFixed(state.world, c, state.clock.now));
+    // Kept means fixed, or rightly sent back. A close alone is not a fix.
+    const extra = state.world.extraTickets.find((x) => x.id === t?.extraId);
+    const caseId = t?.caseId ?? extra?.duplicateOf;
+    const c = state.world.cases.find((x) => x.caseId === caseId);
+    const kept = t?.sentBack !== undefined || (c && caseFixed(state.world, c, state.clock.now));
     if (kept) return;
   }
   const traps = data.calls.traps;
@@ -309,7 +312,8 @@ function promiseTimer(state: GameState, data: GameData, timer: Timer): void {
     k === "name" ? p.name : k === "ticket" ? p.ticket : k === "time" ? p.time : "",
   );
   const open = state.book.tickets.filter((x) => x.closedAt === undefined && !x.sentBack);
-  const on = open.find((x) => x.id !== t?.id) ?? open[0] ?? t;
+  // Nothing open: it still costs, as a shift-level hit.
+  const on = open.find((x) => x.id !== t?.id) ?? open[0];
   on?.history.push({ at: state.clock.now, by: "dispatch", text });
   state.events.push({ at: state.clock.now, text });
   points(state, data, "brokenPromise", text, on?.id);
@@ -1190,13 +1194,9 @@ function run(state: GameState, data: GameData, a: Action): ActionResult {
       const t = a.ticket ? find(book, a.ticket) : undefined;
       if (a.ticket && !t) return { ok: false, error: `No ticket ${a.ticket}.` };
       state.calls ??= {};
+      const ctx = callCtx(state, data, Object.keys(state.calls).length + 1);
       const id = `c${Object.keys(state.calls).length + 1}`;
-      const call = dial(
-        callCtx(state, data, Object.keys(state.calls).length + 1),
-        id,
-        person,
-        a.ticket,
-      );
+      const call = dial(ctx, id, person, a.ticket);
       state.calls[id] = call;
       spend(state, data, data.calls.dialMinutes + (call.hold ?? 0));
       // A client that switches our account off has said a call to switch it back on is fine.
@@ -1233,6 +1233,7 @@ function run(state: GameState, data: GameData, a: Action): ActionResult {
           text: `Called ${person.name}. ${call.transcript.at(-1) ?? ""}`,
         });
       }
+      if (call.answered && !person.isp && !person.team) plantTrap(ctx, call, person);
       return { ok: true, session: id, output: call.transcript };
     }
     case "call-ask": {
@@ -1324,6 +1325,7 @@ function run(state: GameState, data: GameData, a: Action): ActionResult {
       if (call.closed) return { ok: false, error: "The call has ended." };
       if (call.trap.answer !== undefined) return { ok: false, error: "You already answered." };
       call.trap.answer = a.answer;
+      call.trap.lines += 2;
       const traps = data.calls.traps;
       const person = findPerson(world, call.person, data);
       const name = person?.name ?? "They";

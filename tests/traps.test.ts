@@ -61,4 +61,31 @@ describe("client dialogue traps", () => {
     act({ t: "advance", minutes: 600 });
     expect(g.score.some((e) => e.reason.includes("never agreed"))).toBe(true);
   });
+
+  it("a promise on a ticket rightly sent back is kept; a close without a fix is not", () => {
+    const { g, act } = setup();
+    const edr = g.book.tickets.find((x) => x.extraId === "edr-misroute") as Ticket;
+    const id = callWithTrap(g, edr, "when-fixed");
+    act({ t: "call-answer", call: id, answer: 0 });
+    act({ t: "send-back", ticket: edr.id, reason: "misrouted" });
+    act({ t: "advance", minutes: 100 });
+    expect(g.score.some((e) => e.reason.includes("would be fixed by"))).toBe(false);
+
+    const { g: g2, act: act2, t } = setup();
+    const id2 = callWithTrap(g2, t, "when-fixed");
+    act2({ t: "call-answer", call: id2, answer: 0 });
+    act2({ t: "resolve", ticket: t.id, note: 0 });
+    act2({ t: "advance", minutes: 100 });
+    expect(g2.score.some((e) => e.reason.includes("would be fixed by"))).toBe(true);
+  });
+
+  it("the trap's lines do not move the ask draws on the call", () => {
+    const { g, act, t } = setup();
+    const id = callWithTrap(g, t, "when-fixed");
+    const call = g.calls?.[id];
+    expect(call?.trap?.lines).toBe(1);
+    act({ t: "call-answer", call: id, answer: 1 });
+    expect(call?.trap?.lines).toBe(3);
+    expect((call?.transcript.length ?? 0) - (call?.trap?.lines ?? 0)).toBe(1);
+  });
 });
