@@ -101,6 +101,7 @@ export function makeDevice(
   if (t.poeBudgetW !== undefined) dev.poeBudgetW = t.poeBudgetW;
   if (t.poe) dev.poe = { ...t.poe };
   if (t.dialect) dev.dialect = t.dialect;
+  if (t.cloud) dev.cloud = true;
   if (t.tags) dev.tags = [...t.tags];
   if (t.credentials) {
     dev.credentials = {
@@ -118,7 +119,11 @@ function templatesFor(
   opts: { brand?: string; tag?: string } = {},
 ): DeviceTemplate[] {
   let all = [...data.devices.values()].filter(
-    (t) => t.kind === kind && (opts.tag ? t.tags?.includes(opts.tag) : !t.tags?.length),
+    (t) =>
+      t.kind === kind &&
+      (opts.tag ? t.tags?.includes(opts.tag) : !t.tags?.length) &&
+      // Cloud-managed gear only when the client's gear is cloud-managed.
+      (!t.cloud || t.brand === opts.brand),
   );
   if (opts.brand && all.some((t) => t.brand === opts.brand))
     all = all.filter((t) => t.brand === opts.brand);
@@ -247,7 +252,7 @@ export function genSiteGear(
   const switchT =
     switches.find((t) => accessPortCount(t) >= endpoints.length + spare) ??
     [...data.devices.values()]
-      .filter((t) => t.kind === "switch")
+      .filter((t) => t.kind === "switch" && (!t.cloud || t.brand === opts.switchBrand))
       .sort((a, b) => accessPortCount(b) - accessPortCount(a))[0];
   if (!switchT) throw new Error("no switch template");
 

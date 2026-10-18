@@ -1,0 +1,18 @@
+- id: meridian-dashboard
+  brand: meridian
+  type: defaults
+  title: "Meridian MS switches: dashboard only"
+  body:
+    - "Meridian switches have no CLI and no local login. Everything goes through the Meridian Dashboard."
+    - "Sign in with the organization login. The switch must be checking in for live tools to work."
+    - "A switch that loses its internet path shows offline with the time it last checked in."
+- id: meridian-tools
+  brand: meridian
+  type: cli
+  title: "Meridian Dashboard live tools"
+  body:
+    - "Cable test: all four pairs OK means the copper is fine. One pair open at a distance means a break or a crush about that far from the switch."
+    - "All pairs open means nothing at the far end, or a cut right at the switch."
+    - "Cycle port: turns the port off for 5 seconds. A device powered by PoE on that port reboots."
+    - "PoE priority low, high or critical per port. Over budget, the switch sheds low priority ports first, highest port number first."
+    - "The event log lists link changes per port. Flapping at 100 Mbps with CRC errors points at bad copper."

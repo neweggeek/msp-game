@@ -26,6 +26,8 @@ export const deviceTemplateSchema = z.object({
   brand: z.string(),
   model: z.string(),
   dialect: z.string().optional(),
+  /** Managed from the vendor's cloud dashboard only. */
+  cloud: z.boolean().optional(),
   tiers: z.array(tierSchema).min(1),
   firmware: z.array(z.string()).min(1),
   /** default: the factory password, listed in the vendor KB. */
@@ -72,7 +74,13 @@ export const roomTemplateSchema = z.object({
 /** "docs", "monitoring", "rmm", "hands" (a phone call), "isp" (its support line), or "ssh:<role>" / "rmm:<role>". */
 export const accessTokenSchema = z
   .string()
-  .regex(/^(docs|rmm|monitoring|hands|isp|screen|vpn|(ssh|rmm):[a-z-]+)$/);
+  .regex(/^(docs|rmm|monitoring|hands|isp|screen|vpn|cloud|(ssh|rmm):[a-z-]+)$/);
+/** One access token, or several joined by "|" when any of them reaches the clue. */
+const clueAccessSchema = z
+  .string()
+  .regex(
+    /^(docs|rmm|monitoring|hands|isp|screen|vpn|cloud|(ssh|rmm):[a-z-]+)(\|(docs|rmm|monitoring|hands|isp|screen|vpn|cloud|(ssh|rmm):[a-z-]+))*$/,
+  );
 /** "<day>d HH:MM", day 0 is the Monday epoch. Negative days are before it. */
 export const gameTimeSchema = z.string().regex(/^-?\d+d \d{2}:\d{2}$/);
 const clock = z.string().regex(/^\d{2}:\d{2}$/);
@@ -107,6 +115,8 @@ const effectSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("mangle-phase2"), target: z.string() }),
   /** A patch cable with both ends in wall jacks on the same switch. No loop protection, so a storm. */
   z.object({ type: z.literal("loop-cable"), target: z.string() }),
+  /** The target's patch cable is crushed: one pair open, so no link. */
+  z.object({ type: z.literal("damage-cable"), target: z.string() }),
   /** The ISP's side of the site goes down until they fix it. Target is the site's firewall. */
   z.object({ type: z.literal("isp-outage"), target: z.string() }),
   /** NTP sync off and the firewall clock drifts this many minutes, so token codes stop matching. */
@@ -131,6 +141,7 @@ export const checkSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("no-loop"), role: z.string() }),
   z.object({ type: z.literal("isp-up"), role: z.string() }),
   z.object({ type: z.literal("clock-synced"), role: z.string() }),
+  z.object({ type: z.literal("cable-good"), role: z.string() }),
 ]);
 
 export const faultSchema = z.object({
@@ -146,8 +157,8 @@ export const faultSchema = z.object({
       z.object({
         id: z.string(),
         text: z.string(),
-        surface: z.enum(["monitoring", "cli", "docs", "rmm", "ticket", "call"]),
-        requires: accessTokenSchema,
+        surface: z.enum(["monitoring", "cli", "docs", "rmm", "ticket", "call", "cloud"]),
+        requires: clueAccessSchema,
       }),
     )
     .min(1),
@@ -167,6 +178,8 @@ export const caseSchema = z.object({
     probe: z.boolean().optional(),
     /** The main office firewall gives the MSP a VPN account with this sign-in. */
     vpn: z.enum(["totp", "push"]).optional(),
+    /** The site's switches are cloud-managed. */
+    cloud: z.boolean().optional(),
   }),
   roles: z.record(
     z.object({
@@ -207,7 +220,7 @@ export const caseSchema = z.object({
             label: z.string(),
             /** A fact ask id, or "power:<role>" once someone says what that device plugs into. */
             unlockedBy: z.string(),
-            effect: z.enum(["end-power-cut", "unplug-loop"]),
+            effect: z.enum(["end-power-cut", "unplug-loop", "replace-cable"]),
             roles: z.array(z.string()).min(1),
           }),
         )
@@ -283,6 +296,18 @@ export const vpnRulesSchema = z.object({
     lockMinutes: z.number().int(),
     pushMinutes: z.number().int(),
   }),
+  messages: z.record(z.string()),
+});
+
+export const cloudRulesSchema = z.object({
+  vendor: z.string(),
+  name: z.string(),
+  url: z.string(),
+  chance: z.number().min(0).max(1),
+  loginMinutes: z.number().int(),
+  cableTestMinutes: z.number().int(),
+  portCycleMinutes: z.number().int(),
+  configMinutes: z.number().int(),
   messages: z.record(z.string()),
 });
 
@@ -618,6 +643,7 @@ export type ScenarioDef = z.infer<typeof scenarioSchema>;
 export type ScriptDef = z.infer<typeof scriptSchema>;
 export type KbEntry = z.infer<typeof kbSchema>;
 export type VpnRules = z.infer<typeof vpnRulesSchema>;
+export type CloudRules = z.infer<typeof cloudRulesSchema>;
 export type HandoffRules = z.infer<typeof handoffRulesSchema>;
 export type CallRules = z.infer<typeof callRulesSchema>;
 export type CheckDef = z.infer<typeof checkSchema>;

@@ -12,6 +12,7 @@ import {
   newClock,
   schedule,
 } from "../clock/clock";
+import { type PortChange, cableTest, portCycle, setPort } from "../cloud/dashboard";
 import type { GameData } from "../data";
 import { GENERATOR_VERSION, generate } from "../gen";
 import { DEVICE_KINDS, type DeviceKind, type Priority, type World } from "../model/types";
@@ -105,7 +106,12 @@ export type Action =
   | { t: "vpn-push"; approve: boolean }
   | { t: "vpn-disconnect" }
   | { t: "local-open" }
-  | { t: "local"; session: string; line: string };
+  | { t: "local"; session: string; line: string }
+  | { t: "cloud-login"; username: string; password: string }
+  | { t: "cloud-logout" }
+  | { t: "cloud-cable-test"; device: string; port: string }
+  | { t: "cloud-port-cycle"; device: string; port: string }
+  | { t: "cloud-port"; device: string; port: string; change: PortChange };
 
 export interface ScreenLinkInvite {
   code: string;
@@ -169,6 +175,8 @@ export interface GameState {
   screenlink?: ScreenLinkInvite[];
   /** Your VPN apps, connection and authenticator lockouts. */
   vpn?: VpnState;
+  /** Signed in to the client's cloud dashboard. */
+  cloud?: { since: number };
   log: Action[];
   snapshot?: { at: number; state: string };
 }
@@ -1388,6 +1396,44 @@ function run(state: GameState, data: GameData, a: Action): ActionResult {
         state.vpn.push = undefined;
       }
       return { ok: true, output: ["Disconnected."] };
+    }
+    case "cloud-login": {
+      const org = world.cloudOrg;
+      spend(state, data, data.cloud.loginMinutes);
+      if (!org || a.username.trim() !== org.username || a.password !== org.password)
+        return { ok: false, error: data.cloud.messages.noOrg };
+      state.cloud = { since: clock.now };
+      return {
+        ok: true,
+        output: [fill(data.cloud.messages.loggedIn ?? "", (k) => (k === "org" ? org.name : ""))],
+      };
+    }
+    case "cloud-logout": {
+      state.cloud = undefined;
+      return { ok: true };
+    }
+    case "cloud-cable-test":
+    case "cloud-port-cycle":
+    case "cloud-port": {
+      if (!state.cloud) return { ok: false, error: "Sign in to the dashboard first." };
+      const d = world.devices.find((x) => x.id === a.device && x.cloud);
+      if (!d) return { ok: false, error: "No such device in this organization." };
+      const r =
+        a.t === "cloud-cable-test"
+          ? cableTest(world, data, d, a.port, clock.now)
+          : a.t === "cloud-port-cycle"
+            ? portCycle(world, data, d, a.port, clock.now)
+            : setPort(world, data, d, a.port, a.change, clock.now);
+      spend(
+        state,
+        data,
+        a.t === "cloud-cable-test"
+          ? data.cloud.cableTestMinutes
+          : a.t === "cloud-port-cycle"
+            ? data.cloud.portCycleMinutes
+            : data.cloud.configMinutes,
+      );
+      return r.ok ? { ok: true, output: r.lines } : { ok: false, error: r.lines.join(" ") };
     }
     case "local-open": {
       const id = `s${state.nextSession++}`;

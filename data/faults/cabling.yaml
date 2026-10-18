@@ -1,0 +1,26 @@
+# Layer 1 faults: the copper itself.
+- id: crushed-cable
+  name: Patch cable crushed under a desk chair
+  layer: 1
+  device: pc
+  startedAt: "0d 09:40"
+  effects:
+    - { type: damage-cable, target: pc }
+  proof: []
+  clues:
+    - id: pc-offline
+      text: "Ovik shows {pc.hostname} ({pc.ip}) offline since Monday 09:40."
+      surface: monitoring
+      requires: monitoring
+    - id: port-flaps
+      text: "The Meridian Dashboard event log shows {pc.hostname}'s port on {switch.hostname} flapping at 100 Mbps with CRC errors, then down for good."
+      surface: cloud
+      requires: cloud
+    - id: cable-open
+      text: "A cable test on that port shows pair 3-6 open a couple of meters short of the far end, near the desk."
+      surface: cloud
+      requires: cloud
+    - id: new-chair
+      text: "On a call, a contact says {pc.user} got a new chair and a plastic floor mat on Monday."
+      surface: call
+      requires: hands

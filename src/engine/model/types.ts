@@ -155,6 +155,10 @@ export interface Device {
   /** disabled: the client turned the MSP's account off. Logins fail like a wrong password. */
   credentials?: { username: string; password: string; disabled?: boolean };
   dialect?: string;
+  /** Cloud-managed: no CLI, only the vendor dashboard. */
+  cloud?: boolean;
+  /** What the dashboard's event log shows beyond link changes: flaps, tools you ran, edits. */
+  cloudLog?: { at: number; text: string }[];
   /** The MSP's SSL VPN account on this firewall. The log is what diagnose vpn ssl log prints. */
   vpn?: VpnAccount;
   /** Minutes the clock runs off while NTP sync is off. */
@@ -257,6 +261,7 @@ export interface Docs {
   contacts: Contact[];
   floorPlan: boolean;
   accessNotes: string[];
+  cloud?: DocCloud;
   history: DocHistoryEntry[];
   accessLog: { at: number; who: string; entry: string }[];
   /** Hidden: a coworker changed a password on the device and never saved it to the vault. */
@@ -296,7 +301,7 @@ export interface CaseCall {
     id: string;
     label: string;
     unlockedBy: string;
-    effect: "end-power-cut" | "unplug-loop";
+    effect: "end-power-cut" | "unplug-loop" | "replace-cable";
     roles: string[];
   }[];
 }
@@ -371,5 +376,21 @@ export interface World {
   extraTickets: ExtraTicket[];
   history: HistoryEvent[];
   monitoring: { collectorId: string; inventory: OvikDevice[] };
+  /** The client's cloud dashboard org, when its gear is cloud-managed. */
+  cloudOrg?: CloudOrg;
   solvability: SolvabilityReport;
+}
+
+export interface CloudOrg {
+  name: string;
+  username: string;
+  password: string;
+}
+
+/** The MSP's dashboard login as the docs have it. Its password is the vault entry "cloud". */
+export interface DocCloud {
+  dashboard: string;
+  url: string;
+  org: string;
+  username: string;
 }

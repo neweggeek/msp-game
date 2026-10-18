@@ -1,0 +1,21 @@
+# Cloud dashboards for cloud-managed gear. No CLI: the dashboard is the only way in.
+vendor: meridian
+name: Meridian Dashboard
+url: dashboard.meridian.cloud
+# Share of clients, outside scenarios that pick a switch brand, whose switches are cloud-managed.
+chance: 0.3
+loginMinutes: 1
+cableTestMinutes: 2
+portCycleMinutes: 2
+configMinutes: 1
+messages:
+  noOrg: "No account matches that email and password."
+  loggedIn: "Signed in to the {org} organization."
+  offline: "{device} is offline. It has not checked in since {lastSeen}, so live tools are not available."
+  cableOk: "Port {port}: all four pairs OK. Cable length about {length} m."
+  cableOpen: "Port {port}: pair 3-6 open at about {at} m. Pairs 1-2, 4-5 and 7-8 OK."
+  cableNone: "Port {port}: all pairs open. Nothing is plugged in at the far end, or the cable is cut near the switch."
+  cycled: "Port {port} cycled. It turned off for 5 seconds and came back."
+  cycledPoe: "Port {port} cycled. PoE was off for 5 seconds, so {client} lost power and is booting."
+  uplink: "Port {port} is the uplink to the network. Disabling it would cut {device} off from the dashboard."
+  saved: "Saved. {device} picks up the change within a minute."

@@ -256,6 +256,9 @@ export function ask(
         if (fix.f.effect === "end-power-cut" && d?.powerCut && d.powerCut.until === undefined)
           d.powerCut.until = now;
         if (fix.f.effect === "unplug-loop" && d) unplugLoops(world, d);
+        if (fix.f.effect === "replace-cable" && d)
+          for (const l of world.links)
+            if (l.a.device === d.id || l.b.device === d.id) l.condition = "good";
       }
     }
     // They say done either way. Check their work.

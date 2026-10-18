@@ -17,3 +17,5 @@
 - id: barricade
   name: Barricade
   vpnClient: Barricade VPN
+- id: meridian
+  name: Meridian Networks
