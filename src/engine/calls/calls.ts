@@ -456,6 +456,7 @@ function unplugLoops(world: World, sw: Device): void {
 /** Off for a few minutes, then up on its saved config. Unsaved changes are gone. */
 export function powerCycle(data: GameData, dev: Device, now: number): void {
   dev.rebootUntil = now + data.calls.rebootMinutes;
+  dev.rebootAt = now;
   if (dev.startup) {
     dev.running = structuredClone(dev.startup);
     applyRunning(dev);
@@ -504,6 +505,7 @@ function ispAsk(
       // The modem goes dark near the end of the ask and comes back on a clean config.
       const back = now + def.minutes + data.calls.isp.rebootMinutes;
       site.isp.rebootUntil = back;
+      site.isp.rebootAt = now;
       const o = site.isp.outage;
       if (o && o.until === undefined && now >= o.since) o.until = back;
       out.lines.push(

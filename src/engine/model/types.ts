@@ -77,8 +77,9 @@ export interface Isp {
   pin: string;
   /** The ISP's side is down: a modem stuck after a provisioning push, for example. */
   outage?: { since: number; until?: number };
-  /** The ISP rebooted the modem from their end. Down until then. */
+  /** The ISP rebooted the modem from their end. Down from rebootAt until rebootUntil. */
   rebootUntil?: number;
+  rebootAt?: number;
 }
 
 export interface Site {
@@ -143,6 +144,8 @@ export interface Device {
   powerCut?: PowerCut;
   /** Power-cycled by remote hands; dark until this minute, then boots from its startup config. */
   rebootUntil?: number;
+  /** When that power-cycle started. */
+  rebootAt?: number;
   bootAt: number;
   roomId: string;
   managed: boolean;

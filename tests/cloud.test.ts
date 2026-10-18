@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { viewData } from "../src/engine/cli/views";
 import { dashboard } from "../src/engine/cloud/dashboard";
 import { gameData } from "../src/engine/data";
 import type { Device } from "../src/engine/model/types";
@@ -126,5 +127,29 @@ describe("cloud dashboards", () => {
     });
     expect(r.ok).toBe(false);
     expect(up?.shutdown).toBeFalsy();
+  });
+});
+
+describe("cloud dashboard edge cases", () => {
+  it("a switch cut off by an ISP outage shows when it went quiet, not now", () => {
+    const g = cloudGame("crushed-cable");
+    const { act, login, sw } = tools(g);
+    login();
+    const site = g.world.sites.find((s) => s.id === sw.siteId);
+    if (site) site.isp.outage = { since: g.clock.now + 1 };
+    act({ t: "advance", minutes: 30 });
+    const d = dashboard(g.world, g.clock.now).devices[0];
+    expect(d?.online).toBe(false);
+    expect(d?.lastSeen).toBe(site?.isp.outage?.since ?? 0);
+    const r = act({ t: "cloud-cable-test", device: sw.id, port: "1" });
+    expect(r.ok).toBe(false);
+  });
+
+  it("the firewall does not manage Meridian switches", () => {
+    const g = cloudGame("crushed-cable");
+    const fw = g.world.devices.find((d) => d.kind === "firewall" && d.siteId === "hq") as Device;
+    const ctx = { world: g.world, device: fw, args: {}, time: "", now: g.clock.now };
+    const r = viewData("poe-status", ctx);
+    expect(r.ok && (r.data.switches as unknown[]).length).toBe(0);
   });
 });

@@ -118,7 +118,21 @@ export function CloudPage() {
             </select>{" "}
             <span className={p.poe.state === "denied" ? "bad" : "dim"}>
               {p.poe.state} {p.poe.powerW > 0 ? `${p.poe.powerW.toFixed(1)} W` : ""}
-            </span>
+            </span>{" "}
+            <button
+              type="button"
+              className="btn small"
+              onClick={() =>
+                run({
+                  t: "cloud-port",
+                  device: dev?.id ?? "",
+                  port: p.port,
+                  change: { poeEnabled: !p.poe.enabled },
+                })
+              }
+            >
+              {p.poe.enabled ? "PoE off" : "PoE on"}
+            </button>
           </>
         ) : (
           <span className="dim">no PoE</span>

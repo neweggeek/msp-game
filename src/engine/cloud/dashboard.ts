@@ -3,7 +3,7 @@ import { formatTime } from "../clock/clock";
 import type { GameData } from "../data";
 import type { Device, Link, PoePriority, World } from "../model/types";
 import { canReach } from "../net/reach";
-import { type NetState, netState } from "../net/state";
+import { type NetState, netState, powerCutActive, siteFirewall } from "../net/state";
 import { fill } from "../util/template";
 
 export interface DashPort {
@@ -41,13 +41,34 @@ export function cloudOnline(world: World, d: Device, ns: NetState): boolean {
   return ns.online.get(d.id) === true && canReach(world, d.id, "1.1.1.1", ns);
 }
 
-/** When it last checked in: now if it is online, else its last drop before now. */
+/**
+ * When it last checked in: now if it is online, else when its current dark spell began. The
+ * switch drops off the cloud when it, its firewall or the ISP goes dark, so take the latest start.
+ */
 function lastSeen(world: World, d: Device, ns: NetState): number {
-  if (cloudOnline(world, d, ns)) return ns.now;
-  const downs = world.history.filter(
-    (h) => h.deviceId === d.id && h.state === "down" && h.at <= ns.now,
-  );
-  return downs.at(-1)?.at ?? ns.now;
+  const now = ns.now;
+  if (cloudOnline(world, d, ns)) return now;
+  const starts: number[] = [];
+  const fw = siteFirewall(world, d.siteId);
+  for (const x of fw ? [d, fw] : [d]) {
+    if (x.rebootUntil !== undefined && now < x.rebootUntil && x.rebootAt !== undefined)
+      starts.push(x.rebootAt);
+    const c = x.powerCut;
+    if (c && powerCutActive(x, now))
+      starts.push(now - (((((now % 1440) - c.from) % 1440) + 1440) % 1440));
+    const down = world.history.filter((h) => h.deviceId === x.id && h.at <= now).at(-1);
+    if (down?.state === "down") starts.push(down.at);
+  }
+  const isp = world.sites.find((s) => s.id === d.siteId)?.isp;
+  if (
+    isp?.outage &&
+    now >= isp.outage.since &&
+    (isp.outage.until === undefined || now < isp.outage.until)
+  )
+    starts.push(isp.outage.since);
+  if (isp?.rebootUntil !== undefined && now < isp.rebootUntil && isp.rebootAt !== undefined)
+    starts.push(isp.rebootAt);
+  return starts.length > 0 ? Math.max(...starts) : now;
 }
 
 function linkOn(world: World, d: Device, port: string): Link | undefined {
@@ -123,7 +144,12 @@ export function dashboard(
       if (online && poe) out.poe = { budgetW: poe.budgetW, allocatedW: poe.allocatedW };
       return out;
     });
-  return { devices, events: dashEvents(world, now) };
+  const events = dashEvents(world, now);
+  // A switch that dropped off for a reason it never logged still shows when it went quiet.
+  for (const d of devices)
+    if (!d.online && !events.some((e) => e.device === d.name && e.at === d.lastSeen))
+      events.push({ at: d.lastSeen, device: d.name, text: "Stopped checking in" });
+  return { devices, events: events.sort((a, b) => b.at - a.at) };
 }
 
 /** Link changes on every port, plus whatever the switch logged itself. Newest first. */
