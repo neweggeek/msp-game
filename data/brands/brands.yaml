@@ -14,3 +14,6 @@
 - id: aurora
   name: Aurora Networking
   dialect: aurora-cx
+- id: barricade
+  name: Barricade
+  vpnClient: Barricade VPN

@@ -19,6 +19,7 @@ import {
   type SlaRules,
   type StalenessRules,
   type TicketRules,
+  type VpnRules,
   actionCostSchema,
   assetRulesSchema,
   brandSchema,
@@ -38,6 +39,7 @@ import {
   slaSchema,
   stalenessSchema,
   ticketRulesSchema,
+  vpnRulesSchema,
 } from "../schema";
 
 export interface GameData {
@@ -60,6 +62,7 @@ export interface GameData {
   clients: ClientRules;
   assets: AssetRules;
   calls: CallRules;
+  vpn: VpnRules;
 }
 
 /** Raw YAML text keyed by path, like "../../../data/devices/fortress.yaml". */
@@ -139,6 +142,7 @@ export function loadData(files: RawFiles): GameData {
     clients: rule(files, "clients", clientRulesSchema),
     assets: rule(files, "assets", assetRulesSchema),
     calls: rule(files, "calls", callRulesSchema),
+    vpn: rule(files, "vpn", vpnRulesSchema),
   };
   for (const t of data.devices.values()) {
     if (!data.brands.has(t.brand)) throw new DataError(`device ${t.id}: unknown brand ${t.brand}`);
@@ -180,6 +184,8 @@ export function loadData(files: RawFiles): GameData {
   for (const t of data.devices.values())
     if (!kinds.includes(t.kind))
       throw new DataError(`device ${t.id}: kind ${t.kind} has no type in assets.yaml`);
+  for (const a of data.vpn.apps)
+    if (!data.brands.has(a.brand)) throw new DataError(`vpn.yaml: unknown brand ${a.brand}`);
   if (!data.tickets.statuses.some((s) => s.initial))
     throw new DataError("tickets.yaml: no initial status");
   return data;

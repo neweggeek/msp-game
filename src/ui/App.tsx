@@ -12,6 +12,7 @@ import { ScoreToast } from "./score/Score";
 import { ScreenLinkPage } from "./screenlink/ScreenLink";
 import { type Tab, data, openCount, useGame, useUi } from "./store";
 import { Terminal } from "./terminal/Terminal";
+import { VpnPage } from "./vpn/Vpn";
 
 export const fmt = (min: number) => formatTime(data.calendar, min);
 
@@ -35,6 +36,7 @@ export function App() {
       {tab === "desk" && <Desk />}
       {tab === "rmm" && <RmmPage />}
       {tab === "screenlink" && <ScreenLinkPage />}
+      {tab === "vpn" && <VpnPage />}
       {tab === "ovik" && <OvikPage />}
       {tab === "docs" && (
         <main className="main single">
@@ -67,7 +69,7 @@ const tabs: { id: Tab | null; label: string; group?: string }[] = [
   { id: "screenlink", label: "ScreenLink" },
   { id: "ovik", label: "Ovik" },
   { id: "docs", label: "Hoodoo Docs", group: "|" },
-  { id: null, label: "VPN clients" },
+  { id: "vpn", label: "VPN clients" },
   { id: "terminal", label: "Terminal" },
   { id: "kb", label: "Vendor KB" },
 ];

@@ -10,7 +10,7 @@ import { genSite } from "./site";
 import { checkSolvable } from "./validate";
 
 /** Bump when a code change alters what an existing seed builds. */
-export const GENERATOR_VERSION = 11;
+export const GENERATOR_VERSION = 12;
 
 const MAX_WORLD_ATTEMPTS = 200;
 const MAX_FAULT_ATTEMPTS = 8;
@@ -65,6 +65,20 @@ function buildBase(
     if (factory !== undefined && crng.chance(level.defaultPassword))
       d.credentials.password = factory;
     if (client.disablesMspAccounts && d.kind === "firewall") d.credentials.disabled = true;
+  }
+  // Some clients give the MSP a VPN account on the main office firewall.
+  const vrng = rng.fork("vpn");
+  const hqFw = ctx.devices.find((d) => d.kind === "firewall" && d.siteId === "hq");
+  if (hqFw?.running && client.managed && vrng.chance(data.vpn.chance)) {
+    const port = vrng.pick(data.vpn.ports);
+    hqFw.running.sslvpn = { status: "enable", port };
+    hqFw.vpn = {
+      username: `msp-${client.code.toLowerCase()}`,
+      password: `${vrng.pick(["Tunnel", "Bridge", "Gate", "Ridge"])}-${vrng.hex(6)}`,
+      mfa: vrng.chance(data.vpn.pushChance) ? "push" : "totp",
+      secret: vrng.hex(16),
+      log: [],
+    };
   }
   const fwOf = (siteId: string) =>
     ctx.devices.find((d) => d.kind === "firewall" && d.siteId === siteId) as Device;

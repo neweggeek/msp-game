@@ -14,7 +14,7 @@ export type Priority = "P1" | "P2" | "P3" | "P4";
 export type PoePriority = "low" | "high" | "critical";
 export type Staleness = "fresh" | "partly" | "stale";
 export type Origin = "client" | "alert" | "tech";
-/** "docs", "monitoring", "rmm", "hands", "isp", or "ssh:<role>" / "rmm:<role>" for one bound device. */
+/** "docs", "monitoring", "rmm", "hands", "isp", "screen", "vpn", or "ssh:<role>" / "rmm:<role>" for one bound device. */
 export type AccessToken = string;
 
 export interface Contact {
@@ -155,8 +155,21 @@ export interface Device {
   /** disabled: the client turned the MSP's account off. Logins fail like a wrong password. */
   credentials?: { username: string; password: string; disabled?: boolean };
   dialect?: string;
+  /** The MSP's SSL VPN account on this firewall. The log is what diagnose vpn ssl log prints. */
+  vpn?: VpnAccount;
+  /** Minutes the clock runs off while NTP sync is off. */
+  clockDrift?: number;
   running?: DeviceConfig;
   startup?: DeviceConfig;
+}
+
+export interface VpnAccount {
+  username: string;
+  password: string;
+  mfa: "totp" | "push";
+  /** Seeds the authenticator codes. */
+  secret: string;
+  log: { at: number; text: string }[];
 }
 
 export interface PowerCut {
@@ -215,6 +228,16 @@ export interface DocSite {
   address: string;
   vlans: Vlan[];
   isp: Isp;
+  /** The MSP's VPN profile for this site. Its password is the vault entry "vpn-<site>". */
+  vpn?: DocVpn;
+}
+
+export interface DocVpn {
+  app: string;
+  gateway: string;
+  port: number;
+  username: string;
+  mfa: "totp" | "push";
 }
 
 export interface DocHistoryEntry {

@@ -138,6 +138,36 @@ export function genDocs(
     );
   }
 
+  // The MSP's VPN profile. A stale page can have an old port.
+  const vpns: Record<string, Docs["sites"][number]["vpn"]> = {};
+  const vrng = rng.fork("vpn");
+  for (const fw of snapshot.devices.filter((d) => d.kind === "firewall" && d.vpn)) {
+    const v = fw.vpn as NonNullable<typeof fw.vpn>;
+    const site = snapshot.sites.find((x) => x.id === fw.siteId);
+    const app = data.vpn.apps.find((a) => a.brand === fw.brand);
+    const real = Number((fw.running?.sslvpn as Record<string, unknown> | undefined)?.port ?? 443);
+    const port = vrng.chance(data.vpn.wrongPort[snapshot.client.staleness])
+      ? (data.vpn.ports.find((p) => p !== real) ?? real)
+      : real;
+    if (!site || !app) continue;
+    vpns[site.id] = {
+      app: app.name,
+      gateway: site.isp.wanIp,
+      port,
+      username: v.username,
+      mfa: v.mfa,
+    };
+    credentials.push({
+      deviceId: `vpn-${site.id}`,
+      hostname: `${site.name} VPN`,
+      username: v.username,
+      password: v.password,
+    });
+    accessNotes.push(
+      `${site.name}: we have a VPN. Connect ${app.name} to ${site.isp.wanIp} port ${port} as ${v.username}, ${v.mfa === "push" ? "approve the push on the MSP authenticator" : "with a code from the MSP authenticator"}, then SSH from the laptop terminal.`,
+    );
+  }
+
   const floorPlan = rng.chance(0.15);
 
   // Wi-Fi: one set of networks per site with access points. Passphrases live in the vault.
@@ -175,6 +205,7 @@ export function genDocs(
       vlans: structuredClone(s.vlans),
       // Nobody wrote the ISP's security PIN down at some clients. It is on the bill.
       isp: { ...s.isp, pin: rng.chance(level.missingCredential * 3) ? "" : s.isp.pin },
+      ...(vpns[s.id] ? { vpn: vpns[s.id] } : {}),
     })),
     devices,
     credentials,

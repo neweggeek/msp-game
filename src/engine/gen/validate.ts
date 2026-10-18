@@ -7,8 +7,8 @@ import type {
   SolvabilityReport,
   World,
 } from "../model/types";
-import { canManage, canReach } from "../net/reach";
-import { netState } from "../net/state";
+import { canManage, canReach, sslVpnUp, vpnCanManage } from "../net/reach";
+import { clockOffset, netState } from "../net/state";
 
 type Checkable = Omit<World, "solvability">;
 
@@ -46,6 +46,24 @@ export function accessPaths(
     !!d && ns.online.get(d.id) === true && canReach(w, d.id, "1.1.1.1", ns);
   const screenHosts = w.client.contacts.map((p) => personPc(w, p)).filter(live);
   if (screenHosts.length > 0) access.push("screen");
+  // VPN: the docs profile matches the firewall, the vault has the password, and codes pass.
+  const vpnFws = docs.sites.flatMap((ds) => {
+    const fw = w.devices.find((d) => d.kind === "firewall" && d.siteId === ds.siteId);
+    const real = w.sites.find((x) => x.id === ds.siteId)?.isp.wanIp;
+    const port = (fw?.running?.sslvpn as Record<string, unknown> | undefined)?.port;
+    const pass = docs.credentials.find((x) => x.deviceId === `vpn-${ds.siteId}`)?.password;
+    const ok =
+      fw?.vpn &&
+      ds.vpn &&
+      ds.vpn.gateway === real &&
+      ds.vpn.port === port &&
+      ds.vpn.username === fw.vpn.username &&
+      pass === fw.vpn.password &&
+      (fw.vpn.mfa === "push" || clockOffset(fw) === 0) &&
+      sslVpnUp(fw, ns);
+    return ok && fw ? [fw] : [];
+  });
+  if (vpnFws.length > 0) access.push("vpn");
   if (!c) return access;
   // The ticket's user can be called too, and shares the PC the ticket is about.
   const primary = w.devices.find((x) => x.id === c.bindings[c.primary]);
@@ -70,7 +88,11 @@ export function accessPaths(
         (ip) => ip !== undefined && canManage(w, h.id, ip, "ssh", ns) && ownedBy(w, ip, id),
       ),
     );
-    if (via) access.push(`ssh:${role}`);
+    const overVpn =
+      docIp !== undefined &&
+      ownedBy(w, docIp, id) &&
+      vpnFws.some((fw) => vpnCanManage(w, fw, docIp, "ssh", ns));
+    if (via || overVpn) access.push(`ssh:${role}`);
   }
   return access;
 }

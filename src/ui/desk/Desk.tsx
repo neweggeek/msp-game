@@ -321,7 +321,10 @@ function TicketView() {
                 <option value="">Attach output...</option>
                 <option value="ovik">Ovik status of the device</option>
                 {sessions.map((s) => {
-                  const host = game.world.devices.find((d) => d.id === s.deviceId)?.hostname;
+                  const host =
+                    s.kind === "local"
+                      ? "Laptop"
+                      : game.world.devices.find((d) => d.id === s.deviceId)?.hostname;
                   const outs = s.outputs ?? (s.last ? [s.last] : []);
                   return (
                     <optgroup

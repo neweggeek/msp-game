@@ -1,6 +1,6 @@
 import type { Device, Fields, World } from "../model/types";
 import { canReach } from "../net/reach";
-import { type NetState, bootTime, firewallInterfaces, netState } from "../net/state";
+import { type NetState, bootTime, clockOffset, firewallInterfaces, netState } from "../net/state";
 import { tunnelStates, wanIp } from "../net/vpn";
 import type { ViewNode } from "../schema";
 import { fnv1a } from "../util/hash";
@@ -186,6 +186,15 @@ export function viewData(name: string, ctx: ViewContext): ViewResult {
           };
         });
       return { ok: true, data: { tunnels } };
+    }
+    case "ssl-log": {
+      // Time stamps come from the firewall's own clock.
+      const off = clockOffset(device);
+      const entries = (device.vpn?.log ?? [])
+        .filter((e) => e.at <= ctx.now)
+        .slice(-12)
+        .map((e) => ({ time: clockOf(e.at + off), message: e.text }));
+      return { ok: true, data: { entries } };
     }
     case "ike-log": {
       const all = tunnelStates(world, ns);

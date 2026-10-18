@@ -150,6 +150,13 @@ export function ispOutage(isp: Isp, now: number): boolean {
   );
 }
 
+/** Was the ISP's side down at any point from `since` to `now`? */
+export function ispDownBetween(isp: Isp, since: number, now: number): boolean {
+  const o = isp.outage;
+  if (o && o.since <= now && (o.until === undefined || o.until > since)) return true;
+  return isp.rebootUntil !== undefined && isp.rebootUntil > since;
+}
+
 /** Good cables with both ends on this switch. */
 export function loopLinks(world: World, switchId: string) {
   return world.links.filter(
@@ -190,4 +197,10 @@ export function siteOf(world: World, siteId: string) {
   const s = world.sites.find((x) => x.id === siteId);
   if (!s) throw new Error(`no site ${siteId}`);
   return s;
+}
+
+/** Minutes a device's clock is off: it drifts while NTP sync is off. */
+export function clockOffset(d: Device): number {
+  const ntp = d.running?.ntp as Fields | undefined;
+  return ntp?.ntpsync === "disable" ? (d.clockDrift ?? 0) : 0;
 }

@@ -47,3 +47,11 @@ export {
   type PhoneCall,
 } from "./calls/calls";
 export { bootTime } from "./net/state";
+export {
+  authenticator,
+  newVpnState,
+  vpnLink,
+  type AuthEntry,
+  type LocalSession,
+  type VpnState,
+} from "./vpn/client";

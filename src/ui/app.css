@@ -184,6 +184,13 @@ textarea {
   min-width: 0;
 }
 
+/* A column of fixed panels that scrolls instead of squeezing them. */
+.col.stack {
+  overflow: auto;
+}
+.col.stack > .panel {
+  flex-shrink: 0;
+}
 .panel {
   background: var(--panel);
   border: 1px solid var(--line);
