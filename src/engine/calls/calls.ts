@@ -39,6 +39,9 @@ export interface PhoneCall {
   hold?: number;
   verified?: boolean;
   agent?: string;
+  /** A question the client asked, and the answer you picked, if any. */
+  /** Lines counts the transcript lines the trap added. */
+  trap?: { id: string; answer?: number; lines: number };
 }
 
 /** The docs contacts, plus the user on a ticket when they are not one of them. */
@@ -175,6 +178,24 @@ export function dial(ctx: CallCtx, id: string, person: Person, ticket?: string):
   return call;
 }
 
+/**
+ * Sometimes an answered client has a question of their own. Its own stream, and its lines are
+ * left out of the ask seed, so other draws on the call stay put.
+ */
+export function plantTrap(ctx: CallCtx, call: PhoneCall, person: Person): void {
+  const traps = ctx.data.calls.traps;
+  const trng = new Rng(`${ctx.world.seed}:trap:${ctx.serial}`);
+  const fits = traps.list.filter((x) => !x.ticket || call.ticket);
+  if (fits.length === 0 || trng.next() >= traps.chance) return;
+  const trap = trng.pick(fits);
+  call.trap = { id: trap.id, lines: 1 };
+  call.transcript.push(
+    fill(traps.lines.ask ?? "", (k) =>
+      k === "name" ? person.name : k === "question" ? trap.question : "",
+    ),
+  );
+}
+
 /** Remote hands tasks unlocked by what this client has told you. */
 export function unlockedFixes(world: World, heard: string[]): CaseCall["fixes"] {
   return world.cases
@@ -220,7 +241,8 @@ export function ask(
     .find((x) => x.f.id === askId && ctx.heard.includes(x.f.unlockedBy));
   const def = data.calls.asks.find((a) => a.id === askId);
   if (!def && !fix) return { error: "Pick something to ask." };
-  const rng = new Rng(`${world.seed}:call:${ctx.serial}:${call.transcript.length}`);
+  const asked = call.transcript.length - (call.trap?.lines ?? 0);
+  const rng = new Rng(`${world.seed}:call:${ctx.serial}:${asked}`);
   const v: Record<string, string> = { name: person.name };
   // Low competence: a wrong answer or the wrong box, some of the time.
   const slip = () => rng.next() < (1 - person.competence) * 0.5;

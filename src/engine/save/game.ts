@@ -1,4 +1,4 @@
-import { type PhoneCall, ask, dial, findPerson } from "../calls/calls";
+import { type PhoneCall, ask, dial, findPerson, plantTrap } from "../calls/calls";
 import { type CliContext, type CliSession, openSession, runLine } from "../cli/session";
 import {
   type ClockState,
@@ -89,6 +89,7 @@ export type Action =
   | { t: "call"; person: string; ticket?: string }
   | { t: "call-ask"; call: string; ask: string; device?: string }
   | { t: "call-end"; call: string }
+  | { t: "call-answer"; call: string; answer: number }
   | { t: "sl-new" }
   | { t: "sl-open"; code: string }
   | { t: "vpn-upgrade"; app: string }
@@ -268,6 +269,7 @@ function spend(state: GameState, data: GameData, minutes: number): void {
     if (timer.kind === "reopen") return reopen(state, data, String(timer.payload.ticket));
     if (timer.kind === "console-rollback") return consoleRollback(state, timer.payload);
     if (timer.kind.startsWith("desk-")) return deskTimer(state, data, timer);
+    if (timer.kind.startsWith("promise-")) return promiseTimer(state, data, timer);
     if (timer.kind.startsWith("ticket-")) {
       const ev = onTicketTimer(state.book, state.clock, data, timer);
       if (ev) {
@@ -288,6 +290,34 @@ const cost = (data: GameData, key: string) => data.actionCosts[key] ?? 0;
 
 const deskLine = (data: GameData, key: string, vars: Record<string, unknown>) =>
   fill(data.tickets.desk.lines[key] ?? key, (k) => vars[k]);
+
+/**
+ * A promise made on a call comes due. A broken one lands as a rating hit, on another of the
+ * client's open tickets when there is one: the client brings it up wherever they can.
+ */
+function promiseTimer(state: GameState, data: GameData, timer: Timer): void {
+  const p = timer.payload;
+  const t = p.ticket ? find(state.book, String(p.ticket)) : undefined;
+  if (timer.kind === "promise-time") {
+    // Kept means fixed, or rightly sent back. A close alone is not a fix.
+    const extra = state.world.extraTickets.find((x) => x.id === t?.extraId);
+    const caseId = t?.caseId ?? extra?.duplicateOf;
+    const c = state.world.cases.find((x) => x.caseId === caseId);
+    const kept = t?.sentBack !== undefined || (c && caseFixed(state.world, c, state.clock.now));
+    if (kept) return;
+  }
+  const traps = data.calls.traps;
+  const key = timer.kind === "promise-time" ? "brokenTime" : "brokenOther";
+  const text = fill(traps.lines[key] ?? key, (k) =>
+    k === "name" ? p.name : k === "ticket" ? p.ticket : k === "time" ? p.time : "",
+  );
+  const open = state.book.tickets.filter((x) => x.closedAt === undefined && !x.sentBack);
+  // Nothing open: it still costs, as a shift-level hit.
+  const on = open.find((x) => x.id !== t?.id) ?? open[0];
+  on?.history.push({ at: state.clock.now, by: "dispatch", text });
+  state.events.push({ at: state.clock.now, text });
+  points(state, data, "brokenPromise", text, on?.id);
+}
 
 /** Dispatch checks in on a P1 every hour of MSP time until it closes. */
 function startP1Clock(state: GameState, data: GameData, t: Ticket): void {
@@ -1164,13 +1194,9 @@ function run(state: GameState, data: GameData, a: Action): ActionResult {
       const t = a.ticket ? find(book, a.ticket) : undefined;
       if (a.ticket && !t) return { ok: false, error: `No ticket ${a.ticket}.` };
       state.calls ??= {};
+      const ctx = callCtx(state, data, Object.keys(state.calls).length + 1);
       const id = `c${Object.keys(state.calls).length + 1}`;
-      const call = dial(
-        callCtx(state, data, Object.keys(state.calls).length + 1),
-        id,
-        person,
-        a.ticket,
-      );
+      const call = dial(ctx, id, person, a.ticket);
       state.calls[id] = call;
       spend(state, data, data.calls.dialMinutes + (call.hold ?? 0));
       // A client that switches our account off has said a call to switch it back on is fine.
@@ -1207,6 +1233,7 @@ function run(state: GameState, data: GameData, a: Action): ActionResult {
           text: `Called ${person.name}. ${call.transcript.at(-1) ?? ""}`,
         });
       }
+      if (call.answered && !person.isp && !person.team) plantTrap(ctx, call, person);
       return { ok: true, session: id, output: call.transcript };
     }
     case "call-ask": {
@@ -1289,6 +1316,45 @@ function run(state: GameState, data: GameData, a: Action): ActionResult {
       });
       spend(state, data, cost(data, "rmm-open"));
       return { ok: true, session: id };
+    }
+    case "call-answer": {
+      const call = state.calls?.[a.call];
+      const trap = data.calls.traps.list.find((x) => x.id === call?.trap?.id);
+      const ans = trap?.answers[a.answer];
+      if (!call || !call.trap || !trap || !ans) return { ok: false, error: "Nothing to answer." };
+      if (call.closed) return { ok: false, error: "The call has ended." };
+      if (call.trap.answer !== undefined) return { ok: false, error: "You already answered." };
+      call.trap.answer = a.answer;
+      call.trap.lines += 2;
+      const traps = data.calls.traps;
+      const person = findPerson(world, call.person, data);
+      const name = person?.name ?? "They";
+      const line = (key: string) => fill(traps.lines[key] ?? "", (k) => (k === "name" ? name : ""));
+      call.transcript.push(ans.says);
+      if (ans.effect === "training") {
+        spend(state, data, traps.trainingMinutes);
+        call.transcript.push(line("training"));
+        return { ok: true };
+      }
+      call.transcript.push(line("okay"));
+      spend(state, data, 1);
+      if (ans.effect === "promise-time")
+        schedule(clock, clock.now + traps.promiseMinutes, "promise-time", {
+          ticket: call.ticket ?? "",
+          name,
+          time: formatTime(data.calendar, clock.now + 60).slice(-5),
+        });
+      if (ans.effect === "promise-other")
+        schedule(
+          clock,
+          addBusinessMinutes(data.calendar, clock.now, traps.otherTechMinutes),
+          "promise-other",
+          {
+            ticket: call.ticket ?? "",
+            name,
+          },
+        );
+      return { ok: true };
     }
     case "call-end": {
       const call = state.calls?.[a.call];
