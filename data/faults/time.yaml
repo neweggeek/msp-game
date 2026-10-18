@@ -17,7 +17,7 @@
       surface: cli
       requires: "ssh:firewall"
     - id: codes-in-log
-      text: "diagnose vpn ssl log on {firewall.hostname} shows three token codes rejected at 07:20, then the lockout."
+      text: "diagnose vpn ssl log on {firewall.hostname} shows three token codes rejected this morning, then the lockout."
       surface: cli
       requires: "ssh:firewall"
     - id: kyle-tried

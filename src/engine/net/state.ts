@@ -150,6 +150,13 @@ export function ispOutage(isp: Isp, now: number): boolean {
   );
 }
 
+/** Was the ISP's side down at any point from `since` to `now`? */
+export function ispDownBetween(isp: Isp, since: number, now: number): boolean {
+  const o = isp.outage;
+  if (o && o.since <= now && (o.until === undefined || o.until > since)) return true;
+  return isp.rebootUntil !== undefined && isp.rebootUntil > since;
+}
+
 /** Good cables with both ends on this switch. */
 export function loopLinks(world: World, switchId: string) {
   return world.links.filter(

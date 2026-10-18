@@ -1,7 +1,7 @@
 import type { GameData } from "../data";
 import type { Device, World } from "../model/types";
 import { resolveTarget, sslVpnUp, vpnCanReach } from "../net/reach";
-import { clockOffset, netState } from "../net/state";
+import { bootTime, clockOffset, ispDownBetween, netState } from "../net/state";
 import { fnv1a } from "../util/hash";
 import { isIp } from "../util/ip";
 import { fill } from "../util/template";
@@ -10,7 +10,9 @@ import { fill } from "../util/template";
 export interface VpnState {
   /** Brand -> installed app version. */
   apps: Record<string, string>;
-  conn?: { fwId: string; gateway: string; since: number };
+  /** id: SSH sessions opened over this connection carry it, so they die with it. */
+  conn?: { id: number; fwId: string; gateway: string; since: number };
+  nextConn?: number;
   /** A push sign-in waiting on your phone. */
   push?: { fwId: string; gateway: string; at: number };
   /** Firewall id -> bad codes in a row, and minute the account unlocks. */
@@ -177,7 +179,8 @@ function up(
 ): VpnResult {
   vs.bad[fw.id] = 0;
   vs.push = undefined;
-  vs.conn = { fwId: fw.id, gateway, since: now };
+  vs.nextConn = (vs.nextConn ?? 0) + 1;
+  vs.conn = { id: vs.nextConn, fwId: fw.id, gateway, since: now };
   log(fw, now, `${fw.vpn?.username} connected, tunnel up`);
   const site = world.sites.find((s) => s.id === fw.siteId);
   return { ok: true, output: [say("connected", { gateway, site: site?.name })] };
@@ -202,18 +205,33 @@ export function approvePush(
     log(fw, now, `push sign-in denied for ${fw.vpn?.username}`);
     return { ok: false, output: [say("pushDenied")] };
   }
-  if (now > p.at + data.vpn.mfa.pushMinutes) {
+  if (now > p.at + data.vpn.mfa.pushMinutes || !sslVpnUp(fw, netState(world, now))) {
     log(fw, now, `push sign-in timed out for ${fw.vpn?.username}`);
     return { ok: false, output: [say("pushExpired")] };
   }
   return up(vs, world, fw, p.gateway, now, say);
 }
 
-/** The firewall you are connected through, while the tunnel holds. */
+/**
+ * The firewall you are connected through, while the tunnel holds. A tunnel that dropped stays
+ * dropped: the firewall rebooted, its ISP went down, or the SSL VPN is off.
+ */
 export function vpnLink(vs: VpnState | undefined, world: World, now: number): Device | undefined {
-  if (!vs?.conn) return undefined;
-  const fw = world.devices.find((d) => d.id === vs.conn?.fwId);
-  return fw?.vpn && sslVpnUp(fw, netState(world, now)) ? fw : undefined;
+  const c = vs?.conn;
+  if (!c) return undefined;
+  const fw = world.devices.find((d) => d.id === c.fwId);
+  const isp = world.sites.find((s) => s.id === fw?.siteId)?.isp;
+  if (!fw?.vpn || !isp || !sslVpnUp(fw, netState(world, now))) return undefined;
+  if (bootTime(fw, now) > c.since || ispDownBetween(isp, c.since, now)) return undefined;
+  return fw;
+}
+
+/** Forget a tunnel that dropped. Returns the line to tell the player, if it just did. */
+export function settleVpn(vs: VpnState | undefined, world: World, data: GameData, now: number) {
+  if (!vs?.conn || vpnLink(vs, world, now)) return undefined;
+  const gateway = vs.conn.gateway;
+  vs.conn = undefined;
+  return fill(data.vpn.messages.dropped ?? "", (k) => (k === "gateway" ? gateway : ""));
 }
 
 export function upgradeApp(vs: VpnState, data: GameData, name: string): VpnResult {
@@ -222,8 +240,9 @@ export function upgradeApp(vs: VpnState, data: GameData, name: string): VpnResul
   if (vs.apps[app.brand] === app.latest)
     return { ok: false, output: [`${app.name} ${app.latest} is already the newest version.`] };
   vs.apps[app.brand] = app.latest;
-  // Upgrading restarts the app, so any tunnel it held drops.
+  // Upgrading restarts the app, so any tunnel or sign-in it held drops.
   vs.conn = undefined;
+  vs.push = undefined;
   return { ok: true, output: [`${app.name} updated to ${app.latest}.`] };
 }
 

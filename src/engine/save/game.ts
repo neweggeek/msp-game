@@ -46,6 +46,7 @@ import {
   newVpnState,
   openLocal,
   runLocal,
+  settleVpn,
   upgradeApp,
   vpnLink,
 } from "../vpn/client";
@@ -405,7 +406,9 @@ function sessionReaches(state: GameState, s: CliSession): boolean {
   const ns = netState(world, state.clock.now);
   if (s.vpn && s.address) {
     const fw = vpnLink(state.vpn, world, state.clock.now);
-    return fw?.id === s.vpn && vpnCanManage(world, fw, s.address, "ssh", ns);
+    return (
+      !!fw && String(state.vpn?.conn?.id) === s.vpn && vpnCanManage(world, fw, s.address, "ssh", ns)
+    );
   }
   if (!s.fromId || !s.address) return true;
   const host = world.devices.find((d) => d.id === s.fromId);
@@ -579,6 +582,9 @@ function openDeviceSession(
 
 function run(state: GameState, data: GameData, a: Action): ActionResult {
   const { clock, book, world } = state;
+  // A tunnel that dropped since the last action is gone for good. Say so once.
+  const dropped = settleVpn(state.vpn, world, data, clock.now);
+  if (dropped) state.events.push({ at: clock.now, text: dropped });
   switch (a.t) {
     case "advance":
       spend(state, data, a.minutes);
@@ -591,7 +597,11 @@ function run(state: GameState, data: GameData, a: Action): ActionResult {
       const typedPassword = !!s.login;
       const dev = world.devices.find((d) => d.id === s.deviceId);
       // SSH over the VPN ends when the tunnel does.
-      if (s.vpn && !s.closed && vpnLink(state.vpn, world, clock.now)?.id !== s.vpn) {
+      if (
+        s.vpn &&
+        !s.closed &&
+        (!vpnLink(state.vpn, world, clock.now) || String(state.vpn?.conn?.id) !== s.vpn)
+      ) {
         s.closed = true;
         const line = `Connection to ${s.address} closed. The VPN is no longer connected.`;
         s.transcript.push(line);
@@ -1182,7 +1192,7 @@ function run(state: GameState, data: GameData, a: Action): ActionResult {
       const opened = openDeviceSession(state, data, target.device.id, {
         username: res.ssh.username,
         address: res.ssh.address,
-        vpn: fw.id,
+        vpn: String(state.vpn?.conn?.id),
       });
       return { ...opened, output: [`Opened SSH to ${res.ssh.address} in a new tab.`] };
     }

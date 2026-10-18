@@ -132,10 +132,11 @@ export function vpnCanReach(world: World, fw: Device, ip: string, ns: NetState):
   const target = resolveTarget(world, ip, ns);
   if (target.kind === "none" || target.kind === "internet" || target.kind === "isp-gateway")
     return false;
-  // The firewall's WAN side is the way in, not a place to manage from inside the tunnel.
-  if (target.kind === "firewall-iface" && target.device?.id === fw.id) {
-    const f = firewallInterfaces(fw).find(([n]) => n === target.iface)?.[1];
-    return f?.role === "lan";
+  // Public WAN addresses are the internet side, and the tunnel does not route there.
+  if (target.kind === "firewall-iface" && target.device) {
+    const f = firewallInterfaces(target.device).find(([n]) => n === target.iface)?.[1];
+    if (f?.role !== "lan") return false;
+    if (target.device.id === fw.id) return true;
   }
   return fromFirewall(world, fw, target, ip, ns);
 }

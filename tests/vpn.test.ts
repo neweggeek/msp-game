@@ -3,7 +3,7 @@ import { gameData } from "../src/engine/data";
 import type { Device } from "../src/engine/model/types";
 import { type GameState, applyAction, newGame } from "../src/engine/save/game";
 import { caseFixed } from "../src/engine/tickets/checks";
-import { authenticator } from "../src/engine/vpn/client";
+import { authenticator, vpnLink } from "../src/engine/vpn/client";
 
 const data = gameData();
 
@@ -132,5 +132,45 @@ describe("VPN client and authenticator", () => {
       act({ t: "cli", session: s, line });
     expect(caseFixed(g.world, c, g.clock.now)).toBe(true);
     expect(connect().ok).toBe(true);
+  });
+  it("a dropped tunnel stays down, and its SSH sessions with it", () => {
+    const { g, fw } = vpnGame("totp");
+    const { act, ready } = tools(g, fw);
+    expect(ready().ok).toBe(true);
+    const sh = act({ t: "local-open" }).session as string;
+    const mgmt = (fw.running?.interfaces as Record<string, { ip?: string }>).mgmt?.ip?.split(
+      "/",
+    )[0];
+    const cli = act({ t: "local", session: sh, line: `ssh admin@${mgmt}` }).session as string;
+    // A short ISP blip, skipped over in one wait.
+    const site = g.world.sites.find((s) => s.id === fw.siteId);
+    if (site) site.isp.outage = { since: g.clock.now + 5, until: g.clock.now + 10 };
+    act({ t: "advance", minutes: 30 });
+    expect(vpnLink(g.vpn, g.world, g.clock.now)).toBeUndefined();
+    expect(act({ t: "cli", session: cli, line: "x" }).output?.join(" ")).toContain(
+      "VPN is no longer connected",
+    );
+    expect(g.vpn?.conn).toBeUndefined();
+    expect(g.events.some((e) => e.text.includes("dropped"))).toBe(true);
+  });
+
+  it("the tunnel does not reach another site's public WAN", () => {
+    for (let i = 0; i < 200; i++) {
+      const g = newGame(`vpn-wan-${i}`, data);
+      const fw = g.world.devices.find((d) => d.kind === "firewall" && d.siteId === "hq");
+      const branch = g.world.devices.find((d) => d.kind === "firewall" && d.siteId === "branch");
+      if (fw?.vpn?.mfa !== "totp" || !branch) continue;
+      const { act, ready } = tools(g, fw);
+      expect(ready().ok).toBe(true);
+      const sh = act({ t: "local-open" }).session as string;
+      const wan = (branch.running?.interfaces as Record<string, { ip?: string }>).wan1?.ip?.split(
+        "/",
+      )[0];
+      expect(act({ t: "local", session: sh, line: `ping ${wan}` }).output).toContain(
+        "Request timed out.",
+      );
+      return;
+    }
+    throw new Error("no seed");
   });
 });

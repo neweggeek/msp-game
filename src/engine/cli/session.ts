@@ -19,7 +19,7 @@ export interface CliSession {
   address?: string;
   /** The RMM or ScreenLink shell this SSH session was typed in. */
   parent?: string;
-  /** Typed in the laptop terminal over the VPN to this firewall. */
+  /** Typed in the laptop terminal over this VPN connection (its id). */
   vpn?: string;
   dialect: string;
   mode: CliMode;
