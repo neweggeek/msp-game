@@ -356,6 +356,32 @@ export const callRulesSchema = z.object({
     ),
     lines: z.record(z.string()),
   }),
+  /** Questions clients ask on a call. Trap answers cost later; ignoring one is fine. */
+  traps: z.object({
+    chance: z.number().min(0).max(1),
+    promiseMinutes: z.number().int(),
+    otherTechMinutes: z.number().int(),
+    trainingMinutes: z.number().int(),
+    list: z
+      .array(
+        z.object({
+          id: z.string(),
+          ticket: z.boolean().optional(),
+          question: z.string(),
+          answers: z
+            .array(
+              z.object({
+                text: z.string(),
+                says: z.string(),
+                effect: z.enum(["none", "promise-time", "promise-other", "training"]),
+              }),
+            )
+            .min(2),
+        }),
+      )
+      .min(1),
+    lines: z.record(z.string()),
+  }),
   /** The ISP's business support line: open all hours, on hold first, account and PIN before anything. */
   isp: z.object({
     holdMinutes: z.tuple([z.number().int().min(0), z.number().int().min(0)]),

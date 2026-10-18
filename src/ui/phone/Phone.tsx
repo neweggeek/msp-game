@@ -23,6 +23,7 @@ export function PhoneDialog({
   const who = [...people(game.world, t?.contact), ...ispLines(game.world), ...teamLines(data)];
   const c = call ? game.calls?.[call] : undefined;
   const person = c ? who.find((p) => p.id === c.person) : undefined;
+  const trap = data.calls.traps.list.find((x) => x.id === c?.trap?.id);
   const docs = [...game.world.docs.devices].sort((a, b) => a.hostname.localeCompare(b.hostname));
   const [device, setDevice] = useState(docs[0]?.deviceId ?? "");
   const end = useRef<HTMLDivElement>(null);
@@ -114,6 +115,21 @@ export function PhoneDialog({
         ))}
         <div ref={end} />
       </div>
+      {live && trap && c.trap?.answer === undefined && (
+        <div className="call-asks" style={{ marginTop: 8 }}>
+          <span className="dim">Answer them:</span>
+          {trap.answers.map((ans, i) => (
+            <button
+              key={ans.text}
+              type="button"
+              className="btn small"
+              onClick={() => act({ t: "call-answer", call: c.id, answer: i })}
+            >
+              {ans.text}
+            </button>
+          ))}
+        </div>
+      )}
       {live && (
         <>
           {!ispSite && (

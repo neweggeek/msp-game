@@ -39,6 +39,8 @@ export interface PhoneCall {
   hold?: number;
   verified?: boolean;
   agent?: string;
+  /** A question the client asked, and the answer you picked, if any. */
+  trap?: { id: string; answer?: number };
 }
 
 /** The docs contacts, plus the user on a ticket when they are not one of them. */
@@ -171,6 +173,19 @@ export function dial(ctx: CallCtx, id: string, person: Person, ticket?: string):
   } else {
     call.answered = true;
     call.transcript.push(say(data, "hello", v));
+    // Sometimes they have a question of their own. Its own stream, so other draws stay put.
+    const traps = data.calls.traps;
+    const trng = new Rng(`${ctx.world.seed}:trap:${ctx.serial}`);
+    const fits = traps.list.filter((x) => !x.ticket || ticket);
+    if (fits.length > 0 && trng.next() < traps.chance) {
+      const trap = trng.pick(fits);
+      call.trap = { id: trap.id };
+      call.transcript.push(
+        fill(traps.lines.ask ?? "", (k) =>
+          k === "name" ? person.name : k === "question" ? trap.question : "",
+        ),
+      );
+    }
   }
   return call;
 }

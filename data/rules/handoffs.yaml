@@ -90,3 +90,4 @@ scoring:
   escalatedEarly: -10
   seniorHelp: -5
   noCheckIn: -5
+  brokenPromise: -20

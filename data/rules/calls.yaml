@@ -96,3 +96,36 @@ isp:
     reboot: "{name}: OK, I sent the reboot. Give it about {minutes} minutes to come back."
     statusRebooting: "{name}: The modem is still rebooting. Give it a few more minutes."
     tired: "{name}: Is there anything else? Then I'll note the account and let you go."
+
+# Questions a client asks on a call. Some answers feel helpful and backfire later.
+traps:
+  # Chance an answered client call brings one up. Ignoring it is fine; they move on.
+  chance: 0.35
+  # Minutes a promised fix time has before the client notices it passed.
+  promiseMinutes: 90
+  # Business minutes before a promise made for another tech falls through.
+  otherTechMinutes: 180
+  trainingMinutes: 60
+  list:
+    - id: when-fixed
+      ticket: true
+      question: "When will it be fixed?"
+      answers:
+        - { text: "Give them a time: within the hour.", effect: promise-time, says: "You: It will be fixed within the hour." }
+        - { text: "Tell them what you are doing and that an update will follow.", effect: none, says: "You: I'm working on it now. You'll get an update on the ticket as soon as I know more." }
+    - id: other-tech
+      question: "The other tech said he'd also set up our new printer. He'll still do that, right?"
+      answers:
+        - { text: "Yes, he will.", effect: promise-other, says: "You: Yes, he'll take care of it." }
+        - { text: "Say you will ask him to confirm.", effect: none, says: "You: I can't speak for him. I'll ask him and he'll confirm with you." }
+    - id: show-me
+      question: "While you're on, can you show me how to set up email on my new phone?"
+      answers:
+        - { text: "Sure, walk them through it.", effect: training, says: "You: Sure, let's do it now." }
+        - { text: "Point them to a help desk ticket.", effect: none, says: "You: That one is quick for the help desk. Send them a ticket and they'll set it up with you." }
+  lines:
+    ask: "{name}: Oh, one more thing. {question}"
+    okay: "{name}: Okay, thanks."
+    training: "{name}: That took a while, but thank you so much!"
+    brokenTime: "{name} called dispatch: you said {ticket} would be fixed by {time}, and it is not."
+    brokenOther: "{name} called dispatch: they were told another tech would set up the printer. He never agreed to it."
