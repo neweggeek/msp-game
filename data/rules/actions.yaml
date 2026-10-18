@@ -9,3 +9,5 @@ send-back: 2
 attach-proof: 1
 doc-edit: 2
 ticket-note: 1
+escalate: 3
+flag-p1: 2

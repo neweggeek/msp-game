@@ -2,6 +2,7 @@ import { type PhoneCall, ask, dial, findPerson } from "../calls/calls";
 import { type CliContext, type CliSession, openSession, runLine } from "../cli/session";
 import {
   type ClockState,
+  type Timer,
   addBusinessMinutes,
   advance,
   dayOfWeek,
@@ -27,6 +28,7 @@ import {
   resolutionNotes,
 } from "../tickets/desk";
 import {
+  type Ticket,
   type TicketBook,
   addNote,
   createTicket,
@@ -68,6 +70,7 @@ export type Action =
   | { t: "ticket-status"; ticket: string; status: string }
   | { t: "ticket-priority"; ticket: string; priority: Priority }
   | { t: "ticket-flag-p1"; ticket: string; reason: string }
+  | { t: "escalate"; ticket: string; note: string }
   | { t: "ticket-note"; ticket: string; text: string }
   | {
       t: "handoff";
@@ -241,6 +244,7 @@ export function newGame(
   };
   if (o.scenario) state.scenario = o.scenario;
   if (o.caseId) state.caseId = o.caseId;
+  for (const t of book.tickets) if (t.priority === "P1") startP1Clock(state, data, t);
   return state;
 }
 
@@ -263,10 +267,16 @@ function spend(state: GameState, data: GameData, minutes: number): void {
     if (timer.kind === "handoff-follow-up") return handoffFollowUp(state, data, timer.payload);
     if (timer.kind === "reopen") return reopen(state, data, String(timer.payload.ticket));
     if (timer.kind === "console-rollback") return consoleRollback(state, timer.payload);
+    if (timer.kind.startsWith("desk-")) return deskTimer(state, data, timer);
     if (timer.kind.startsWith("ticket-")) {
       const ev = onTicketTimer(state.book, state.clock, data, timer);
       if (ev) {
         state.events.push({ at: ev.at, text: ev.text });
+        // Aged up to P1: dispatch starts checking in.
+        if (timer.kind === "ticket-p1-aging") {
+          const t = find(state.book, ev.ticketId);
+          if (t) startP1Clock(state, data, t);
+        }
         if (timer.kind === "ticket-resolve-due" || timer.kind === "ticket-response-due")
           points(state, data, "slaBreach", ev.text, ev.ticketId);
       }
@@ -275,6 +285,98 @@ function spend(state: GameState, data: GameData, minutes: number): void {
 }
 
 const cost = (data: GameData, key: string) => data.actionCosts[key] ?? 0;
+
+const deskLine = (data: GameData, key: string, vars: Record<string, unknown>) =>
+  fill(data.tickets.desk.lines[key] ?? key, (k) => vars[k]);
+
+/** Dispatch checks in on a P1 every hour of MSP time until it closes. */
+function startP1Clock(state: GameState, data: GameData, t: Ticket): void {
+  if (t.p1Clock) return;
+  t.p1Clock = true;
+  t.p1Since = state.clock.now;
+  schedule(state.clock, state.clock.now + data.tickets.desk.p1CheckInMinutes, "desk-p1-checkin", {
+    ticket: t.id,
+  });
+}
+
+/** Has the tech written anything on the ticket since this minute? */
+const techSince = (t: Ticket, since: number) =>
+  t.history.some((h) => h.by === "tech" && h.at >= since);
+
+/** Last minute the tech wrote on the ticket, or `floor` if later. */
+const lastTech = (t: Ticket, floor: number) =>
+  t.history.reduce((m, h) => (h.by === "tech" && h.at > m ? h.at : m), floor);
+
+/** Ball in the client's court or booked: dispatch does not chase the tech for an update. */
+const WAITING = ["awaiting-client", "scheduled"];
+
+function deskTimer(state: GameState, data: GameData, timer: Timer): void {
+  const t = find(state.book, String(timer.payload.ticket));
+  if (!t) return;
+  if (t.closedAt !== undefined || t.sentBack) {
+    // A reopen starts the hourly check-ins again.
+    if (timer.kind === "desk-p1-checkin") t.p1Clock = false;
+    return;
+  }
+  const desk = data.tickets.desk;
+  const at = state.clock.now;
+  const say = (by: string, key: string, vars: Record<string, unknown> = {}) => {
+    const text = deskLine(data, key, { ticket: t.id, priority: t.priority, ...vars });
+    t.history.push({ at, by, text });
+    return text;
+  };
+  switch (timer.kind) {
+    case "desk-p1-checkin": {
+      if (t.priority !== "P1") {
+        t.p1Clock = false;
+        return;
+      }
+      // An hour of MSP time since the last word, so the night does not count against you.
+      const due = addBusinessMinutes(
+        data.calendar,
+        lastTech(t, t.p1Since ?? t.createdAt),
+        desk.p1CheckInMinutes,
+      );
+      if (isBusinessTime(data.calendar, at) && !WAITING.includes(t.status) && due <= at) {
+        say("dispatch", "p1CheckIn");
+        state.events.push({ at, text: `Dispatch wants an update on ${t.id}.` });
+        points(state, data, "p1CheckInMissed", `${t.id}: missed a P1 hourly check-in`, t.id);
+      }
+      schedule(state.clock, at + desk.p1CheckInMinutes, "desk-p1-checkin", { ticket: t.id });
+      return;
+    }
+    case "desk-p1-flag": {
+      const def = t.caseId ? data.cases.get(t.caseId) : undefined;
+      if (def?.p1Worthy && t.priority !== "P1") {
+        setPriority(state.book, state.clock, data, t.id, "P1", "dispatch", at);
+        say("dispatch", "p1Granted");
+        points(state, data, "p1FlagGood", `${t.id}: P1 flag was right`, t.id);
+        startP1Clock(state, data, t);
+      } else if (!def?.p1Worthy) {
+        say("dispatch", "p1Declined");
+        points(state, data, "p1FlagBad", `${t.id}: flagged P1 for a problem that is not one`, t.id);
+      }
+      state.events.push({ at, text: `Dispatch reviewed the P1 flag on ${t.id}.` });
+      return;
+    }
+    case "desk-stuck": {
+      const c = state.world.cases.find((x) => x.caseId === t.caseId);
+      if (!c || caseFixed(state.world, c, at) || t.escalatedAt !== undefined) return;
+      if (techSince(t, t.openedAt ?? at)) return;
+      say("system", "stuck");
+      state.events.push({ at, text: `${t.id}: an hour in. Tell the team where you are.` });
+      points(state, data, "noCheckIn", `${t.id}: an hour with no fix and no check-in`, t.id);
+      return;
+    }
+    case "desk-senior": {
+      const c = state.world.cases.find((x) => x.caseId === t.caseId);
+      const extra = state.world.extraTickets.find((x) => x.id === t.extraId);
+      say(desk.senior, "seniorHint", { hint: c?.rootCause ?? extra?.hint ?? "" });
+      state.events.push({ at, text: `${desk.senior} answered on ${t.id}.` });
+      return;
+    }
+  }
+}
 
 function cliContext(state: GameState, data: GameData, s: CliSession): CliContext {
   const dialect = data.dialects.get(s.dialect);
@@ -373,6 +475,7 @@ function reopen(state: GameState, data: GameData, id: string): void {
     text: "Reopened: the problem is back.",
   });
   state.events.push({ at: state.clock.now, text: `${t.id} reopened. The problem is not fixed.` });
+  if (t.priority === "P1") startP1Clock(state, data, t);
   points(state, data, "reopened", `${t.id} reopened after close.`, t.id);
 }
 
@@ -714,15 +817,69 @@ function run(state: GameState, data: GameData, a: Action): ActionResult {
     case "ticket-open": {
       const t = find(book, a.ticket);
       if (!t) return { ok: false, error: `No ticket ${a.ticket}.` };
-      t.openedAt ??= clock.now;
+      if (t.openedAt === undefined) {
+        t.openedAt = clock.now;
+        if (t.caseId)
+          schedule(
+            clock,
+            addBusinessMinutes(data.calendar, clock.now, data.tickets.desk.checkInAfterMinutes),
+            "desk-stuck",
+            { ticket: t.id },
+          );
+      }
       return { ok: true };
     }
     case "ticket-status":
       return setStatus(book, clock, data, a.ticket, a.status);
-    case "ticket-priority":
+    case "ticket-priority": {
+      if (find(book, a.ticket)?.priority === "P1")
+        return { ok: false, error: "Only dispatch changes a P1." };
       return setPriority(book, clock, data, a.ticket, a.priority, "tech");
-    case "ticket-flag-p1":
-      return flagP1(book, clock, a.ticket, a.reason);
+    }
+    case "ticket-flag-p1": {
+      const t = find(book, a.ticket);
+      if (!t || t.closedAt !== undefined || t.sentBack)
+        return { ok: false, error: `No open ticket ${a.ticket}.` };
+      if (t.priority === "P1") return { ok: false, error: `${t.id} is already a P1.` };
+      if (t.flaggedP1) return { ok: false, error: `${t.id} is already flagged for dispatch.` };
+      const r = flagP1(book, clock, a.ticket, a.reason);
+      t.respondedAt ??= clock.now;
+      schedule(clock, clock.now + data.tickets.desk.p1FlagReviewMinutes, "desk-p1-flag", {
+        ticket: t.id,
+      });
+      spend(state, data, cost(data, "flag-p1"));
+      return r;
+    }
+    case "escalate": {
+      const t = find(book, a.ticket);
+      if (!t || t.closedAt !== undefined || t.sentBack)
+        return { ok: false, error: `No open ticket ${a.ticket}.` };
+      const desk = data.tickets.desk;
+      t.respondedAt ??= clock.now;
+      t.history.push({ at: clock.now, by: "tech", text: `Escalated to ${desk.senior}: ${a.note}` });
+      const say = (key: string) => {
+        const text = deskLine(data, key, { ticket: t.id });
+        t.history.push({ at: clock.now, by: desk.senior, text });
+        return { ok: true, output: [text] };
+      };
+      spend(state, data, cost(data, "escalate"));
+      if (t.escalatedAt !== undefined) return say("seniorAgain");
+      // Roadblocked or not, the senior wants a real try first.
+      const worked = clock.now - (t.openedAt ?? clock.now);
+      if (worked < desk.escalateAfterMinutes) {
+        points(state, data, "escalatedEarly", `${t.id}: escalated before trying for long`, t.id);
+        return say("seniorTooEarly");
+      }
+      t.escalatedAt = clock.now;
+      points(state, data, "seniorHelp", `${t.id}: senior time`, t.id);
+      schedule(
+        clock,
+        addBusinessMinutes(data.calendar, clock.now, desk.seniorReplyMinutes),
+        "desk-senior",
+        { ticket: t.id },
+      );
+      return { ok: true, output: [`Escalated. ${desk.senior} will look and reply on the ticket.`] };
+    }
     case "ticket-note": {
       spend(state, data, cost(data, "ticket-note"));
       const t = find(book, a.ticket);

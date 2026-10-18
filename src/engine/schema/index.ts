@@ -188,6 +188,8 @@ export const caseSchema = z.object({
       .default([]),
   }),
   faults: z.array(z.string()).min(1),
+  /** Dispatch grants a P1 flag on this case: the business is stopped. */
+  p1Worthy: z.boolean().optional(),
   fixed: z.array(checkSchema).min(1),
   /** What the client's contacts say and can do on a call for this case. */
   call: z
@@ -497,6 +499,15 @@ export const ticketRulesSchema = z.object({
   ),
   techPriorities: z.array(z.enum(["P1", "P2", "P3", "P4"])),
   aging: z.object({ followUpAfterDays: z.number(), p1AfterBusinessDays: z.number() }),
+  desk: z.object({
+    p1CheckInMinutes: z.number().int().min(1),
+    p1FlagReviewMinutes: z.number().int(),
+    escalateAfterMinutes: z.number().int(),
+    checkInAfterMinutes: z.number().int().min(1),
+    seniorReplyMinutes: z.number().int(),
+    senior: z.string(),
+    lines: z.record(z.string()),
+  }),
 });
 
 export const calendarSchema = z.object({

@@ -179,6 +179,7 @@ function TicketView() {
   const worked = t.openedAt !== undefined ? game.clock.now - t.openedAt : 0;
   const contact =
     game.world.client.contacts.find((c) => c.name === t.contact) ?? game.world.client.contacts[0];
+  const vpnDoc = game.world.docs.sites.find((s) => s.vpn)?.vpn;
   return (
     <section className="panel" style={{ flex: "1 1 auto", maxHeight: "60%" }}>
       <div className="body">
@@ -215,10 +216,22 @@ function TicketView() {
               Open Shinobi RMM
             </button>
           </div>
-          <div className="card off">
-            <span className="k">Site VPN</span>
-            <span>Not in this build</span>
-          </div>
+          {vpnDoc ? (
+            <div className="card">
+              <span className="k">Site VPN</span>
+              <span>
+                {vpnDoc.app} to {vpnDoc.gateway}
+              </span>
+              <button type="button" className="btn small" onClick={() => setTab("vpn")}>
+                Open VPN clients
+              </button>
+            </div>
+          ) : (
+            <div className="card off">
+              <span className="k">Site VPN</span>
+              <span>No VPN in the docs</span>
+            </div>
+          )}
           <div className="card">
             <span className="k">Remote hands</span>
             <span>
@@ -302,6 +315,30 @@ function TicketView() {
                 }}
               >
                 Add note
+              </button>
+              <button
+                type="button"
+                className="btn"
+                disabled={!note.trim()}
+                title={`Ask ${data.tickets.desk.senior} for a hand. Say what you ruled out. Try for ${data.tickets.desk.escalateAfterMinutes} minutes first.`}
+                onClick={() => {
+                  const r = act({ t: "escalate", ticket: t.id, note: note.trim() });
+                  if (r.ok) setNote("");
+                }}
+              >
+                Escalate
+              </button>
+              <button
+                type="button"
+                className="btn"
+                disabled={!note.trim() || t.priority === "P1" || t.flaggedP1}
+                title="Only dispatch sets P1. Flag it with the reason, and dispatch decides."
+                onClick={() => {
+                  const r = act({ t: "ticket-flag-p1", ticket: t.id, reason: note.trim() });
+                  if (r.ok) setNote("");
+                }}
+              >
+                Flag P1
               </button>
             </div>
             <div className="actions" style={{ marginTop: 10 }}>
